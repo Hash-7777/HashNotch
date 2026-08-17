@@ -53,14 +53,37 @@ public final class QuitConfirmation {
     public func ask() {
         let window = self.window ?? makeWindow()
         self.window = window
-        window.contentViewController = NSHostingController(
+        let hosting = NSHostingController(
             rootView: QuitConfirmationView(
                 accent: accent(),
                 onQuit: { [weak self] in self?.answerQuit() },
                 onCancel: { [weak self] in self?.hide() }
             )
         )
-        window.center()
+        window.contentViewController = hosting
+        // Exactly as tall as the words in it, measured rather than guessed.
+        //
+        // A hand-picked height has to be right for a sentence that wraps
+        // differently at another text size or in another language, and when it
+        // is too big the extra lands as a band of empty black between the last
+        // line and the buttons — which reads as something having failed to draw.
+        // `fittingSize` asks the laid-out view how much room it actually wants.
+        //
+        // Laid out first, because `fittingSize` reports on the arrangement that
+        // exists when it is asked, and a view that has only just been attached
+        // has not been arranged yet — the answer then is zero, and a window
+        // sized from it is not small, it is invisible. The floor is the second
+        // half of the same guard: whatever happens, this window is never
+        // shrunk to something that cannot hold its own buttons.
+        hosting.view.layoutSubtreeIfNeeded()
+        let measured = hosting.view.fittingSize
+        window.setContentSize(CGSize(
+            width: Self.width,
+            height: max(measured.height, Self.minimumHeight)
+        ))
+        if let screen = NotchGeometry.preferredScreen() ?? NSScreen.main {
+            window.setFrameOrigin(Self.origin(for: window.frame.size, in: screen.visibleFrame))
+        }
         if !window.isVisible { window.alphaValue = 0 }
         window.orderFrontRegardless()
         window.makeKey()
@@ -101,9 +124,39 @@ public final class QuitConfirmation {
         })
     }
 
+    /// Wide enough for the sentence to break where it reads well, and no wider
+    /// — this is a question, not a document.
+    package static let width: CGFloat = 420
+    /// The least the window may ever be, whatever a measurement says. Enough for
+    /// the title, one line, and the buttons.
+    package static let minimumHeight: CGFloat = 150
+
+    /// Where the window sits: the middle of the screen the island is on.
+    ///
+    /// **Not `NSWindow.center()`.** Despite the name, that method does not
+    /// centre a window vertically — it places it high, leaving about a third of
+    /// the free space above it. On a laptop screen that put this window up under
+    /// the physical notch, hard against the top bezel, right beside the island
+    /// whose button had just raised it. The two then read as one thing, which is
+    /// the opposite of what closing the panel first was for: this question is
+    /// about the whole app, so it belongs where the eye already is.
+    ///
+    /// Measured against `visibleFrame` rather than `frame`, so the menu bar and
+    /// the Dock are excluded and the middle is the middle of the space actually
+    /// available.
+    ///
+    /// Pure and package-visible: "centred" is a claim about arithmetic, and this
+    /// is the arithmetic that was wrong.
+    package static func origin(for size: CGSize, in visible: CGRect) -> CGPoint {
+        CGPoint(
+            x: visible.midX - size.width / 2,
+            y: visible.midY - size.height / 2
+        )
+    }
+
     private func makeWindow() -> QuitPanelWindow {
         let window = QuitPanelWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 236),
+            contentRect: NSRect(x: 0, y: 0, width: Self.width, height: Self.minimumHeight),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -135,12 +188,18 @@ final class QuitPanelWindow: NSWindow {
 
 /// The question itself, in the same hand as the first-run window: a dark HUD
 /// surface, a plain sentence, and the two answers at the bottom.
-struct QuitConfirmationView: View {
-    let accent: Color
-    let onQuit: () -> Void
-    let onCancel: () -> Void
+package struct QuitConfirmationView: View {
+    package let accent: Color
+    package let onQuit: () -> Void
+    package let onCancel: () -> Void
 
-    var body: some View {
+    package init(accent: Color, onQuit: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        self.accent = accent
+        self.onQuit = onQuit
+        self.onCancel = onCancel
+    }
+
+    package var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 12) {
@@ -170,15 +229,18 @@ struct QuitConfirmationView: View {
             .padding(.top, 24)
             .padding(.bottom, 20)
 
-            Spacer(minLength: 0)
-
             Rectangle()
                 .fill(Color.white.opacity(0.08))
                 .frame(height: 1)
 
             actions
         }
-        .frame(width: 420, height: 236)
+        // Width only. The height is whatever the words need — see the note on
+        // `fittingSize` where the window is sized. A `Spacer` used to sit above
+        // the hairline to fill a fixed 236 points, which is the same mistake
+        // said twice: the view padded itself out to a number, and the window
+        // was told that number separately.
+        .frame(width: QuitConfirmation.width)
         .background(
             ZStack {
                 VisualEffectView(material: .hudWindow)

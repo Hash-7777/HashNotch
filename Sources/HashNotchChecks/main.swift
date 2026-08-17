@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import CoreGraphics
+import AppKit
 import HashNotchKit
 import FeatureMedia
 import FeatureActivities
@@ -1038,6 +1039,62 @@ MainActor.assumeIsolated {
         ActivitiesReader.feedURL(in: feedHome).path == newFolder.appendingPathComponent("activities.json").path
     )
     try? FileManager.default.removeItem(at: feedHome)
+
+    // The "quit?" window is exactly as tall as the words in it.
+    //
+    // It shipped with a hand-picked height and a Spacer holding the content
+    // apart to reach it, which left a band of empty black between the last line
+    // and the buttons — the kind of gap that reads as something having failed
+    // to draw. The height is now measured from the laid-out view, so what is
+    // pinned here is that the measurement is real: a view that has not been
+    // arranged reports zero, and a window sized from zero is not small, it is
+    // invisible.
+    let quitHosting = NSHostingController(
+        rootView: QuitConfirmationView(accent: .blue, onQuit: {}, onCancel: {})
+    )
+    quitHosting.view.layoutSubtreeIfNeeded()
+    let quitFit = quitHosting.view.fittingSize
+    check(
+        "the quit window measures a real height, not zero",
+        quitFit.height >= QuitConfirmation.minimumHeight
+    )
+    check(
+        "the quit window is not padded out past what it says",
+        quitFit.height <= QuitConfirmation.minimumHeight + 120
+    )
+    check(
+        "the quit window keeps the one width it is designed for",
+        abs(quitFit.width - QuitConfirmation.width) < 1
+    )
+    print("       quit window measures \(Int(quitFit.width))x\(Int(quitFit.height))")
+
+    // And it opens in the MIDDLE of the screen, which `NSWindow.center()` does
+    // not do: that method leaves about a third of the free space above the
+    // window, which on a laptop parked this one under the physical notch, hard
+    // against the top bezel and touching the island whose button raised it.
+    let quitScreen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let quitSize = CGSize(width: QuitConfirmation.width, height: 204)
+    let quitOrigin = QuitConfirmation.origin(for: quitSize, in: quitScreen)
+    check(
+        "the quit window is centred across the screen",
+        abs((quitOrigin.x + quitSize.width / 2) - quitScreen.midX) < 0.5
+    )
+    check(
+        "the quit window is centred DOWN the screen, not pushed to the top",
+        abs((quitOrigin.y + quitSize.height / 2) - quitScreen.midY) < 0.5
+    )
+    // The same on a screen whose usable area does not start at zero — a Dock at
+    // the bottom and a menu bar at the top both move the middle.
+    let inset = CGRect(x: 0, y: 70, width: 1440, height: 900 - 70 - 38)
+    let insetOrigin = QuitConfirmation.origin(for: quitSize, in: inset)
+    check(
+        "the middle is the middle of the space actually available",
+        abs((insetOrigin.y + quitSize.height / 2) - inset.midY) < 0.5
+    )
+    check(
+        "the whole window fits inside that space",
+        insetOrigin.y >= inset.minY && insetOrigin.y + quitSize.height <= inset.maxY
+    )
 
     // A finished notice is the tool's name and nothing else.
     //
