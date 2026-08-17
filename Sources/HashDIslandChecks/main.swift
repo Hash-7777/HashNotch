@@ -1011,6 +1011,40 @@ MainActor.assumeIsolated {
         ActivitiesReader.read(from: tempFile("[{\"id\":\"S\",\"title\":\"Sym\",\"icon\":\"bolt.fill\"}]"))
             .first.map { $0.imagePath == nil && $0.icon == "bolt.fill" } == true
     )
+
+    // A finished notice is the tool's name and nothing else.
+    //
+    // What posters put underneath it is which model answered — "gemini-2.5-flash"
+    // trailing "HashCortX finished" — and on a strip that is read in a glance
+    // that is debris: the work is over, so a second line offers nothing to act
+    // on while costing the first line the room to be read cleanly. The app's own
+    // Claude Code hook already sends no subtitle on a finish, but nothing it
+    // does could make that true of anybody else's poster, so the rule is applied
+    // where every poster passes through rather than asked of each one.
+    let finishedNotice = ActivitiesReader.read(from: tempFile("""
+    [{"id":"hashcortx","title":"HashCortX finished","subtitle":"gemini-2.5-flash",
+      "dismissAfter":3,"endsAt":"2099-01-01T12:00:03Z"}]
+    """))
+    check("a finished notice is read as a notice", finishedNotice.first?.isNotice == true)
+    check(
+        "a finished notice shows the tool and not the model",
+        finishedNotice.first.map { $0.title == "HashCortX finished" && $0.displaySubtitle == nil } == true
+    )
+    check(
+        "the subtitle is still carried, only not drawn",
+        finishedNotice.first?.subtitle == "gemini-2.5-flash"
+    )
+    // A standing request is the opposite case: there the subtitle IS the reason
+    // it is asking, and dropping it would leave a notice that has withheld the
+    // only part worth reading.
+    let standingRequest = ActivitiesReader.read(from: tempFile("""
+    [{"id":"claude-code","title":"Claude needs you","subtitle":"Allow this command?",
+      "endsAt":"2099-01-01T12:03:00Z"}]
+    """))
+    check(
+        "a standing request keeps the reason it is asking",
+        standingRequest.first?.displaySubtitle == "Allow this command?"
+    )
     try? FileManager.default.removeItem(at: logoDir)
 
     // A notice announces something that already happened, so it draws no

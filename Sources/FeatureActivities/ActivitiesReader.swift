@@ -62,6 +62,27 @@ public struct LiveActivity: Identifiable, Equatable {
     /// something that already happened. Only a countdown draws a timer.
     public var showsCountdown: Bool { endsAt != nil && dismissAfter == nil }
 
+    /// True when this announces something that is already over — a job that
+    /// finished, a file that arrived — rather than asking for anything.
+    public var isNotice: Bool { dismissAfter != nil }
+
+    /// The subtitle worth drawing, which for a notice is none.
+    ///
+    /// "HashCortX finished" is the whole message. What the poster tends to put
+    /// underneath it is which model answered, or which folder it ran in, and on
+    /// a glance surface that is debris: the thing being reported is over, so a
+    /// second line adds nothing to act on and costs the first line the room to
+    /// be read cleanly. The name of the tool is what the eye is looking for.
+    ///
+    /// A standing request keeps its subtitle, because there the text IS the
+    /// reason it is asking — "Claude needs you" without the reason is a
+    /// notification that has withheld the only part worth reading.
+    ///
+    /// Judged here rather than trusted from the feed, so it holds for every
+    /// poster: the app's own Claude Code hook already sends no subtitle on a
+    /// finish, but nothing could make that true of anyone else's.
+    public var displaySubtitle: String? { isNotice ? nil : subtitle }
+
     /// Seconds remaining until `endsAt`, if this is a countdown.
     public func secondsLeft(now: Date) -> Int? {
         guard showsCountdown, let endsAt else { return nil }

@@ -104,16 +104,21 @@ struct ActivitiesTitleView: View {
             // The strip is exactly as tall as the notch — 28 points on this
             // hardware — and an 11pt title stacked on a 9pt subtitle fills
             // essentially all of it, leaving the pair looking jammed against
-            // each other with no room to breathe. The subtitle is worth
-            // keeping (it says WHICH project finished), so it goes beside the
-            // title, dimmed, where the eye reads it as one phrase. The full
-            // two-line treatment still exists in the panel, which has room.
+            // each other with no room to breathe. So where there is a subtitle
+            // to draw it goes BESIDE the title, dimmed, where the eye reads it
+            // as one phrase. The full two-line treatment still exists in the
+            // panel, which has room.
+            //
+            // In practice only a standing request has one: a finished notice
+            // is title-only by `displaySubtitle`, so "HashCortX finished" is
+            // all the strip shows, without the model name that used to trail
+            // it.
             HStack(spacing: 5) {
                 Text(activity.title)
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                if !activity.showsCountdown, let subtitle = activity.subtitle {
+                if !activity.showsCountdown, let subtitle = activity.displaySubtitle {
                     Text(subtitle)
                         .font(.system(size: 9.5, weight: .medium, design: .rounded))
                         .foregroundStyle(theme.subtitleColor)
@@ -191,7 +196,7 @@ struct ActivitiesDetailView: View {
                     Text(activity.title)
                         .foregroundStyle(theme.textColor)
                         .lineLimit(1)
-                    if let subtitle = activity.subtitle {
+                    if let subtitle = activity.displaySubtitle {
                         Text(subtitle)
                             .font(.system(size: 9))
                             .foregroundStyle(theme.subtitleColor)
