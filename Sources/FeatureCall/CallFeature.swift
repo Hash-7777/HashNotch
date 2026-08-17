@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Shows when an app has your microphone open — a call, a meeting, a recording
 /// — with that app's own icon, a live dot, and how long it has been going.

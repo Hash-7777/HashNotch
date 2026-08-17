@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Hash D Island</string>
+	<string>HashNotch</string>
 	<key>CFBundleDisplayName</key>
-	<string>Hash D Island</string>
+	<string>HashNotch</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.hashdisland.app</string>
+	<string>com.hashnotch.app</string>
 	<key>CFBundleExecutable</key>
-	<string>HashDIsland</string>
+	<string>HashNotch</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>LSApplicationCategoryType</key>
@@ -34,12 +34,12 @@
 	     first thing a new user reads about it, and a prompt that cites a name
 	     they have never seen is a prompt they are right to refuse. -->
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Hash D Island asks your media apps for the current track and artwork — and, for web videos, asks your browser for the playing tab's address to show its thumbnail — so Now Playing can appear around the notch. Playback and volume are controlled only when you use the panel's buttons. Deny this and everything else still works.</string>
+	<string>HashNotch asks your media apps for the current track and artwork — and, for web videos, asks your browser for the playing tab's address to show its thumbnail — so Now Playing can appear around the notch. Playback and volume are controlled only when you use the panel's buttons. Deny this and everything else still works.</string>
 	<!-- macOS protects the Downloads folder, so listing it prompts once. Without
 	     this key that prompt carries no explanation at all, which is the worst
 	     possible moment for the app to have nothing to say for itself. -->
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Hash D Island reads the names and dates of files in your Downloads folder so it can show a short notice at the notch when a download finishes. It never opens, moves, or uploads a file. Deny this and everything else still works.</string>
+	<string>HashNotch reads the names and dates of files in your Downloads folder so it can show a short notice at the notch when a download finishes. It never opens, moves, or uploads a file. Deny this and everything else still works.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Seif Hashish. Licensed under the GNU General Public License v3 or later.</string>
 </dict>

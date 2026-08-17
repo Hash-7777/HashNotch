@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Posts a HashDIsland live activity when Claude Code finishes a reply or is
+# Posts a HashNotch live activity when Claude Code finishes a reply or is
 # waiting for your permission. Wired into ~/.claude/settings.json as a Stop +
 # Notification hook by scripts/install-claude-hooks.sh. Reads the hook payload
 # Claude Code sends on stdin (JSON) and writes ONLY the local activities feed
-# (~/.hashdisland/activities.json) — nothing else, nowhere else.
+# (~/.hashnotch/activities.json) — nothing else, nowhere else.
 #
 #   claude-code-hook.sh stop           # "Claude finished"
 #   claude-code-hook.sh notification   # "Claude needs you" (+ the reason)
@@ -12,20 +12,20 @@
 set -euo pipefail
 
 # Bumped whenever this script's OUTPUT changes. The installer copies this file
-# into ~/.hashdisland, so an installed hook keeps running whatever version was
+# into ~/.hashnotch, so an installed hook keeps running whatever version was
 # current the day it was installed — it does not follow app updates. Stamping it
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
-# months. Read with: grep HOOK_VERSION= ~/.hashdisland/claude-code-hook.sh
+# months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
 HOOK_VERSION=5
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
 # own mark is not shipped with this app — drop a PNG at this path and the notch
 # uses it; without it the checkmark symbol is shown exactly as before.
-LOGO="$HOME/.hashdisland/logos/claude.png"
+LOGO="$HOME/.hashnotch/logos/claude.png"
 PAYLOAD="$(cat 2>/dev/null || true)"
-FEED="$HOME/.hashdisland/activities.json"
+FEED="$HOME/.hashnotch/activities.json"
 mkdir -p "$(dirname "$FEED")"
 
 # Which app is Claude running inside — the terminal, the editor, or Claude's own

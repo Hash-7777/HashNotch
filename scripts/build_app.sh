@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Assembles "Hash D Island.app" from the release build so it can run as a proper
+# Assembles "HashNotch.app" from the release build so it can run as a proper
 # agent app and register for "open at login". Works with the Command Line
 # Tools alone — no full Xcode required.
 #
-#   ./scripts/build_app.sh          # build into "./build/Hash D Island.app" (ad-hoc signed)
+#   ./scripts/build_app.sh          # build into "./build/HashNotch.app" (ad-hoc signed)
 #
 # For a distributable build, set CODESIGN_IDENTITY to a "Developer ID
 # Application: …" certificate; the app is then signed with the hardened
@@ -15,17 +15,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$ROOT/build/Hash D Island.app"
+APP="$ROOT/build/HashNotch.app"
 IDENTITY="${CODESIGN_IDENTITY:--}"
 
 echo "Building release binary…"
-swift build -c release --package-path "$ROOT" --product HashDIsland
+swift build -c release --package-path "$ROOT" --product HashNotch
 BIN_DIR="$(swift build -c release --package-path "$ROOT" --show-bin-path)"
 
 echo "Assembling app bundle…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/HashDIsland" "$APP/Contents/MacOS/HashDIsland"
+cp "$BIN_DIR/HashNotch" "$APP/Contents/MacOS/HashNotch"
 cp "$ROOT/Packaging/Info.plist" "$APP/Contents/Info.plist"
 
 # App icon. Regenerate the .icns from the master PNG if it is missing or

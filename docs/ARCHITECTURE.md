@@ -1,6 +1,6 @@
 # Architecture
 
-Hash D Island is built so that every capability is a **plug-in**. The core knows how
+HashNotch is built so that every capability is a **plug-in**. The core knows how
 to draw an island around the notch and how to talk to a feature through one small
 protocol — it never knows what any feature actually does. That is what lets
 features be added or removed without editing the core.
@@ -8,12 +8,12 @@ features be added or removed without editing the core.
 ## Modules
 
 ```
-HashDIslandKit      Core framework. Notch detection, the overlay window, the
+HashNotchKit      Core framework. Notch detection, the overlay window, the
                   island and panel, the theme, shared UI pieces, settings, and
                   the NotchFeature contract. Depends on nothing in this repo.
 
 FeatureMedia      One self-contained feature each. Every feature module depends
-FeatureActivities only on HashDIslandKit — never on another feature.
+FeatureActivities only on HashNotchKit — never on another feature.
 FeatureDownloads
 FeatureTimer
 FeatureTokens
@@ -26,26 +26,26 @@ FeatureCPU
 FeatureMemory
 FeatureStorage
 
-HashDIsland       The executable. The only place features are wired together.
+HashNotch       The executable. The only place features are wired together.
                   Depends on the core + every feature it enables.
 
-HashDIslandChecks   Framework-free checks for the core and the parsers, runnable
-                  under the Command Line Tools (`swift run HashDIslandChecks`).
+HashNotchChecks   Framework-free checks for the core and the parsers, runnable
+                  under the Command Line Tools (`swift run HashNotchChecks`).
 ```
 
 Dependencies only ever point **inward** toward the core:
 
 ```
 FeatureMedia ────┐
-FeatureBattery ──┼─▶ HashDIslandKit
+FeatureBattery ──┼─▶ HashNotchKit
 … every other ───┘
        ▲
-HashDIsland ─────┘   (also depends on each feature, to register them)
+HashNotch ─────┘   (also depends on each feature, to register them)
 ```
 
 ## The feature contract
 
-Every feature implements `NotchFeature` (in `HashDIslandKit`):
+Every feature implements `NotchFeature` (in `HashNotchKit`):
 
 ```swift
 @MainActor
@@ -121,7 +121,7 @@ coalesced timers; monitors publish only when a displayed value actually changes;
 
 ## Customization (settings)
 
-User choices live in `SettingsStore` (in `HashDIslandKit`), persisted to
+User choices live in `SettingsStore` (in `HashNotchKit`), persisted to
 `UserDefaults`. It is the single source of truth for:
 
 - which features are enabled and in what order,
@@ -154,12 +154,12 @@ is quit.
    - a SwiftUI `View`,
    - a type conforming to `NotchFeature` that ties them together.
 2. In `Package.swift`, add a `.target(name: "Feature<Name>", dependencies:
-   ["HashDIslandKit"])` and add `"Feature<Name>"` to the `HashDIsland` target's
+   ["HashNotchKit"])` and add `"Feature<Name>"` to the `HashNotch` target's
    dependencies.
-3. In `Sources/HashDIsland/FeatureManifest.swift`, `import Feature<Name>` and add
+3. In `Sources/HashNotch/FeatureManifest.swift`, `import Feature<Name>` and add
    one line to the returned array.
 
-The core (`HashDIslandKit`) does not change.
+The core (`HashNotchKit`) does not change.
 
 ## Removing a feature
 

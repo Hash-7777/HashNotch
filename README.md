@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/media/banner.png" alt="Hash D Island on a MacBook: a live strip beside the notch showing what is playing, and the panel dropped below it with artwork, a progress bar and transport controls, a volume slider, internet speed with a graph, battery held at 80%, AI tokens counted today, processor, drive and battery temperatures, memory, CPU, a timer and storage." width="100%">
+<img src="docs/media/banner.png" alt="HashNotch on a MacBook: a live strip beside the notch showing what is playing, and the panel dropped below it with artwork, a progress bar and transport controls, a volume slider, internet speed with a graph, battery held at 80%, AI tokens counted today, processor, drive and battery temperatures, memory, CPU, a timer and storage." width="100%">
 
-# Hash D Island
+# HashNotch
 
 ### Hash made the Dynamic Island every Mac user deserves.
 
@@ -15,7 +15,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-534%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="534 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-540%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="540 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -79,10 +79,10 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 534 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 540 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
-$ swift run HashDIslandChecks
+$ swift run HashNotchChecks
   ok   a feature that is off is never started
   ok   the optimistic "could be made free" figure is not used as free space
   ok   a cover that arrives after a skip is dropped
@@ -96,7 +96,7 @@ All checks passed.
 
 ## ◦ Install
 
-1. Download the disk image — `Hash.D.Island.1.1.0.dmg` — from [Releases](https://github.com/Hash-7777/Hash-D-Island/releases/latest) and open it. Drag **Hash D Island** onto the **Applications** folder shown beside it, then eject the disk image.
+1. Download the disk image — `HashNotch-1.2.0.dmg` — from [Releases](https://github.com/Hash-7777/HashNotch/releases/latest) and open it. Drag **HashNotch** onto the **Applications** folder shown beside it, then eject the disk image.
 2. First launch, macOS says it cannot verify the developer. Click **Done**, then open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**. Once only.
 3. **Hover the notch.** No Dock icon, no menu-bar item — the notch is the whole interface. The gear beside it opens settings.
 
@@ -107,14 +107,14 @@ Sometimes there is no **Open Anyway** button to click, or clicking it changes no
 One command removes that label:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Hash D Island.app"
+xattr -dr com.apple.quarantine "/Applications/HashNotch.app"
 ```
 
 Open **Terminal** (press ⌘Space, type `Terminal`, press Return), paste that line, press Return. It prints nothing — that means it worked. Now open the app normally.
 
 Run it **after** the app is already in Applications. If you drag the app somewhere else afterwards, you do not need to run it again.
 
-**What that command actually does,** because you should never paste something into a terminal on trust alone: `xattr` reads and edits the hidden labels macOS attaches to files. `com.apple.quarantine` is the one meaning "this was downloaded". The `-d` deletes that one label and `-r` applies it through the app's folder. It touches nothing else on your Mac, needs no password, and affects only this one app. You can see the label before removing it with `xattr "/Applications/Hash D Island.app"`.
+**What that command actually does,** because you should never paste something into a terminal on trust alone: `xattr` reads and edits the hidden labels macOS attaches to files. `com.apple.quarantine` is the one meaning "this was downloaded". The `-d` deletes that one label and `-r` applies it through the app's folder. It touches nothing else on your Mac, needs no password, and affects only this one app. You can see the label before removing it with `xattr "/Applications/HashNotch.app"`.
 
 ### Which macOS
 
@@ -138,7 +138,7 @@ No accounts. No analytics. No telemetry. No servers. The app writes no files —
 
 ### Nothing runs until you have been asked
 
-On a new install, Hash D Island has read nothing. Before a single indicator starts, a window names what each one reads and what it will never do, and **nothing begins until you accept**.
+On a new install, HashNotch has read nothing. Before a single indicator starts, a window names what each one reads and what it will never do, and **nothing begins until you accept**.
 
 That is stricter than a notice with an OK button. Until you answer, every feature is stopped rather than started, so the app is in the same state as having everything switched off — no file is opened, no command is run, and none of the requests below can even be triggered.
 
@@ -170,7 +170,7 @@ Fetching the cover for what's playing: HTTPS only, restricted to the image serve
 
 ### Terms
 
-Hash D Island is free software under the **[GNU General Public License v3](LICENSE)** or later. Use it for anything, read all of it, change it, pass it on — anything you distribute built on it stays free too, with its source available.
+HashNotch is free software under the **[GNU General Public License v3](LICENSE)** or later. Use it for anything, read all of it, change it, pass it on — anything you distribute built on it stays free too, with its source available.
 
 It comes with **no warranty of any kind**, and you run it at your own risk; the author is not liable for any loss or damage arising from its use (sections 15 and 16 of the licence). The readings are for information only — **don't rely on them where being wrong would be dangerous or costly.**
 
@@ -180,7 +180,7 @@ Apple, Spotify, YouTube and every other product named here belong to their owner
 
 ### Removing it
 
-Four steps, and this is every trace: switch **Open at Login** off and quit; drag the app to the Trash; delete `~/.hashdisland`; run `defaults delete com.hashdisland.app`. No launch agents, no caches, no receipts.
+Four steps, and this is every trace: switch **Open at Login** off and quit; drag the app to the Trash; delete `~/.hashnotch`; run `defaults delete com.hashnotch.app`. No launch agents, no caches, no receipts.
 
 Every value it reads, both private Apple interfaces it uses, and the full detail: **[SECURITY.md](SECURITY.md)**. Every claim there is checkable by reading the source and pinned by the checks.
 
@@ -206,8 +206,8 @@ A Swift package. Builds and runs with the Command Line Tools alone — no full X
 
 ```sh
 swift build                 # compile
-swift run HashDIsland       # launch the overlay
-swift run HashDIslandChecks # run the checks
+swift run HashNotch       # launch the overlay
+swift run HashNotchChecks # run the checks
 ./scripts/build_app.sh      # assemble the .app
 ```
 
@@ -215,7 +215,7 @@ Every capability is a self-contained module. The core knows how to draw an islan
 
 ```mermaid
 flowchart LR
-    subgraph core["HashDIslandKit — the core"]
+    subgraph core["HashNotchKit — the core"]
         direction TB
         G["NotchGeometry<br/><i>measures the hardware</i>"]
         W["NotchWindow<br/><i>click-through overlay</i>"]
@@ -233,7 +233,7 @@ flowchart LR
 ```
 
 ```swift
-// Sources/HashDIsland/FeatureManifest.swift — the only place features meet
+// Sources/HashNotch/FeatureManifest.swift — the only place features meet
 static func enabledFeatures() -> [NotchFeature] {
     FeatureRegistry.inDefaultOrder([
         MediaFeature(), ActivitiesFeature(), DownloadsFeature(),

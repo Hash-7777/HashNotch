@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Compact thermal readout: a thermometer glyph tinted by pressure, plus the
 /// hottest die temperature (falling back to the pressure word).

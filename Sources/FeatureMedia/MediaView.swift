@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import HashDIslandKit
+import HashNotchKit
 
 /// Leading compact-live: album artwork to the left of the notch.
 /// Shows while a track is present — playing or paused — so the artwork stays
@@ -239,7 +239,7 @@ struct MediaDetailView: View {
             // there is nothing left to be stale, and letting the app add itself
             // back. Advice that does not work is worse than none — it costs the
             // reader the time AND their belief in the next thing the app says.
-            return "macOS is not allowing the media keys. In Accessibility, select Hash D Island, remove it with the − button, then press Allow here to add it back."
+            return "macOS is not allowing the media keys. In Accessibility, select HashNotch, remove it with the − button, then press Allow here to add it back."
         }
     }
 

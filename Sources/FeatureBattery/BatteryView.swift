@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Compact battery readout. The style selects icon, percent, both, or the
 /// estimated time remaining.

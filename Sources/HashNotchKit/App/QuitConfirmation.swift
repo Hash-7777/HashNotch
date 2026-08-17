@@ -152,7 +152,7 @@ struct QuitConfirmationView: View {
                             RoundedRectangle(cornerRadius: 9, style: .continuous)
                                 .fill(Self.destructive.opacity(0.14))
                         )
-                    Text("Quit Hash D Island?")
+                    Text("Quit HashNotch?")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.white)
                 }
@@ -160,7 +160,7 @@ struct QuitConfirmationView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.68))
                     .fixedSize(horizontal: false, vertical: true)
-                Text("To bring it back, open Hash D Island again from Applications.")
+                Text("To bring it back, open HashNotch again from Applications.")
                     .font(.system(size: 12.5))
                     .foregroundStyle(.white.opacity(0.45))
                     .fixedSize(horizontal: false, vertical: true)

@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How full the startup disk is. Panel only — a disk fills over weeks, and
 /// there is nothing about it worth a place beside the notch.

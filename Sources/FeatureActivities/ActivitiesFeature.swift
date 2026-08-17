@@ -1,8 +1,8 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Live activities posted by other apps / scripts / Shortcuts, shown like the
-/// iPhone's Live Activities. Reads the local `~/.hashdisland/activities.json` feed.
+/// iPhone's Live Activities. Reads the local `~/.hashnotch/activities.json` feed.
 @MainActor
 public final class ActivitiesFeature: NotchFeature {
     public let id = "activities"

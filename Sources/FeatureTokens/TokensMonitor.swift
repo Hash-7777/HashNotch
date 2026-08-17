@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Publishes today's AI token usage.
 ///
@@ -23,7 +23,7 @@ public final class TokensMonitor: ObservableObject {
     @Published public private(set) var isCounting = false
 
     private var sampler: VisibleSampler?
-    private let queue = DispatchQueue(label: "com.hashdisland.tokens", qos: .utility)
+    private let queue = DispatchQueue(label: "com.hashnotch.tokens", qos: .utility)
     private let scanner = TokenUsageScanner()
     private let defaults: UserDefaults
     private var inFlight = false

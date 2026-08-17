@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Leading compact: the app's own icon, with the live dot on it.
 struct CallIconView: View {
@@ -111,7 +111,7 @@ struct CallDetailView: View {
                 // one readout where somebody is entitled to wonder. An app that
                 // notices your microphone should say what it noticed with, and
                 // it should say it where the noticing is on screen.
-                Text("Hash D Island only sees that an app opened the microphone. It never listens, records or transcribes, and has no microphone permission of its own.")
+                Text("HashNotch only sees that an app opened the microphone. It never listens, records or transcribes, and has no microphone permission of its own.")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
                     .fixedSize(horizontal: false, vertical: true)

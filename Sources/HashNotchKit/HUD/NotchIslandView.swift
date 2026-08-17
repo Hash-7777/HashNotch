@@ -135,12 +135,12 @@ struct NotchIslandView: View {
     /// opening. Coming back waits for the panel to finish retracting — but only
     /// when a panel was actually open, so a track starting on an idle notch
     /// still appears at once.
-    /// Development aid, inert unless `HASHDISLAND_DEBUG=island`. The strip
+    /// Development aid, inert unless `HASHNOTCH_DEBUG=island`. The strip
     /// appearing beside an open panel is invisible to reading — both flags are
     /// spread across a view struct, an observable, and a delayed work item —
     /// and obvious in one line of trace.
     private static var tracesIsland: Bool {
-        (ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "").contains("island")
+        (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("island")
     }
 
     private func trace(_ label: String) {
@@ -197,7 +197,7 @@ struct NotchIslandView: View {
                 // The state the bug report describes, kept as a trace rather
                 // than deleted: `liveVisible` now makes it unreachable on
                 // screen, and this says so out loud if that ever stops being
-                // true. Gated behind HASHDISLAND_DEBUG=island, so it costs a
+                // true. Gated behind HASHNOTCH_DEBUG=island, so it costs a
                 // string comparison and nothing else.
                 let _ = trace("strip suppressed while the panel is open")
             }
@@ -497,7 +497,7 @@ struct NotchIslandView: View {
             IslandControlButton(
                 symbol: "power",
                 tint: Color(red: 1.0, green: 0.35, blue: 0.35),
-                help: "Quit Hash D Island"
+                help: "Quit HashNotch"
             ) {
                 // Put the panel away before asking. The question is about the
                 // whole app, not about the panel, and leaving it hanging over

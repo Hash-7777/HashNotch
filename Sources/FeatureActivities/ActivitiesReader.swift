@@ -1,9 +1,9 @@
 import Foundation
 
-/// One live activity posted to Hash D Island by another app, a script, or a
+/// One live activity posted to HashNotch by another app, a script, or a
 /// Shortcut. This is the macOS-honest version of iPhone Live Activities: since
 /// no system API lets us read another app's activity, apps push to a local feed
-/// and Hash D Island renders it.
+/// and HashNotch renders it.
 public struct LiveActivity: Identifiable, Equatable {
     public let id: String
     public let icon: String        // SF Symbol name, e.g. "bicycle"
@@ -109,7 +109,9 @@ public struct LiveActivity: Identifiable, Equatable {
 
 /// Reads the activity feed file. Missing/empty/invalid file → no activities.
 ///
-/// Feed: `~/.hashdisland/activities.json`, an array of objects:
+/// Feed: `~/.hashnotch/activities.json` — or `~/.hashdisland/activities.json`,
+/// where it lived under the app's previous name, for as long as a poster is
+/// still writing there. An array of objects:
 ///   {"id","icon","title","subtitle"?,"progress"?,"endsAt"? (ISO8601),
 ///    "dismissAfter"? (seconds), "image"? (path to a logo)}
 ///
@@ -129,8 +131,33 @@ package enum ActivitiesReader {
     private static let maxIconLength = 64
 
     static var feedURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".hashdisland/activities.json")
+        Self.feedURL(in: FileManager.default.homeDirectoryForCurrentUser)
+    }
+
+    /// The folder the feed lives in now, and the one it lived in under the app's
+    /// previous name. Order is preference.
+    package static let feedFolders = [".hashnotch", ".hashdisland"]
+
+    /// Which feed to read, given a home folder.
+    ///
+    /// The rename moved the folder, and the posters are other programs — a hook
+    /// script copied into place months ago, another app's build, a Shortcut.
+    /// None of them update when this app does, so on the first launch after an
+    /// update every one of them is still writing to the old folder, and reading
+    /// only the new one would have made the whole feature go quiet with nothing
+    /// on screen to say why. Re-running the installer is what actually moves a
+    /// poster across; this is what keeps the notch working in the meantime.
+    ///
+    /// The new folder wins whenever it has a feed in it, so a poster that HAS
+    /// moved is never shadowed by a stale file left behind in the old one.
+    /// Nothing is written or migrated here — this only decides which file to
+    /// open, and the same bounds are applied to it either way.
+    package static func feedURL(in home: URL) -> URL {
+        let candidates = feedFolders.map {
+            home.appendingPathComponent("\($0)/activities.json")
+        }
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+            ?? candidates[0]
     }
 
     /// A notice is glanceable, so its lifetime is clamped rather than trusted:

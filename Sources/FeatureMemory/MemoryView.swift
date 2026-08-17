@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Expanded detail: memory in use as a figure, a graph, or both — laid out
 /// exactly like the processor row so the two read as one pair.

@@ -12,12 +12,12 @@ public final class LivePresence: ObservableObject {
 
     public var hasLive: Bool { !activeIDs.isEmpty }
 
-    /// Development aid, off unless `HASHDISLAND_DEBUG` asks for it. Which
+    /// Development aid, off unless `HASHNOTCH_DEBUG` asks for it. Which
     /// features hold the strip is otherwise unobservable from outside the app —
     /// every live state gives the overlay window the same height, so no amount
     /// of measuring its frame can tell a song from an alert.
     private static let logsChanges =
-        (ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "").contains("live")
+        (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("live")
 
     public func setActive(_ id: String, _ active: Bool) {
         guard active != activeIDs.contains(id) else { return }

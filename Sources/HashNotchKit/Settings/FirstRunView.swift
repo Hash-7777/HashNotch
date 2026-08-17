@@ -106,7 +106,7 @@ struct FirstRunView: View {
             Text("Before anything starts")
                 .font(.system(size: 21, weight: .semibold))
                 .foregroundStyle(Color.white)
-            Text("Hash D Island has not read anything yet. Here is everything it will read, and what it will never do.")
+            Text("HashNotch has not read anything yet. Here is everything it will read, and what it will never do.")
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.62))
                 .fixedSize(horizontal: false, vertical: true)
@@ -196,7 +196,7 @@ struct FirstRunView: View {
 
             Spacer()
 
-            Button("Start Hash D Island") { onAccept() }
+            Button("Start HashNotch") { onAccept() }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
                 .controlSize(.large)

@@ -17,7 +17,7 @@ import Foundation
 /// A cache from yesterday is not a stale number to be corrected, it is a
 /// different question's answer, and it is discarded rather than shown.
 package enum TokenTotalsCache {
-    private static let key = "hashdisland.tokens.today.v1"
+    private static let key = "hashnotch.tokens.today.v1"
 
     package struct Entry: Codable, Equatable {
         package var day: Date

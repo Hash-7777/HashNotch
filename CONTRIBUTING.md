@@ -19,7 +19,7 @@ Then, before every push:
 
 ```sh
 swift build                 # must be clean, and warning-free
-swift run HashDIslandChecks # must pass, all of them
+swift run HashNotchChecks # must pass, all of them
 ```
 
 Both are the gate, and they are yours to run — nothing catches a broken push for
@@ -54,8 +54,8 @@ Every capability is a self-contained module. The core never imports a feature
 and never learns what one does.
 
 1. Create `Sources/Feature<Name>/` with a type conforming to `NotchFeature`.
-2. Add the target in `Package.swift`, depending only on `HashDIslandKit`.
-3. Add one line to `Sources/HashDIsland/FeatureManifest.swift`.
+2. Add the target in `Package.swift`, depending only on `HashNotchKit`.
+3. Add one line to `Sources/HashNotch/FeatureManifest.swift`.
 
 Where it appears on a fresh install comes from `FeatureRegistry.defaultOrder`,
 not from where you put it in the manifest — a feature that is not named there
@@ -71,7 +71,7 @@ Two things a feature must honour:
 
 ## Tests
 
-`Sources/HashDIslandChecks` is the whole suite: a plain executable, because this
+`Sources/HashNotchChecks` is the whole suite: a plain executable, because this
 machine has Command Line Tools only and no XCTest.
 
 Write checks against **pure functions**, and extract one if there isn't a

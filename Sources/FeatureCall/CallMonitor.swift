@@ -1,7 +1,7 @@
 import AppKit
 import Combine
 import Foundation
-import HashDIslandKit
+import HashNotchKit
 
 /// A microphone that is open, and for how long.
 public struct MicrophoneUse: Equatable {

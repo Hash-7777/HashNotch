@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Packages "Hash D Island.app" into a disk image anyone can download, open, and
+# Packages "HashNotch.app" into a disk image anyone can download, open, and
 # drag into Applications.
 #
 #   ./scripts/make_dmg.sh                 # writes to ./build/
@@ -14,14 +14,19 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${1:-$ROOT/build}"
-APP="$ROOT/build/Hash D Island.app"
-VOLUME="Hash D Island"
+APP="$ROOT/build/HashNotch.app"
+VOLUME="HashNotch"
 
 # Version comes from the bundle rather than being typed here, so the file name
 # can never disagree with what is inside it.
 "$ROOT/scripts/build_app.sh"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
-DMG="$OUT_DIR/Hash D Island $VERSION.dmg"
+# A hyphen, not a space. GitHub rewrites every space in a release asset's name
+# to a dot as the file is uploaded, so an image built as "HashNotch 1.2.0.dmg"
+# is offered for download as "HashNotch.1.2.0.dmg" — and any instruction that
+# names the file as it was built is then wrong at the one moment it is read.
+# Without a space, what is built and what is downloaded are the same string.
+DMG="$OUT_DIR/HashNotch-$VERSION.dmg"
 
 mkdir -p "$OUT_DIR"
 
@@ -53,7 +58,7 @@ echo "Verifying…"
 hdiutil verify "$DMG" >/dev/null
 MOUNT="$(mktemp -d)"
 hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MOUNT" >/dev/null
-if ! codesign --verify --strict "$MOUNT/Hash D Island.app"; then
+if ! codesign --verify --strict "$MOUNT/HashNotch.app"; then
   hdiutil detach "$MOUNT" >/dev/null || true
   rm -rf "$MOUNT"
   echo "The app inside the image does not verify — do not ship this." >&2

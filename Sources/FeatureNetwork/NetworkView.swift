@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Compact up/down throughput readout in a fixed MB/s layout.
 ///

@@ -1,17 +1,17 @@
 # Live activities, and AI finish alerts
 
 macOS has no system API to read another app's live activity — that exists only
-on iPhone. So Hash D Island reads a small local file that any app, script or
+on iPhone. So HashNotch reads a small local file that any app, script or
 Shortcut can write, and renders whatever is in it.
 
-That file is the whole interface. Nothing here needs Hash D Island to know
+That file is the whole interface. Nothing here needs HashNotch to know
 anything about the tool posting to it.
 
 ---
 
 ## The feed
 
-`~/.hashdisland/activities.json` — an array of objects:
+`~/.hashnotch/activities.json` — an array of objects:
 
 ```json
 [
@@ -76,7 +76,7 @@ Installed the app rather than the source? The same scripts travel inside the
 bundle:
 
 ```sh
-"/Applications/Hash D Island.app/Contents/Resources/scripts/install-claude-hooks.sh"
+"/Applications/HashNotch.app/Contents/Resources/scripts/install-claude-hooks.sh"
 ```
 
 From then on the island lights up when Claude **finishes a reply** — a
@@ -94,7 +94,7 @@ only this feed file, and the installer backs up your Claude settings first.
 > next.
 
 > **Want a tool's logo instead of the symbol?** Drop a square PNG at
-> `~/.hashdisland/logos/claude.png`. No logos ship with the app — those marks
+> `~/.hashnotch/logos/claude.png`. No logos ship with the app — those marks
 > belong to the tools they represent, not to this one.
 
 **HashCortX** and **HashCerebrum** post to the same feed and need nothing

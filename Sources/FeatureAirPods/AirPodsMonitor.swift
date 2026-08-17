@@ -1,5 +1,5 @@
 import Foundation
-import HashDIslandKit
+import HashNotchKit
 
 /// Publishes AirPods battery, and nothing while no pair is connected. Polls at a
 /// low frequency off the main thread — battery moves slowly and each read spawns
@@ -10,7 +10,7 @@ public final class AirPodsMonitor: ObservableObject {
     @Published public private(set) var battery: AirPodsBattery?
 
     private var sampler: VisibleSampler?
-    private let queue = DispatchQueue(label: "com.hashdisland.airpods", qos: .utility)
+    private let queue = DispatchQueue(label: "com.hashnotch.airpods", qos: .utility)
     private var inFlight = false
 
     public init() {}

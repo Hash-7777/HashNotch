@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import HashDIslandKit
+import HashNotchKit
 
 /// Leading compact-live: the top activity's icon, to the left of the notch.
 ///

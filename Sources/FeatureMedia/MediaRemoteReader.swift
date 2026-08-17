@@ -1,5 +1,5 @@
 import Foundation
-import HashDIslandKit
+import HashNotchKit
 
 /// Which app owns the current track — controls only exist for apps we can
 /// script (Spotify and Music); everything else is display-only.
@@ -108,14 +108,14 @@ extension NowPlaying: Equatable {
 /// The script is passed inline via `-e` — nothing is written to disk, so there
 /// is no temp file another process could swap out between write and execute.
 final class MediaRemoteReader {
-    private let queue = DispatchQueue(label: "com.hashdisland.media.nowplaying")
+    private let queue = DispatchQueue(label: "com.hashnotch.media.nowplaying")
     /// Commands run on their own queue so a click NEVER waits behind an
     /// in-flight fetch — play/pause must feel instant.
-    private let commandQueue = DispatchQueue(label: "com.hashdisland.media.commands", qos: .userInitiated)
+    private let commandQueue = DispatchQueue(label: "com.hashnotch.media.commands", qos: .userInitiated)
     /// Downloading a cover is the one slow thing here, and it is never the
     /// thing the reader was asked for. It gets its own queue so the track can
     /// be published the moment the script returns.
-    private let artworkQueue = DispatchQueue(label: "com.hashdisland.media.artwork", qos: .utility)
+    private let artworkQueue = DispatchQueue(label: "com.hashnotch.media.artwork", qos: .utility)
 
     private let stateLock = NSLock()
     private var inFlight = false
@@ -513,7 +513,7 @@ final class MediaRemoteReader {
     /// panel that shouts about it would be worse.
     private static func report(_ command: MediaCommand, _ message: String) {
         FileHandle.standardError.write(
-            Data("Hash D Island: \(command) command failed — \(message)\n".utf8)
+            Data("HashNotch: \(command) command failed — \(message)\n".utf8)
         )
     }
 

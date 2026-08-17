@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// The player's own account of where the track is: a position, and the instant
 /// that position was true.
@@ -96,9 +96,9 @@ public final class MediaMonitor: ObservableObject {
     private var lastCommand = Date.distantPast
     private static let commandSettleWindow: TimeInterval = 1.5
     /// Prints what the bar is being told, for when a readout misbehaves and
-    /// guessing has already been tried. `HASHDISLAND_DEBUG=media`.
+    /// guessing has already been tried. `HASHNOTCH_DEBUG=media`.
     private static let logsProgress =
-        (ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "").contains("media")
+        (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("media")
     private var audioObserver: AudioActivityObserver?
     /// Whether the user has allowed the media keys, read at the moment a button
     /// is pressed so switching it on takes effect without a restart.
@@ -137,11 +137,11 @@ public final class MediaMonitor: ObservableObject {
         // and every media key is dropped.
         if pressesKeys(), !MediaKeys.isTrusted {
             FileHandle.standardError.write(Data("""
-            Hash D Island: browser control is switched on, but macOS is not \
+            HashNotch: browser control is switched on, but macOS is not \
             allowing this app to press the media keys. The Accessibility \
             switch may still look on — a new build has to be approved afresh. \
             Switching it off and on does NOT clear the stale entry; remove \
-            Hash D Island with the minus button and let it add itself back.
+            HashNotch with the minus button and let it add itself back.
 
             """.utf8))
         }

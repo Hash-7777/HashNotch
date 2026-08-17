@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-# Wires Claude Code to your notch: after this, HashDIsland shows a live activity
+# Wires Claude Code to your notch: after this, HashNotch shows a live activity
 # the moment Claude finishes a reply or is waiting for your permission.
 #
 # What it does — nothing more:
-#   1. Copies claude-code-hook.sh to ~/.hashdisland/ (the hook writes only the
+#   1. Copies claude-code-hook.sh to ~/.hashnotch/ (the hook writes only the
 #      local activities feed).
 #   2. Registers it as a Stop + Notification hook in ~/.claude/settings.json,
 #      backing the file up first. Safe to re-run; already-installed is a no-op.
 #
 # Uninstall: delete the two entries mentioning claude-code-hook.sh from
-# ~/.claude/settings.json and remove ~/.hashdisland/claude-code-hook.sh.
+# ~/.claude/settings.json and remove ~/.hashnotch/claude-code-hook.sh.
 #
 set -euo pipefail
 
@@ -19,7 +19,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # Contents/Resources/scripts inside the app bundle for anyone who downloaded the
 # app rather than the source.
 HOOK_SRC="$HERE/claude-code-hook.sh"
-HOOK_DST="$HOME/.hashdisland/claude-code-hook.sh"
+HOOK_DST="$HOME/.hashnotch/claude-code-hook.sh"
 SETTINGS="$HOME/.claude/settings.json"
 
 if [ ! -f "$HOOK_SRC" ]; then
@@ -27,18 +27,50 @@ if [ ! -f "$HOOK_SRC" ]; then
   exit 1
 fi
 
-mkdir -p "$HOME/.hashdisland" "$HOME/.claude"
+mkdir -p "$HOME/.hashnotch" "$HOME/.claude"
 
 # Explain the logo slot, because an empty folder explains nothing.
 #
-# The hook points the activity at ~/.hashdisland/logos/claude.png and the app
+# The hook points the activity at ~/.hashnotch/logos/claude.png and the app
 # quietly draws its checkmark symbol when no such file exists — which is correct
 # behaviour and completely invisible, so "why is there no logo?" has had no
 # answer anywhere. No mark is shipped: Claude's logo belongs to Anthropic, not
 # to this app, and an app that ships someone else's brand has helped itself to
 # it. Put one there yourself and the notch wears it.
-LOGO_DIR="$HOME/.hashdisland/logos"
+LOGO_DIR="$HOME/.hashnotch/logos"
 mkdir -p "$LOGO_DIR"
+
+# Bring across the marks from the folder the app used under its previous name.
+#
+# The rename moved this folder, and a logo is something the user put here by
+# hand — nothing re-downloads it, and nothing else on the machine knows it
+# existed. Left behind, every tool's mark would silently turn back into a
+# symbol on the first update, which looks like the app having forgotten
+# something rather than a folder having moved.
+#
+# Copied, never moved, and never over a file that is already here: the old
+# folder is left exactly as it was, so nothing is lost if this is re-run or if
+# the old app is still installed.
+#
+# Written with plain `if`s rather than `cond && action`: under `set -e` an
+# AND-list whose left side is false leaves a non-zero status behind, which is
+# exactly the shape that once let a failure in this repo's build script be
+# reported as success.
+OLD_LOGO_DIR="$HOME/.hashdisland/logos"
+if [ -d "$OLD_LOGO_DIR" ]; then
+  carried=0
+  for old in "$OLD_LOGO_DIR"/*; do
+    if [ ! -f "$old" ]; then continue; fi
+    name="$(basename "$old")"
+    if [ "$name" = "README.txt" ]; then continue; fi
+    if [ -e "$LOGO_DIR/$name" ]; then continue; fi
+    cp "$old" "$LOGO_DIR/$name"
+    carried=$((carried + 1))
+  done
+  if [ "$carried" -gt 0 ]; then
+    echo "Carried $carried logo(s) over from the app's previous folder."
+  fi
+fi
 if [ ! -f "$LOGO_DIR/README.txt" ]; then
   cat > "$LOGO_DIR/README.txt" <<'NOTE'
 Logos shown on the notch instead of a symbol.
@@ -89,13 +121,13 @@ else
 fi
 
 if [ -f "$SETTINGS" ]; then
-  cp "$SETTINGS" "$SETTINGS.hashdisland-backup-$(date +%s)"
+  cp "$SETTINGS" "$SETTINGS.hashnotch-backup-$(date +%s)"
   # Keep the three most recent and delete the rest of OUR OWN backups. This is
   # safe to re-run at any time, and re-running it is exactly what the README now
   # tells people to do after every update — without a limit, being helpful once
   # a version turns into a drawer full of near-identical files in a folder this
-  # app does not own. Only the .hashdisland-backup-* names are ever touched.
-  ls -t "$SETTINGS".hashdisland-backup-* 2>/dev/null \
+  # app does not own. Only the .hashnotch-backup-* names are ever touched.
+  ls -t "$SETTINGS".hashnotch-backup-* 2>/dev/null \
     | tail -n +4 \
     | while IFS= read -r stale; do rm -f "$stale"; done
 fi

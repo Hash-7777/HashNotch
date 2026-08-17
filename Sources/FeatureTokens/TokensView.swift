@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Compact token readout: today's total AI tokens across your tools.
 struct TokensView: View {

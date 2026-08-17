@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 250" width="780" height="250" role="img" aria-label="Three states. At rest the island is exactly the notch. When something is playing a slim strip appears beside the notch. Hovering the notch drops the full panel below the menu bar.">
-  <title>Three states of Hash D Island</title>
+  <title>Three states of HashNotch</title>
   <style>
     text { font-family: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif; }
     .num   { fill:#3D4353; font-size:38px; font-weight:700; }
@@ -74,7 +74,7 @@
     <!-- strip: wider than the notch, flanking it -->
     <path d="M318 93 h144 v13 a6 6 0 0 1-6 6 H324 a6 6 0 0 1-6-6 z" fill="#000"/>
     <rect class="amber" x="323" y="96" width="9" height="9" rx="2.5"/>
-    <text class="ui" x="337" y="103">Hash D Island</text>
+    <text class="ui" x="337" y="103">HashNotch</text>
     <g class="amber">
       <rect class="bar d1" x="440" y="97" width="2" height="8" rx="1"/>
       <rect class="bar d2" x="444" y="97" width="2" height="8" rx="1"/>
@@ -100,7 +100,7 @@
     <path d="M592 93 h100 v76 a11 11 0 0 1-11 11 H603 a11 11 0 0 1-11-11 z"
           fill="#0C0E15" stroke="#2A2F3C" stroke-width="1"/>
     <rect class="amber" x="600" y="112" width="15" height="15" rx="3.5"/>
-    <text class="ui"    x="620" y="119">Hash D Island</text>
+    <text class="ui"    x="620" y="119">HashNotch</text>
     <text class="uidim" x="620" y="128">your notch</text>
     <rect x="600" y="135" width="84" height="2.5" rx="1.25" fill="#242936"/>
     <rect class="fill amber" x="600" y="135" width="84" height="2.5" rx="1.25"/>

@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// A simple countdown the user starts from the panel. While running it is a
 /// live activity (compact countdown flanking the notch); when it ends it
@@ -83,7 +83,7 @@ public final class TimerEngine: ObservableObject {
         sampler?.stop()
         sampler = nil
         phase = .finished
-        notifier.fire(title: "Timer finished", body: "Your Hash D Island timer is done.")
+        notifier.fire(title: "Timer finished", body: "Your HashNotch timer is done.")
 
         // Keep "Time's up" visible briefly, then go quiet.
         let work = DispatchWorkItem { [weak self] in

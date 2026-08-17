@@ -54,14 +54,14 @@ jobs:
           echo "No warnings in either configuration."
 
       - name: Run the checks
-        run: swift run HashDIslandChecks
+        run: swift run HashNotchChecks
 
       # The README carries a "checks passing" badge. A badge is a claim, so
       # it has to be true — and it is the kind of claim that rots silently,
       # because adding a check is exactly when nobody thinks about the README.
       - name: The badge must match the checks
         run: |
-          counted=$(swift run HashDIslandChecks | grep -c '^  ok' || true)
+          counted=$(swift run HashNotchChecks | grep -c '^  ok' || true)
           claimed=$(grep -oE 'checks-[0-9]+%20passing' README.md | grep -oE '[0-9]+' | head -1)
           echo "checks that ran: $counted"
           echo "README badge:    ${claimed:-<none found>}"
@@ -84,7 +84,7 @@ jobs:
 
       - name: Confirm the bundle is what it claims
         run: |
-          app="build/Hash D Island.app"
+          app="build/HashNotch.app"
           codesign --verify --strict --verbose=2 "$app"
           version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
-          echo "Built and verified Hash D Island $version"
+          echo "Built and verified HashNotch $version"

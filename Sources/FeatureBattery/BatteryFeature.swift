@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How the battery readout is shown.
 enum BatteryStyle: String {

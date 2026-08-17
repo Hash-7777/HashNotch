@@ -1,4 +1,4 @@
-import HashDIslandKit
+import HashNotchKit
 import FeatureNetwork
 import FeatureBattery
 import FeatureThermal
@@ -24,7 +24,7 @@ import FeatureMemory
 /// ── To REMOVE a feature ───────────────────────────────────────────
 ///   Delete its line below. (Optionally delete its module + Package.swift entry.)
 ///
-/// The core (HashDIslandKit) never changes for either.
+/// The core (HashNotchKit) never changes for either.
 enum FeatureManifest {
     /// Which features exist. The ORDER they appear in on a fresh install is
     /// `FeatureRegistry.defaultOrder`, applied below — so this list can stay

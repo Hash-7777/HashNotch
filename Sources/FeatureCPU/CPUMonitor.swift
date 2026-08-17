@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Publishes processor load, and the shape of the last little while.
 ///

@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Publishes how full the startup disk is, while anyone is looking at it.
 ///

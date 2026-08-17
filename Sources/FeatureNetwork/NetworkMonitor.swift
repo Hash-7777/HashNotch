@@ -1,6 +1,6 @@
 import Foundation
 import Darwin
-import HashDIslandKit
+import HashNotchKit
 
 /// Reads live upload/download throughput by diffing the kernel's per-interface
 /// byte counters (getifaddrs / if_data) once a second. Public API only.

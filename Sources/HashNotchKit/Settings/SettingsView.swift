@@ -167,7 +167,7 @@ public struct SettingsView: View {
     /// stutter.
     private var header: some View {
         HStack(spacing: 8) {
-            Text("Hash D Island")
+            Text("HashNotch")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
             Spacer(minLength: 8)
@@ -363,7 +363,7 @@ public struct SettingsView: View {
 
             SettingCard {
                 SettingRow(
-                    "Quit Hash D Island",
+                    "Quit HashNotch",
                     detail: "Closes the island and stops everything."
                 ) {
                     Button("Quit") { NSApp.terminate(nil) }
@@ -893,7 +893,7 @@ public struct SettingsView: View {
             SettingCard {
                 PrivacyLine(
                     "Your licence",
-                    "Hash D Island is free software under the GNU General Public License, version 3 or later. You may use it for anything, read all of it, change it, and pass it on. Anything you distribute that is built on it must stay free too, with its source available."
+                    "HashNotch is free software under the GNU General Public License, version 3 or later. You may use it for anything, read all of it, change it, and pass it on. Anything you distribute that is built on it must stay free too, with its source available."
                 )
                 SettingDivider()
                 PrivacyLine(

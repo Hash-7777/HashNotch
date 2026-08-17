@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How the token readout is shown.
 enum TokensStyle: String {

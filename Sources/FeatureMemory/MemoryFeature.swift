@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How the memory readout is shown.
 enum MemoryStyle: String {

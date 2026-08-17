@@ -1,5 +1,5 @@
 import Foundation
-import HashDIslandKit
+import HashNotchKit
 
 /// One temperature sensor reading.
 public struct TempSensor: Identifiable, Equatable {
@@ -28,7 +28,7 @@ public final class ThermalMonitor: ObservableObject {
     /// Silicon reports dozens of them. That is far too much to do on the thread
     /// that is drawing the panel — which is exactly where it used to happen,
     /// every three seconds, while the panel was open and animating.
-    private let queue = DispatchQueue(label: "com.hashdisland.thermal", qos: .utility)
+    private let queue = DispatchQueue(label: "com.hashnotch.thermal", qos: .utility)
     private var inFlight = false
 
     public init() {}

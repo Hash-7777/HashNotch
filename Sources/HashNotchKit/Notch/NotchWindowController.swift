@@ -569,7 +569,7 @@ public final class NotchWindowController {
         if abs(window.frame.height - wanted) > 1 { refitWindow() }
     }
 
-    /// Development aid, off unless `HASHDISLAND_DEBUG` is set.
+    /// Development aid, off unless `HASHNOTCH_DEBUG` is set.
     ///
     /// `frames` reports every window frame the controller sets, with the island
     /// size that prompted it, which is the only way to tell a drifting window
@@ -577,7 +577,7 @@ public final class NotchWindowController {
     /// the panel on a timer so that motion can be measured without a hand on
     /// the trackpad.
     private static var debugOptions: Set<String> {
-        Set((ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "")
+        Set((ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "")
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) })
     }

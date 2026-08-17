@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Expanded detail: AirPods battery as clean rows that match the panel — Left,
 /// Right, and Case while a pair is connected; nothing when it isn't.

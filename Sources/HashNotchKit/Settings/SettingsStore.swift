@@ -302,14 +302,34 @@ public final class SettingsStore: ObservableObject {
     @Published public var hasAcceptedReading: Bool = false
 
     private let defaults: UserDefaults
-    private let storageKey = "hashdisland.settings.v2"
+    /// v3, not v2, and the bump is doing real work.
+    ///
+    /// The app has now carried three names, and the current one is the same as
+    /// the FIRST one — so the obvious key, `hashnotch.settings.v2`, is a key
+    /// this app has already used and abandoned once. Writing today's settings
+    /// back into it would make the newest file indistinguishable from the
+    /// oldest, and a machine that has been through both names has both on disk.
+    /// Reading the old one would then quietly restore choices the user changed
+    /// a rename ago. A fresh key means "written by a version that knows about
+    /// all three names", which is exactly the distinction the carry-over below
+    /// needs to make.
+    private let storageKey = "hashnotch.settings.v3"
     private var saveCancellable: AnyCancellable?
 
-    /// Where settings lived before the app was renamed. Preferences are keyed by
-    /// bundle identifier, so without this an existing install would silently
-    /// come back with every choice reset.
-    private static let legacyKey = "hashnotch.settings.v2"
-    private static let legacyDomain = "com.hashnotch.app"
+    /// Where settings lived under each name this app has had, **newest first**.
+    ///
+    /// Preferences are keyed by bundle identifier, so without this an existing
+    /// install would silently come back with every choice reset.
+    ///
+    /// The order is the whole point rather than a detail. Someone who has run
+    /// this app since its first name has an entry under both of these, and only
+    /// one of them is what they last chose. Newest first means the more recent
+    /// name always wins, and the older one is only ever reached by somebody who
+    /// never had the newer.
+    private static let legacyLocations: [(key: String, domain: String)] = [
+        ("hashdisland.settings.v2", "com.hashdisland.app"),
+        ("hashnotch.settings.v2", "com.hashnotch.app"),
+    ]
 
     /// `legacyDefaults` is where settings written under the app's previous name
     /// are looked for. It is a parameter purely so the checks can prove the
@@ -363,18 +383,29 @@ public final class SettingsStore: ObservableObject {
         return try? JSONDecoder().decode(SettingsDocument.self, from: data)
     }
 
-    /// Settings saved under the app's previous name. Checked in the running
-    /// defaults first (an unbundled `swift run` build shares one domain), then
-    /// in the old bundle's own domain, which is where a real installed copy
+    /// Settings saved under one of the app's previous names, newest name first.
+    ///
+    /// Each is checked in the running defaults first (an unbundled `swift run`
+    /// build shares one domain, and the app's CURRENT domain is also where the
+    /// oldest name's key would sit, since the name has come back around), then
+    /// in that name's own bundle domain, which is where a real installed copy
     /// kept them.
     private static func loadLegacy(
         explicit: UserDefaults?,
         running: UserDefaults
     ) -> SettingsDocument? {
-        if let explicit { return load(key: legacyKey, from: explicit) }
-        if let document = load(key: legacyKey, from: running) { return document }
-        guard let legacy = UserDefaults(suiteName: legacyDomain) else { return nil }
-        return load(key: legacyKey, from: legacy)
+        for location in legacyLocations {
+            if let explicit {
+                if let document = load(key: location.key, from: explicit) { return document }
+                continue
+            }
+            if let document = load(key: location.key, from: running) { return document }
+            if let legacy = UserDefaults(suiteName: location.domain),
+               let document = load(key: location.key, from: legacy) {
+                return document
+            }
+        }
+        return nil
     }
 
     // MARK: Reading

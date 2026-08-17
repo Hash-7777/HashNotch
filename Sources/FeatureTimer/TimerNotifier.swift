@@ -37,14 +37,14 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
         // The chime already sounds; keep the banner silent so it does not
         // double up.
         let request = UNNotificationRequest(
-            identifier: "com.hashdisland.timer.\(UUID().uuidString)",
+            identifier: "com.hashnotch.timer.\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// Show the banner even though Hash D Island is running (an agent app is never
+    /// Show the banner even though HashNotch is running (an agent app is never
     /// "frontmost", but this makes the intent explicit).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,

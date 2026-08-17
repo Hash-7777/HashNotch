@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 import CoreGraphics
-import HashDIslandKit
+import HashNotchKit
 import FeatureMedia
 import FeatureActivities
 import FeatureTokens
@@ -18,7 +18,7 @@ import FeatureMemory
 /// Writes `content` to a fresh temp file and returns its URL.
 func tempFile(_ content: String) -> URL {
     let url = FileManager.default.temporaryDirectory
-        .appendingPathComponent("hashdisland-check-\(UUID().uuidString).json")
+        .appendingPathComponent("hashnotch-check-\(UUID().uuidString).json")
     try? content.write(to: url, atomically: true, encoding: .utf8)
     return url
 }
@@ -85,7 +85,7 @@ private final class CountingFeature: NotchFeature {
 }
 
 MainActor.assumeIsolated {
-    print("Hash D Island core checks")
+    print("HashNotch core checks")
 
     // Registry keeps registration order.
     let ordered = FeatureRegistry()
@@ -105,7 +105,7 @@ MainActor.assumeIsolated {
     // privacy promise as much as a battery one: a feature that is off must not
     // still be listing your Downloads folder or asking your browser what it is
     // playing.
-    let runSuite = "hashdisland.checks.running.\(UUID().uuidString)"
+    let runSuite = "hashnotch.checks.running.\(UUID().uuidString)"
     let runDefaults = UserDefaults(suiteName: runSuite)!
     let runSettings = checkStore(defaults: runDefaults)
     let onFeature = CountingFeature(id: "on")
@@ -146,7 +146,7 @@ MainActor.assumeIsolated {
     // something off afterwards is not the same as having been asked. These pin
     // the state before consent as the everything-off state itself, rather than
     // a promise about it.
-    let gateSuite = "hashdisland.checks.consent.\(UUID().uuidString)"
+    let gateSuite = "hashnotch.checks.consent.\(UUID().uuidString)"
     let gateSettings = checkStore(defaults: UserDefaults(suiteName: gateSuite)!, accepted: false)
     let gatedFeature = CountingFeature(id: "gated")
     let gateRegistry = FeatureRegistry()
@@ -174,7 +174,7 @@ MainActor.assumeIsolated {
     // A sideways swipe over the open panel is offered to the features until one
     // takes it. The core stays ignorant of what the gesture means — it only
     // knows the fingers went sideways over the panel.
-    let swipeSuite = "hashdisland.checks.swipe.\(UUID().uuidString)"
+    let swipeSuite = "hashnotch.checks.swipe.\(UUID().uuidString)"
     let swipeSettings = checkStore(defaults: UserDefaults(suiteName: swipeSuite)!)
     let quietFeature = CountingFeature(id: "quiet")
     let eagerFeature = CountingFeature(id: "eager")
@@ -243,7 +243,7 @@ MainActor.assumeIsolated {
     // would be worse than the sort it replaced: a feature switched off would
     // keep drawing, and a reorder would not land until something else happened
     // to change. So the thing actually pinned here is that it INVALIDATES.
-    let orderSuite = "hashdisland.checks.order.\(UUID().uuidString)"
+    let orderSuite = "hashnotch.checks.order.\(UUID().uuidString)"
     let orderDefaults = UserDefaults(suiteName: orderSuite)!
     let orderSettings = checkStore(defaults: orderDefaults)
     let orderRegistry = FeatureRegistry()
@@ -770,7 +770,7 @@ MainActor.assumeIsolated {
     // actually fire — a silent failure here would mean a finished download is
     // never announced again.
     let watchDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("hashdisland-watch-\(UUID().uuidString)")
+        .appendingPathComponent("hashnotch-watch-\(UUID().uuidString)")
     try? FileManager.default.createDirectory(at: watchDir, withIntermediateDirectories: true)
     var changes = 0
     let watcher = DirectoryWatcher(url: watchDir, coalesce: 0.05) { changes += 1 }
@@ -847,7 +847,7 @@ MainActor.assumeIsolated {
     // A logo path comes from the same untrusted feed as everything else, so it
     // is only honoured when it names a readable image that really exists.
     let logoDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("hashdisland-logo-\(UUID().uuidString)")
+        .appendingPathComponent("hashnotch-logo-\(UUID().uuidString)")
     try? FileManager.default.createDirectory(at: logoDir, withIntermediateDirectories: true)
     let realLogo = logoDir.appendingPathComponent("brand.png")
     // A one-pixel PNG is enough: the reader checks the file, not the pixels.
@@ -1011,6 +1011,33 @@ MainActor.assumeIsolated {
         ActivitiesReader.read(from: tempFile("[{\"id\":\"S\",\"title\":\"Sym\",\"icon\":\"bolt.fill\"}]"))
             .first.map { $0.imagePath == nil && $0.icon == "bolt.fill" } == true
     )
+
+    // The feed folder moved when the app was renamed, and the posters are other
+    // programs that do not update when this app does. Reading only the new
+    // folder would have made the whole feature go quiet on the first launch
+    // after an update, with nothing on screen to say why.
+    let feedHome = FileManager.default.temporaryDirectory
+        .appendingPathComponent("hashnotch-feed-\(UUID().uuidString)")
+    let newFolder = feedHome.appendingPathComponent(".hashnotch")
+    let oldFolder = feedHome.appendingPathComponent(".hashdisland")
+    try? FileManager.default.createDirectory(at: newFolder, withIntermediateDirectories: true)
+    try? FileManager.default.createDirectory(at: oldFolder, withIntermediateDirectories: true)
+
+    check(
+        "with neither folder written, the new one is where it looks",
+        ActivitiesReader.feedURL(in: feedHome).path == newFolder.appendingPathComponent("activities.json").path
+    )
+    try? Data("[]".utf8).write(to: oldFolder.appendingPathComponent("activities.json"))
+    check(
+        "a poster still writing to the old folder is still read",
+        ActivitiesReader.feedURL(in: feedHome).path == oldFolder.appendingPathComponent("activities.json").path
+    )
+    try? Data("[]".utf8).write(to: newFolder.appendingPathComponent("activities.json"))
+    check(
+        "a poster that has moved is never shadowed by the old file",
+        ActivitiesReader.feedURL(in: feedHome).path == newFolder.appendingPathComponent("activities.json").path
+    )
+    try? FileManager.default.removeItem(at: feedHome)
 
     // A finished notice is the tool's name and nothing else.
     //
@@ -1201,7 +1228,7 @@ MainActor.assumeIsolated {
     // full re-read would — and that the ways a file can betray an offset are
     // each noticed.
     let scanRoot = FileManager.default.temporaryDirectory
-        .appendingPathComponent("hashdisland-scan-\(UUID().uuidString)")
+        .appendingPathComponent("hashnotch-scan-\(UUID().uuidString)")
     let scanProjects = scanRoot.appendingPathComponent("projects/one")
     try? FileManager.default.createDirectory(at: scanProjects, withIntermediateDirectories: true)
     let transcript = scanProjects.appendingPathComponent("session.jsonl")
@@ -1285,7 +1312,7 @@ MainActor.assumeIsolated {
     // The remembered totals exist so the panel opens on a number rather than on
     // a zero it has not earned. A remembered number from ANOTHER day is not a
     // stale figure to be corrected — it is a different question's answer.
-    let cacheSuite = "hashdisland.checks.tokencache.\(UUID().uuidString)"
+    let cacheSuite = "hashnotch.checks.tokencache.\(UUID().uuidString)"
     let cacheDefaults = UserDefaults(suiteName: cacheSuite)!
     var remembered = TokenTotals()
     remembered.claude = 1234
@@ -2269,7 +2296,7 @@ MainActor.assumeIsolated {
     }
 
     // Settings: defaults, updates, and persistence round-trip.
-    let suite = "hashdisland.checks.\(UUID().uuidString)"
+    let suite = "hashnotch.checks.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suite)!
     let store = checkStore(defaults: defaults)
     let stub = StubFeature(id: "x", placement: .leading)
@@ -2487,7 +2514,7 @@ MainActor.assumeIsolated {
 
     // Corrections are per display, so one screen's fix never follows onto
     // another, and resetting removes the entry rather than storing zeroes.
-    let posSuite = "hashdisland.checks.position.\(UUID().uuidString)"
+    let posSuite = "hashnotch.checks.position.\(UUID().uuidString)"
     let posDefaults = UserDefaults(suiteName: posSuite)!
     let positioned = checkStore(defaults: posDefaults)
     var laptop = IslandAdjustment()
@@ -2508,7 +2535,7 @@ MainActor.assumeIsolated {
     // means the overlay reshapes in place on every value, rather than being
     // rebuilt behind a debounce — which only ever landed once you let go.
     if NotchGeometry.preferredScreen() != nil {
-        let liveSuite = "hashdisland.checks.live.\(UUID().uuidString)"
+        let liveSuite = "hashnotch.checks.live.\(UUID().uuidString)"
         let liveDefaults = UserDefaults(suiteName: liveSuite)!
         let liveSettings = checkStore(defaults: liveDefaults)
         let liveContext = FeatureContext(settings: liveSettings)
@@ -2706,7 +2733,7 @@ MainActor.assumeIsolated {
 
     // Battery saver is one number in one place, and it is the number every
     // sampler multiplies by.
-    let scaleSuite = "hashdisland.checks.scale.\(UUID().uuidString)"
+    let scaleSuite = "hashnotch.checks.scale.\(UUID().uuidString)"
     let scaleDefaults = UserDefaults(suiteName: scaleSuite)!
     let scaled = checkStore(defaults: scaleDefaults)
     check("normally everything samples at its own rate", scaled.samplingScale == 1)
@@ -2760,16 +2787,22 @@ MainActor.assumeIsolated {
     // Renaming the app changes the preferences domain, so settings saved under
     // the old name must be carried over exactly once and rewritten under the new
     // key — otherwise an existing install silently comes back reset.
-    let legacySuite = "hashdisland.checks.legacy.\(UUID().uuidString)"
-    let freshSuite = "hashdisland.checks.fresh.\(UUID().uuidString)"
-    let emptySuite = "hashdisland.checks.empty.\(UUID().uuidString)"
-    let noLegacySuite = "hashdisland.checks.nolegacy.\(UUID().uuidString)"
+    //
+    // There are now TWO old names to carry over from, because the app has come
+    // back around to a name it already had: "hashnotch" (first), "hashdisland"
+    // (second), "hashnotch" again (now, under a new key). A machine that has
+    // been through all three has a document under both old keys, and only the
+    // hashdisland one is what its owner last chose.
+    let legacySuite = "hashnotch.checks.legacy.\(UUID().uuidString)"
+    let freshSuite = "hashnotch.checks.fresh.\(UUID().uuidString)"
+    let emptySuite = "hashnotch.checks.empty.\(UUID().uuidString)"
+    let noLegacySuite = "hashnotch.checks.nolegacy.\(UUID().uuidString)"
     let legacyDefaults = UserDefaults(suiteName: legacySuite)!
     let freshDefaults = UserDefaults(suiteName: freshSuite)!
     let legacyDocument = """
     {"features":{"x":{"enabled":false,"placement":"trailing","styleID":"word","order":4}},"launchAtLogin":true}
     """
-    legacyDefaults.set(Data(legacyDocument.utf8), forKey: "hashnotch.settings.v2")
+    legacyDefaults.set(Data(legacyDocument.utf8), forKey: "hashdisland.settings.v2")
 
     let migrated = SettingsStore(defaults: freshDefaults, legacyDefaults: legacyDefaults)
     check("settings carry over from the old name", migrated.isEnabled("x") == false)
@@ -2784,11 +2817,48 @@ MainActor.assumeIsolated {
     migrated.flush()
     check(
         "carried-over settings are rewritten under the new key",
-        freshDefaults.data(forKey: "hashdisland.settings.v2") != nil
+        freshDefaults.data(forKey: "hashnotch.settings.v3") != nil
+    )
+    check(
+        "the new key is not the key the first name used",
+        freshDefaults.data(forKey: "hashnotch.settings.v2") == nil
+    )
+
+    // The name this app started with is still carried over, for somebody who
+    // never ran the name in between.
+    let firstNameSuite = "hashnotch.checks.firstname.\(UUID().uuidString)"
+    let firstNameTarget = "hashnotch.checks.firstnametarget.\(UUID().uuidString)"
+    let firstNameDefaults = UserDefaults(suiteName: firstNameSuite)!
+    firstNameDefaults.set(Data(legacyDocument.utf8), forKey: "hashnotch.settings.v2")
+    check(
+        "settings carry over from the name before last",
+        SettingsStore(
+            defaults: UserDefaults(suiteName: firstNameTarget)!,
+            legacyDefaults: firstNameDefaults
+        ).style(for: "x") == "word"
+    )
+
+    // Both old names present at once: the more recent one wins. Getting this
+    // backwards would hand somebody the choices they made two renames ago and
+    // look exactly like settings being lost.
+    let bothSuite = "hashnotch.checks.both.\(UUID().uuidString)"
+    let bothTarget = "hashnotch.checks.bothtarget.\(UUID().uuidString)"
+    let bothDefaults = UserDefaults(suiteName: bothSuite)!
+    let staleDocument = """
+    {"features":{"x":{"enabled":false,"placement":"leading","styleID":"stale","order":4}},"launchAtLogin":false}
+    """
+    bothDefaults.set(Data(staleDocument.utf8), forKey: "hashnotch.settings.v2")
+    bothDefaults.set(Data(legacyDocument.utf8), forKey: "hashdisland.settings.v2")
+    check(
+        "with both old names on disk the newer one is used",
+        SettingsStore(
+            defaults: UserDefaults(suiteName: bothTarget)!,
+            legacyDefaults: bothDefaults
+        ).style(for: "x") == "word"
     )
 
     // Once rewritten, the old copy is never needed again.
-    legacyDefaults.removeObject(forKey: "hashnotch.settings.v2")
+    legacyDefaults.removeObject(forKey: "hashdisland.settings.v2")
     let afterMigration = SettingsStore(defaults: freshDefaults, legacyDefaults: legacyDefaults)
     check("settings survive without the old copy", afterMigration.style(for: "x") == "word")
 
@@ -2801,7 +2871,10 @@ MainActor.assumeIsolated {
         ).isFirstRun
     )
 
-    for name in [legacySuite, freshSuite, emptySuite, noLegacySuite] {
+    for name in [
+        legacySuite, freshSuite, emptySuite, noLegacySuite,
+        firstNameSuite, firstNameTarget, bothSuite, bothTarget,
+    ] {
         UserDefaults.standard.removePersistentDomain(forName: name)
     }
 }
@@ -2950,7 +3023,7 @@ MainActor.assumeIsolated {
 // reset that cleared it would stop every indicator with no way on screen to say
 // yes again — a settings button that bricks the app until it is restarted.
 MainActor.assumeIsolated {
-    let resetSuite = "hashdisland.checks.reset.\(UUID().uuidString)"
+    let resetSuite = "hashnotch.checks.reset.\(UUID().uuidString)"
     let resetDefaults = UserDefaults(suiteName: resetSuite)!
     let settings = checkStore(defaults: resetDefaults)
     let descriptors = [
@@ -3034,14 +3107,14 @@ MainActor.assumeIsolated {
 // themselves; three did not, and since the name is unique per RUN, every run
 // left more behind. On the machine this was found on there were **1201** of
 // them — real files under ~/Library/Preferences, put there by a project whose
-// README promises `defaults delete com.hashdisland.app` is the whole cleanup.
+// README promises `defaults delete com.hashnotch.app` is the whole cleanup.
 //
 // Cleaning each one where it is created was the obvious fix and the wrong one:
 // it is exactly the step the next person to add a suite will forget, and the
 // leak is invisible until somebody counts. So the sweep is by PREFIX, at the
 // end, covering every suite that exists now or is added later — and then it
 // checks that the sweep worked, which is the part that makes it stay true.
-let checkDomainPrefix = "hashdisland.checks."
+let checkDomainPrefix = "hashnotch.checks."
 
 /// The throwaway domains still on disk. `CFPreferencesCopyApplicationList` is
 /// unavailable to Swift, so this reads where the domains actually live — one
@@ -3064,7 +3137,7 @@ let checkDomainPrefix = "hashdisland.checks."
 @MainActor
 func checkStore(defaults: UserDefaults, accepted: Bool = true) -> SettingsStore {
     let noLegacy = UserDefaults(
-        suiteName: "hashdisland.checks.nolegacy.\(UUID().uuidString)"
+        suiteName: "hashnotch.checks.nolegacy.\(UUID().uuidString)"
     )!
     let store = SettingsStore(defaults: defaults, legacyDefaults: noLegacy)
     store.hasAcceptedReading = accepted

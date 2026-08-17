@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How the processor readout is shown.
 enum CPUStyle: String {

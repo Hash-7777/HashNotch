@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import IOKit.ps
-import HashDIslandKit
+import HashNotchKit
 
 /// A transient battery moment the island announces like the iPhone does:
 /// plugging in shows a brief charge pill; dropping through 20% / 10% warns.
@@ -281,7 +281,7 @@ public final class BatteryMonitor: ObservableObject {
                 let code = error[NSAppleScript.errorNumber] as? Int ?? 0
                 if code != -128 {
                     FileHandle.standardError.write(Data(
-                        "Hash D Island: could not change Low Power Mode — \(error)\n".utf8
+                        "HashNotch: could not change Low Power Mode — \(error)\n".utf8
                     ))
                 }
             }
@@ -442,12 +442,12 @@ public final class BatteryMonitor: ObservableObject {
     private static let settleInterval: TimeInterval = 4
     private static let settleWindow: TimeInterval = 240
 
-    /// Development aid, off unless `HASHDISLAND_DEBUG` asks for it. What the
+    /// Development aid, off unless `HASHNOTCH_DEBUG` asks for it. What the
     /// system reports about power settles over minutes rather than at once, and
     /// none of it is visible from outside the app — so watching it arrive is
     /// the only way to tell "the app is stuck" from "macOS has not decided".
     private static let logsReadings =
-        (ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "").contains("battery")
+        (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("battery")
 
     /// Nothing further is expected from the system.
     ///

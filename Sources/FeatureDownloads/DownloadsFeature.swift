@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Compact-live: a download glyph left of the notch when a file just finished.
 struct DownloadsIconView: View {

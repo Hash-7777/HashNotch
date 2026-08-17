@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Publishes how much memory is in use, and the shape of the last little while.
 ///

@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// How the speed reads. The same two numbers, arranged for different taste and
 /// different amounts of room beside the notch.

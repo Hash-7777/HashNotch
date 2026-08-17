@@ -1,6 +1,6 @@
 import AppKit
 import Combine
-import HashDIslandKit
+import HashNotchKit
 
 /// Boots the HUD: builds the registry from the manifest, loads settings, starts
 /// the features, and shows the notch overlay. There is no menu-bar item — the
@@ -165,11 +165,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Position corrections are watched by the overlay controller itself,
         // which owns the geometry they change.
 
-        // Development aid, inert unless HASHDISLAND_DEBUG asks for it. Whether
+        // Development aid, inert unless HASHNOTCH_DEBUG asks for it. Whether
         // the system will accept this bundle as a login item cannot be learned
         // from outside the app — SMAppService always answers about whoever is
         // asking — so the only way to see the real error is from in here.
-        if (ProcessInfo.processInfo.environment["HASHDISLAND_DEBUG"] ?? "").contains("login") {
+        if (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("login") {
             FileHandle.standardError.write(Data(
                 "[login] bundle=\(Bundle.main.bundleURL.path)\n[login] status=\(LoginItem.statusDescription)\n".utf8
             ))

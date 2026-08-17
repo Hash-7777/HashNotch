@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Expanded detail: processor load as a number, a graph, or both.
 struct CPUDetailView: View {

@@ -1,6 +1,44 @@
 # Changelog
 
-All notable changes to Hash D Island are recorded here.
+All notable changes to HashNotch are recorded here.
+
+## 1.2.0 — the name comes back, and the quit button works
+
+### Changed
+
+- **The app is called HashNotch again.** Everything carries the name: the app in
+  your Applications folder, the words in its windows, the settings it saves, and
+  the folder other tools post activities into. Nothing you have set up is lost —
+  your settings are carried across the first time you open it, and the notch
+  goes on reading the old activities folder for as long as anything is still
+  writing there, so alerts from Claude Code and other tools keep arriving before
+  you have re-run anything.
+- **Re-run the Claude Code installer when you get a chance.** The hook folder
+  moved with the name, and re-running `install-claude-hooks.sh` points Claude
+  Code at the new one and brings any logos you added across with it. Everything
+  keeps working until you do.
+- **The disk image is named without a space in it.** GitHub turns a space in a
+  download's name into a dot, which made every instruction naming that file
+  wrong at the one moment somebody reads it.
+
+### Fixed
+
+- **The power button in the panel now actually quits.** It looked broken in
+  three ways at once, and all three are gone. The panel did not close, because
+  the button set it closed without telling hover to stand down — so the pointer
+  still resting on the panel put it straight back up. The question then went up
+  as a system alert, which stops the whole app dead while it waits, freezing the
+  panel half shut. And because the app never takes focus, that alert could open
+  behind whatever you were working in, leaving a question you could not see in
+  front of an app that looked hung. The confirmation is now an ordinary window
+  of the app's own: it appears above the island, on whatever desktop you are on,
+  with the island still running behind it. Escape backs out, Return quits.
+- **A finished AI tool shows only its name.** "HashCortX finished" was arriving
+  with the model that answered trailing it in small grey text. The work is over
+  by the time you read it, so that second line offered nothing to act on while
+  crowding the part you were looking for. It now reads just "HashCortX
+  finished", for any tool that posts one. A tool that is *waiting* on you still
+  shows its reason, because there the second line is the whole point.
 
 ## 1.1.0 — the panel behaves
 
@@ -237,7 +275,7 @@ moment something is.
 
 ### Known limitations
 
-- Hash D Island is measured to match a physical notch exactly. On a display
+- HashNotch is measured to match a physical notch exactly. On a display
   without one — an external monitor, an iMac, an older Air — it is drawn against
   the top bezel and made exactly as tall as your menu bar, filling the band
   macOS never uses between the app menus and the status icons. Either way you

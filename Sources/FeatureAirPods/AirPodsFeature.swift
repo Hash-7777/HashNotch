@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// AirPods battery — Left, Right, and Case — shown in the expanded panel while a
 /// pair is connected, and nothing when it isn't. A self-contained feature: it

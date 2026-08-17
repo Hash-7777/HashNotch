@@ -1,11 +1,11 @@
 # Security & Privacy
 
-Hash D Island is designed so you can verify every claim below by reading the
+HashNotch is designed so you can verify every claim below by reading the
 source. This page says exactly what the app reads, what it never does, and why.
 
 ## Everything stays on your Mac
 
-No accounts. No analytics. No telemetry. No servers. Hash D Island never uploads
+No accounts. No analytics. No telemetry. No servers. HashNotch never uploads
 anything, anywhere.
 
 There is exactly **one** kind of network request the app can ever make:
@@ -14,7 +14,7 @@ servers, or a web video's thumbnail from YouTube's thumbnail server. Those
 requests are HTTPS-only, restricted to exactly those hosts (`scdn.co`,
 `spotifycdn.com`, `ytimg.com`), and capped at 5 MB — any other URL, and any
 redirect that would leave those hosts, is refused outright (see `ArtworkPolicy`
-in `Sources/HashDIslandKit/App/ArtworkPolicy.swift`, covered by the automated
+in `Sources/HashNotchKit/App/ArtworkPolicy.swift`, covered by the automated
 checks).
 
 Each service is a **separate switch**, under Settings → General → Cover art.
@@ -44,14 +44,14 @@ anywhere.
 
 Almost nothing. The app itself writes **no files at all** — its only persistent
 state is its own settings, stored where every Mac app stores them
-(`~/Library/Preferences/com.hashdisland.app.plist`). Alongside your choices,
+(`~/Library/Preferences/com.hashnotch.app.plist`). Alongside your choices,
 that holds one small piece of remembered state: the last AI token totals and the
 day they belong to, so the panel opens on a number rather than on a zero it has
 not earned. It is four integers and a date, and a set from any day but today is
 discarded rather than shown. It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.
 
-The one folder that carries Hash D Island's name, `~/.hashdisland`, is written by
+The one folder that carries HashNotch's name, `~/.hashnotch`, is written by
 *you* — by the optional helper scripts in `scripts/`, or by anything else you
 choose to post activities with. The app only ever reads it.
 
@@ -59,10 +59,10 @@ choose to post activities with. The app only ever reads it.
 
 Correspondingly short, and this is every trace:
 
-1. Settings → turn **Open at Login** off, then **Quit Hash D Island**.
+1. Settings → turn **Open at Login** off, then **Quit HashNotch**.
 2. Drag the app from Applications to the Trash.
-3. Delete `~/.hashdisland`.
-4. `defaults delete com.hashdisland.app`
+3. Delete `~/.hashnotch`.
+4. `defaults delete com.hashnotch.app`
 
 If you ran the Claude hook installer, also remove the two entries mentioning
 `claude-code-hook.sh` from `~/.claude/settings.json` — a backup sits next to it.
@@ -105,7 +105,7 @@ as a privacy one.
 | Storage | The startup disk's capacity, from the public file-system API | The "74% full" readout and the bar under it. It asks how big the disk is and how much is free right now — the same figure `df` and `diskutil` report, so you can check it against either. It never lists, opens or looks inside a single file, and needs no permission. A breakdown by category is deliberately not attempted: every honest way to produce one is either a full walk of your disk or a permission prompt for folders this app has no other reason to open, so the row offers a link to macOS's own Storage settings instead. |
 | Memory | The kernel's own virtual-memory counters (`host_statistics64`) and `hw.memsize` | The memory readout. It reads how many pages the machine has in use in total, with no notion of which programs are responsible. No permission, no subprocess. |
 | Downloads | Lists the file names in your `~/Downloads` folder | The "download finished" notice. It reads names and dates only — it never opens, moves, or uploads a file — and shows the name of a file that just completed. |
-| Live activities | `~/.hashdisland/activities.json`, written by your own scripts or Shortcuts | The activity strip. Treated as untrusted input: capped at 256 KB and 8 activities, text length-limited, progress clamped, a logo refused unless it is a readable image under 4 MB. An activity may also name an app to bring forward. That happens only when **you click the row**, and the app named is held to three rules: it must be a real `.app` bundle, it must live where macOS keeps applications (`/Applications`, `/System/Applications`, `/System/Library/CoreServices`, Apple's sealed cryptex volume that `/Applications/Safari.app` really points into, or `~/Applications`), and any symlink is followed before it is judged, so a link cannot stand in an allowed folder while pointing outside one. Clicking brings it forward if it is open and starts it if it is not — which is why a bundle dropped anywhere else is refused outright: this feed is writable by anything running as you, and without that rule a stray `/tmp/Update.app` could wear the words "your build finished". It can never run a loose executable, pass it an argument, or open a document. The optional Claude Code integration is a hook script YOU install (`scripts/install-claude-hooks.sh`, which backs up your Claude settings first); the hook writes only this feed file, and reads only which app it is running inside so that clicking can take you back to it. |
+| Live activities | `~/.hashnotch/activities.json`, written by your own scripts or Shortcuts | The activity strip. Treated as untrusted input: capped at 256 KB and 8 activities, text length-limited, progress clamped, a logo refused unless it is a readable image under 4 MB. An activity may also name an app to bring forward. That happens only when **you click the row**, and the app named is held to three rules: it must be a real `.app` bundle, it must live where macOS keeps applications (`/Applications`, `/System/Applications`, `/System/Library/CoreServices`, Apple's sealed cryptex volume that `/Applications/Safari.app` really points into, or `~/Applications`), and any symlink is followed before it is judged, so a link cannot stand in an allowed folder while pointing outside one. Clicking brings it forward if it is open and starts it if it is not — which is why a bundle dropped anywhere else is refused outright: this feed is writable by anything running as you, and without that rule a stray `/tmp/Update.app` could wear the words "your build finished". It can never run a loose executable, pass it an argument, or open a document. The optional Claude Code integration is a hook script YOU install (`scripts/install-claude-hooks.sh`, which backs up your Claude settings first); the hook writes only this feed file, and reads only which app it is running inside so that clicking can take you back to it. |
 | Media keys | `CGEvent`, only with Accessibility granted and only when you have switched it on | So the panel's play, pause and skip buttons can drive a video in a browser. It SENDS three specific keys — play/pause, next, previous — and reads nothing at all. It never captures a keystroke, and with the setting off no key is ever sent. |
 | Mouse position, scrolling, and mouse-button presses | Global observe-only monitors | So the island opens when you hover the notch, a two-finger swipe on the notch opens/closes the panel, and a click anywhere else puts the panel away. Scroll events are only ever acted on while the cursor is on the island. The button monitors see only that a press happened and where the pointer was — never what was clicked, and never in any other app's content — and they observe: the click still reaches whatever it was aimed at. **It never captures keystrokes**, and mouse monitors need no permission (only keyboard ones do). The overlay is fully click-through except while the panel is open — only then does the panel itself receive clicks (for the media buttons), and it turns click-through again the moment it closes. |
 
@@ -120,7 +120,7 @@ as a privacy one.
 - **Automation (control your browser)** — on a current macOS, not asked at all:
   a web video's picture now comes from the system with everything else. It
   remains only on the fallback path described in the table, asked only if a web
-  video is playing and nothing else already provided artwork. Hash D Island then reads your open
+  video is playing and nothing else already provided artwork. HashNotch then reads your open
   browser tabs' addresses and titles to find the one whose title matches what's
   playing, and derives only that video's thumbnail. This happens once per
   video, not continuously: the result is remembered — including "no thumbnail
@@ -145,13 +145,13 @@ as a privacy one.
   buttons still work for Spotify and Apple Music, which have scripting
   interfaces of their own.
 
-That is the complete list. Hash D Island never asks for Input Monitoring,
+That is the complete list. HashNotch never asks for Input Monitoring,
 Screen Recording, or Full Disk Access, and asks for Accessibility only if you
 switch on the one setting above.
 
 ## Nothing runs until you have been asked
 
-The first time you open Hash D Island, it has read nothing. Before a single
+The first time you open HashNotch, it has read nothing. Before a single
 indicator starts, a window lists what each one reads and what it will never do,
 and nothing begins until you accept it.
 
@@ -213,7 +213,7 @@ interfaces. `kAudioHardwarePropertyProcessObjectList` is declared in Apple's
 own `AudioHardware.h`.
 
 If Apple changes either, those readouts degrade to a placeholder and the rest
-of the app keeps working. Because of these APIs, Hash D Island is distributed
+of the app keeps working. Because of these APIs, HashNotch is distributed
 directly rather than through the Mac App Store.
 
 ## Verify it yourself
@@ -222,7 +222,7 @@ The whole app builds from source with the Command Line Tools alone:
 
 ```sh
 swift build
-swift run HashDIslandChecks   # the automated checks, including the policies above
+swift run HashNotchChecks   # the automated checks, including the policies above
 ```
 
 All commits on this repository are SSH-signed.

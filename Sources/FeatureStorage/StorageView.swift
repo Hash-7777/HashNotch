@@ -1,5 +1,5 @@
 import SwiftUI
-import HashDIslandKit
+import HashNotchKit
 
 /// Expanded detail: how full the disk is, and what the room is going on.
 struct StorageDetailView: View {
