@@ -501,14 +501,22 @@ struct NotchIslandView: View {
             ) {
                 // Put the panel away before asking. The question is about the
                 // whole app, not about the panel, and leaving it hanging over
-                // the screen behind an alert makes the two look related. The
-                // ask waits for the closing spring because a modal blocks the
-                // run loop — start it any sooner and the panel freezes half
-                // shut for as long as the alert is up.
-                state.setExpanded(false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30 * motionScale) {
-                    QuitConfirmation.ask()
-                }
+                // the screen behind the question makes the two look related.
+                //
+                // `dismissAll`, not `state.setExpanded(false)`. Setting the
+                // state alone is what made this button look broken: the pointer
+                // is still on the panel, so the next mouse-moved event found it
+                // inside the keep-open zone and reopened the panel before the
+                // question was even up. Only the controller can tell hover to
+                // stand down for long enough to get out of the way.
+                //
+                // Asked immediately afterwards rather than after the closing
+                // spring. The wait existed because the old system alert blocked
+                // the run loop and would have frozen the panel mid-close; the
+                // question is now an ordinary window, so the panel finishes
+                // closing underneath it.
+                context.dismissAll()
+                context.confirmQuit()
             }
             .frame(width: state.shoulderWidth)
 

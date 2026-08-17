@@ -14,6 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindowController?
     /// Held only until it is answered; a new install sees it once.
     private var firstRunWindow: FirstRunWindowController?
+    /// The "quit?" window. Held here, like every other window the app puts up,
+    /// because nothing else retains it — a controller made at the moment of
+    /// asking would be released before the question could be answered.
+    private var quitConfirmation: QuitConfirmation?
     /// Set for one programmatic open, so settings appears without dragging the
     /// panel open behind it. Cleared as soon as that open happens.
     private var opensSettingsAlone = false
@@ -52,6 +56,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         context.openSettings = { [weak self] in self?.toggleSettings() }
         // Landing on the page that holds the switch the island just named.
         context.openSettingsPage = { [weak self] page in self?.openSettings(at: page) }
+
+        // The "quit?" question. Built once and kept, because the window has to
+        // outlive the click that raised it, and wired here rather than in
+        // `wire(_:)` because it belongs to the app rather than to whichever
+        // overlay controller is currently on screen — a display change replaces
+        // the controller, and the question is not affected by that.
+        let quitConfirmation = QuitConfirmation(accent: { settings.accent.color })
+        self.quitConfirmation = quitConfirmation
+        context.confirmQuit = { [weak quitConfirmation] in quitConfirmation?.ask() }
         settingsWindow.onVisibilityChange = { [weak self] visible in
             guard let self else { return }
             // Settings normally holds the panel open beside it, because it was
@@ -330,6 +343,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // raised. Wired here, like openSettings, because the controller does
         // not exist until now.
         context.closePanel = { [weak controller] in controller?.collapse() }
+        // The quit button's version of the above: everything the app has on
+        // screen goes, whatever is holding it open, and hover is told to stand
+        // down so the pointer still sitting on the panel cannot put it back.
+        context.dismissAll = { [weak controller] in controller?.dismissAll() }
         // So a click anywhere that is not this app puts the whole thing away.
         // The controller cannot see the settings window, and the settings
         // window can be dragged, so it asks rather than being told once.
