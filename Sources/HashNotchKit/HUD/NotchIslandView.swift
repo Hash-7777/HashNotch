@@ -347,22 +347,15 @@ struct NotchIslandView: View {
         let tint = outlineTint
         return ZStack {
             IslandOutlineShape(radius: radius)
-                .stroke(tint ?? .clear, lineWidth: 1.6)
+                .strokeBorder(tint ?? .clear, style: Self.outlineStroke)
             IslandOutlineShape(radius: radius)
-                .stroke((tint ?? .clear).opacity(0.55), lineWidth: 3.5)
-                .blur(radius: 3.5)
+                .strokeBorder((tint ?? .clear).opacity(0.5), style: Self.outlineGlow)
+                .blur(radius: 3.0)
         }
-        // The ends run off under the bezel instead of stopping against it.
-        .mask(
-            LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.42),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        // Everything stays inside the black. `strokeBorder` keeps the line
+        // itself in, and this keeps the blur in — a glow spilling past the pill
+        // draws a halo on the desktop below it and a smear on the bezel above.
+        .clipShape(pillShape(radius: radius))
         // The slow breath, which is what makes it catch the eye from across a
         // desk. A steady ring is easy to stop seeing.
         .opacity(outlinePulse ? 1.0 : 0.55)
@@ -376,6 +369,21 @@ struct NotchIslandView: View {
         .onAppear { outlinePulse = true }
         .allowsHitTesting(false)
     }
+
+    /// Round ends, because the line has two.
+    ///
+    /// It runs up both sides and stops where the island meets the screen. On
+    /// this hardware that is the bezel, so the ends are never seen — but on a
+    /// display with no notch the island hangs below the menu bar and they are,
+    /// and a flat end there reads as the line having been cut off. Round reads
+    /// as finished.
+    ///
+    /// A gradient mask was tried first, fading the top of the line away. It
+    /// looked worse than what it replaced: the line thinned out and vanished a
+    /// third of the way up each side, so instead of an outline the island wore
+    /// two short green marks near its bottom corners with nothing joining them.
+    private static let outlineStroke = StrokeStyle(lineWidth: 2.0, lineCap: .round)
+    private static let outlineGlow = StrokeStyle(lineWidth: 4.5, lineCap: .round)
 
     private var liveIsland: some View {
         // The black pill HUGS its content (no trailing dead space after the

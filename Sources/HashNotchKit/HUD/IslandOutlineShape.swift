@@ -20,17 +20,33 @@ import SwiftUI
 /// The geometry is `NotchShape`'s, minus its top line and its closing segment,
 /// so the line sits exactly on the silhouette it belongs to and cannot drift
 /// from it if that shape is ever adjusted.
-package struct IslandOutlineShape: Shape {
+package struct IslandOutlineShape: InsettableShape {
     package var radius: CGFloat
+    /// How far in from the edge to draw. `InsettableShape` conformance exists
+    /// for `strokeBorder`, which draws the line INSIDE the shape rather than
+    /// straddling its edge — the same rule `NotchShape` follows, and for the
+    /// same reason: half a line hanging outside the black softens the join with
+    /// the bezel and, on the desktop below, draws a halo around the pill.
+    package var inset: CGFloat = 0
 
-    package init(radius: CGFloat) { self.radius = radius }
+    package init(radius: CGFloat, inset: CGFloat = 0) {
+        self.radius = radius
+        self.inset = inset
+    }
 
     package var animatableData: CGFloat {
         get { radius }
         set { radius = newValue }
     }
 
-    package func path(in rect: CGRect) -> Path {
+    package func inset(by amount: CGFloat) -> IslandOutlineShape {
+        // The radius shrinks with the inset so the inner curve stays concentric
+        // with the outer one.
+        IslandOutlineShape(radius: max(0, radius - amount), inset: inset + amount)
+    }
+
+    package func path(in outer: CGRect) -> Path {
+        let rect = outer.insetBy(dx: inset, dy: inset)
         guard rect.width > 0, rect.height > 0 else { return Path() }
         let r = max(0, min(radius, min(rect.width, rect.height) / 2))
         var path = Path()
