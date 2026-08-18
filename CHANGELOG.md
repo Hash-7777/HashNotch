@@ -7,8 +7,10 @@ All notable changes to HashNotch are recorded here.
 ### Added
 
 - **The notch lights up around its edge, the way an iPhone does.** The colour
-  traces the black pill itself, and every battery moment has one: green going on
-  the charger and green again when it is full, blue for running on the battery,
+  traces the black pill itself, down the sides and around the bottom — never
+  across the top, where there is bezel rather than screen — and fades out as it
+  reaches up under it. Every battery moment has a colour: green going on the
+  charger and green again when it is full, white for running on the battery,
   orange for running out. A microphone open anywhere holds it red for as long as
   it is open.
 

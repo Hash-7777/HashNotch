@@ -319,40 +319,62 @@ struct NotchIslandView: View {
 
     /// A line of colour traced around the island's own edge.
     ///
-    /// Drawn as an overlay on the shape rather than as a shadow behind it,
-    /// because the island sits against the physical notch: anything that
-    /// spreads outward lands on the bezel, where there is no screen to light
-    /// up, and looks like a smudge on the black plastic. A stroke on the shape
-    /// hugs the glass exactly.
+    /// Drawn as a stroke on the island's own outline rather than as a shadow
+    /// behind it, because the island sits against the physical notch: anything
+    /// that spreads outward lands on the bezel, where there is no screen to
+    /// light up, and looks like a smudge on the black plastic.
+    ///
+    /// Three sides, never four — see `IslandOutlineShape`. Stroking the closed
+    /// silhouette ran the colour straight across the top and turned it through
+    /// two hard right angles, in the one place that is not an edge at all: up
+    /// there is bezel, or menu bar. The ends are faded out as they approach it,
+    /// so the colour runs off underneath rather than stopping dead against it.
     ///
     /// Two passes — a crisp inner line and a softer wider one — because a
     /// single hairline against black reads as a drawing error at a glance,
     /// while the blurred pass alone has no edge to it. Together they read as
     /// the glass itself being lit.
     ///
-    /// It breathes rather than sitting still. A steady ring is easy to stop
-    /// seeing; the slow pulse is what makes it catch the eye from across a
-    /// desk, which is the entire reason for it.
-    @ViewBuilder
+    /// **Always present, never inserted.** The colour changes; the view stays.
+    /// Adding and removing it meant that handing the strip from one feature to
+    /// another — a charging notice ending and the music coming back — tore one
+    /// outline down and built another in the very moment the pill was resizing
+    /// underneath, so the colour jumped and flickered through a resize instead
+    /// of following it. Keeping the view and animating the tint to and from
+    /// clear makes every handover a cross-fade, including the handover to
+    /// nothing at all.
     private func outline(radius: CGFloat) -> some View {
-        if let tint = outlineTint {
-            ZStack {
-                pillShape(radius: radius)
-                    .strokeBorder(tint.opacity(0.95), lineWidth: 1.6)
-                pillShape(radius: radius)
-                    .strokeBorder(tint.opacity(0.55), lineWidth: 3.5)
-                    .blur(radius: 3.5)
-            }
-            .opacity(outlinePulse ? 1.0 : 0.55)
-            .animation(
-                .easeInOut(duration: 1.4 * motionScale).repeatForever(autoreverses: true),
-                value: outlinePulse
-            )
-            .transition(.opacity)
-            .onAppear { outlinePulse = true }
-            .onDisappear { outlinePulse = false }
-            .allowsHitTesting(false)
+        let tint = outlineTint
+        return ZStack {
+            IslandOutlineShape(radius: radius)
+                .stroke(tint ?? .clear, lineWidth: 1.6)
+            IslandOutlineShape(radius: radius)
+                .stroke((tint ?? .clear).opacity(0.55), lineWidth: 3.5)
+                .blur(radius: 3.5)
         }
+        // The ends run off under the bezel instead of stopping against it.
+        .mask(
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.42),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        // The slow breath, which is what makes it catch the eye from across a
+        // desk. A steady ring is easy to stop seeing.
+        .opacity(outlinePulse ? 1.0 : 0.55)
+        .animation(
+            .easeInOut(duration: 1.4 * motionScale).repeatForever(autoreverses: true),
+            value: outlinePulse
+        )
+        // And the colour itself cross-fades, so a handover between features is
+        // one continuous change rather than a swap.
+        .animation(.easeInOut(duration: 0.42 * motionScale), value: tint)
+        .onAppear { outlinePulse = true }
+        .allowsHitTesting(false)
     }
 
     private var liveIsland: some View {

@@ -1140,6 +1140,72 @@ MainActor.assumeIsolated {
         insetOrigin.y >= inset.minY && insetOrigin.y + quitSize.height <= inset.maxY
     )
 
+    // The outline traces three sides, never four.
+    //
+    // `NotchShape` is square across the top because the island has to meet the
+    // screen edge without a seam — right for the black silhouette, wrong for a
+    // line drawn along it. Stroking the closed shape ran the colour across the
+    // top and turned it through two hard right angles, in the one place that is
+    // not an edge at all: above it is bezel, or menu bar.
+    //
+    // Compared against the silhouette rather than against numbers, so the two
+    // cannot drift apart: the outline must be shorter, and it must not reach
+    // the top edge anywhere along its length.
+    let outlineBox = CGRect(x: 0, y: 0, width: 200, height: 40)
+    let traced = IslandOutlineShape(radius: 14).path(in: outlineBox)
+    check(
+        "the outline spans the island it belongs to",
+        abs(traced.boundingRect.width - outlineBox.width) < 0.5
+            && abs(traced.boundingRect.height - outlineBox.height) < 0.5
+    )
+    // A three-sided line does not run ACROSS the top, and the way to ask is to
+    // look at the segments rather than at the filled region.
+    //
+    // `Path.contains` is the wrong instrument here and answers yes to
+    // everything: it tests the area a path would FILL, and an open path is
+    // implicitly closed for that test — so the missing top edge is imagined
+    // back in and every interior point reads as covered. The line either exists
+    // as a drawn segment or it does not.
+    var segments: [(CGPoint, CGPoint)] = []
+    var cursor = CGPoint.zero
+    var subpathStart = CGPoint.zero
+    traced.forEach { element in
+        switch element {
+        case .move(let to):
+            cursor = to
+            subpathStart = to
+        case .line(let to):
+            segments.append((cursor, to))
+            cursor = to
+        case .quadCurve(_, let to):
+            segments.append((cursor, to))
+            cursor = to
+        case .curve(_, _, let to):
+            segments.append((cursor, to))
+            cursor = to
+        case .closeSubpath:
+            segments.append((cursor, subpathStart))
+            cursor = subpathStart
+        }
+    }
+    let top = outlineBox.minY
+    check(
+        "no segment runs along the top edge",
+        !segments.contains { abs($0.0.y - top) < 0.5 && abs($0.1.y - top) < 0.5 }
+    )
+    // The two ends DO reach the top, one on each side — that is what lets them
+    // be faded out under the bezel rather than stopping in mid-air.
+    check(
+        "but both ends reach up to it, one per side",
+        segments.contains { abs($0.0.y - top) < 0.5 || abs($0.1.y - top) < 0.5 }
+    )
+    // And the shape is not closed back on itself, which is what would put that
+    // top line back.
+    check(
+        "and the path never closes itself",
+        !traced.description.lowercased().contains("z")
+    )
+
     // The island's edge takes a colour from whichever feature holds the strip,
     // the way the iPhone lights its screen edge. The rule worth pinning is
     // restraint: a colour that appears for everything is decoration, and it

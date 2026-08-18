@@ -57,10 +57,12 @@ public final class BatteryFeature: NotchFeature {
         // the colour the eye is quickest to.
         case .lowBattery:
             return Color(red: 1.0, green: 0.55, blue: 0.10)
-        // Off the charger and running on its own — a statement of fact rather
-        // than a warning, so it is cool and quiet where the others are warm.
+        // Off the charger and running on its own. White, because this is the
+        // one of the four that reports rather than warns — it is the absence of
+        // a state, not an event to act on — and white is the only colour that
+        // says "no colour" while still being visible on black.
         case .unplugged:
-            return Color(red: 0.45, green: 0.72, blue: 1.0)
+            return Color(white: 0.96)
         case .none:
             return nil
         }
