@@ -31,6 +31,26 @@ public final class BatteryFeature: NotchFeature {
 
     public init() {}
 
+    /// Green going on, amber running out — the two the iPhone lights its edge
+    /// for, and the two worth seeing without reading anything.
+    ///
+    /// Deliberately nothing for unplugged or fully charged. Those are also
+    /// moments, but neither of them needs acting on, and a colour that appears
+    /// for everything stops meaning anything: the low warning has to be the one
+    /// that pulls the eye.
+    public var outlineTint: Color? { Self.tint(for: monitor.event) }
+
+    /// Pure, and package-visible, because "which moments are worth a colour" is
+    /// a decision rather than a detail — and one that is easy to widen by
+    /// accident until every event has a colour and none of them mean anything.
+    package static func tint(for event: BatteryEvent?) -> Color? {
+        switch event {
+        case .pluggedIn: return Color(red: 0.30, green: 0.85, blue: 0.39)
+        case .lowBattery: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        default: return nil
+        }
+    }
+
     public func start(context: FeatureContext) { monitor.start(presence: context.presence) }
     public func stop() { monitor.stop() }
 

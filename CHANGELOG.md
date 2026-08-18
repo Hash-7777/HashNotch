@@ -4,6 +4,15 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Added
+
+- **The notch lights up around its edge, the way an iPhone does.** Put the
+  charger in and the outline breathes green until the notice passes; a
+  microphone open anywhere on the Mac holds it red for as long as it is open;
+  a battery running out shows amber. It reads from across a desk without
+  looking at any words. Colours are deliberately rare — only the moments worth
+  acting on get one, because an edge that is always lit stops meaning anything.
+
 ### Changed
 
 - **Every panel can be dragged out of the way.** The windows the app puts up —

@@ -1140,6 +1140,38 @@ MainActor.assumeIsolated {
         insetOrigin.y >= inset.minY && insetOrigin.y + quitSize.height <= inset.maxY
     )
 
+    // The island's edge takes a colour from whichever feature holds the strip,
+    // the way the iPhone lights its screen edge. The rule worth pinning is
+    // restraint: a colour that appears for everything is decoration, and it
+    // makes the ones that mean something invisible.
+    check(
+        "going on the charger lights the edge",
+        BatteryFeature.tint(for: .pluggedIn(42)) != nil
+    )
+    check(
+        "running out lights it a different colour",
+        BatteryFeature.tint(for: .lowBattery(8)) != nil
+            && BatteryFeature.tint(for: .lowBattery(8)) != BatteryFeature.tint(for: .pluggedIn(42))
+    )
+    check(
+        "coming off the charger lights nothing",
+        BatteryFeature.tint(for: .unplugged(80)) == nil
+    )
+    check(
+        "reaching full lights nothing",
+        BatteryFeature.tint(for: .fullyCharged(100)) == nil
+    )
+    check(
+        "and a quiet battery lights nothing at all",
+        BatteryFeature.tint(for: nil) == nil
+    )
+    // A feature that has no opinion must not be made to have one: the default
+    // is no colour, so adding a feature never changes what the edge does.
+    check(
+        "a feature with nothing to say leaves the edge alone",
+        StubFeature(id: "quiet", placement: .leading).outlineTint == nil
+    )
+
     // One island, or none. A second copy of this app doubles everything it
     // draws — two overlays on top of each other and every alert twice — with
     // nothing on screen to explain it, since there is no Dock icon or menu-bar

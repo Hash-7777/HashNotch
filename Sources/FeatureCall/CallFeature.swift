@@ -24,6 +24,14 @@ public final class CallFeature: NotchFeature {
 
     public init() {}
 
+    /// Red while a microphone is open, which is the one state on this machine
+    /// that somebody would want to see from the other side of the room — the
+    /// same red every camera and recorder has used for a century, and the same
+    /// signal macOS puts in the menu bar, said where the eye already is.
+    public var outlineTint: Color? {
+        monitor.use == nil ? nil : Color(red: 1.0, green: 0.27, blue: 0.27)
+    }
+
     public func start(context: FeatureContext) {
         monitor.start(presence: context.presence)
     }

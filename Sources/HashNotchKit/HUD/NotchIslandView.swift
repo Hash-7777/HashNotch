@@ -181,6 +181,9 @@ struct NotchIslandView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + handoffDelay, execute: work)
     }
 
+    /// Drives the outline's slow breath. See `outline(radius:)`.
+    @State private var outlinePulse = false
+
     /// When the panel last began closing, so the strip knows whether the notch
     /// is still busy. Nil while the panel is open or has long since gone.
     @State private var panelClosedAt: Date?
@@ -302,6 +305,55 @@ struct NotchIslandView: View {
         pillShape(radius: 10)
             .fill(Color.black)
             .frame(width: state.collapsedWidth, height: state.collapsedHeight)
+            .overlay(outline(radius: 10))
+            .frame(width: state.collapsedWidth, height: state.collapsedHeight)
+    }
+
+    /// The colour the island is wearing, or nil when nothing is asking for one.
+    ///
+    /// Taken from whichever feature currently owns the strip, so the rule that
+    /// decides whose words are shown also decides whose colour is worn and two
+    /// features can never argue over it.
+    private var outlineTint: Color? {
+        liveVisible ? liveFeature?.outlineTint : nil
+    }
+
+    /// A line of colour traced around the island's own edge.
+    ///
+    /// Drawn as an overlay on the shape rather than as a shadow behind it,
+    /// because the island sits against the physical notch: anything that
+    /// spreads outward lands on the bezel, where there is no screen to light
+    /// up, and looks like a smudge on the black plastic. A stroke on the shape
+    /// hugs the glass exactly.
+    ///
+    /// Two passes — a crisp inner line and a softer wider one — because a
+    /// single hairline against black reads as a drawing error at a glance,
+    /// while the blurred pass alone has no edge to it. Together they read as
+    /// the glass itself being lit.
+    ///
+    /// It breathes rather than sitting still. A steady ring is easy to stop
+    /// seeing; the slow pulse is what makes it catch the eye from across a
+    /// desk, which is the entire reason for it.
+    @ViewBuilder
+    private func outline(radius: CGFloat) -> some View {
+        if let tint = outlineTint {
+            ZStack {
+                pillShape(radius: radius)
+                    .strokeBorder(tint.opacity(0.95), lineWidth: 1.6)
+                pillShape(radius: radius)
+                    .strokeBorder(tint.opacity(0.55), lineWidth: 3.5)
+                    .blur(radius: 3.5)
+            }
+            .opacity(outlinePulse ? 1.0 : 0.55)
+            .animation(
+                .easeInOut(duration: 1.4 * motionScale).repeatForever(autoreverses: true),
+                value: outlinePulse
+            )
+            .transition(.opacity)
+            .onAppear { outlinePulse = true }
+            .onDisappear { outlinePulse = false }
+            .allowsHitTesting(false)
+        }
     }
 
     private var liveIsland: some View {
@@ -326,6 +378,10 @@ struct NotchIslandView: View {
                 Color.black.clipShape(pillShape(radius: 14))
             )
             .frame(width: state.liveWidth, height: state.liveHeight, alignment: .leading)
+            .overlay(alignment: .leading) {
+                outline(radius: 14)
+                    .frame(width: state.liveWidth, height: state.liveHeight)
+            }
     }
 
     /// The drop-down panel. It first appears as a solid-black box (matching the

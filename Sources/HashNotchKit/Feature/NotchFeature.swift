@@ -91,6 +91,23 @@ public protocol NotchFeature: AnyObject {
     /// readable list instead of magic constants scattered across modules.
     var livePriority: Int { get }
 
+    /// A colour to trace the island's edge with while this feature holds the
+    /// strip, or `nil` (the default) for none.
+    ///
+    /// The iPhone does this: the edge of the screen glows green while the
+    /// charger goes in, red while a call is up. It reads at a glance and from
+    /// across a desk, without asking anybody to look at what the words say —
+    /// which is the whole appeal of a notch you can see from the corner of your
+    /// eye.
+    ///
+    /// Only the feature that currently owns the strip is asked, so two features
+    /// can never argue over the colour: the same rule that decides whose words
+    /// are shown decides whose colour is worn. It follows that this is worth
+    /// returning only for a state somebody would want to notice ACROSS a room —
+    /// a colour that is always on is not a signal, it is decoration, and it
+    /// makes the ones that mean something invisible.
+    var outlineTint: Color? { get }
+
     /// Act on a sideways swipe over the open panel. Return `true` if this
     /// feature took it, `false` (the default) to let another feature try.
     ///
@@ -121,6 +138,7 @@ public extension NotchFeature {
     func start(context: FeatureContext) {}
     func stop() {}
     var livePriority: Int { LivePriority.ongoing }
+    var outlineTint: Color? { nil }
     func handleSwipe(_ direction: SwipeDirection) -> Bool { false }
 }
 
