@@ -34,8 +34,18 @@ public final class PreviousInstallNotice {
             rootView: PreviousInstallNoticeView(
                 accent: accent(),
                 isRunning: found.isRunning,
-                onReveal: { PreviousInstall.revealInFinder(found) },
-                onLoginItems: { PreviousInstall.openLoginItems() },
+                // Acting on the notice closes it. It has said what it had to
+                // say, and the thing it is pointing at is now in front of the
+                // user — leaving it sitting on top of the Finder window or the
+                // Settings pane it just opened would put it in the way of the
+                // very step it is asking for. It comes back on the next launch
+                // if the old copy is still there, which is the correct reminder.
+                onReveal: { [weak self] in
+                    self?.hide { PreviousInstall.revealInFinder(found) }
+                },
+                onLoginItems: { [weak self] in
+                    self?.hide { PreviousInstall.openLoginItems() }
+                },
                 onDismiss: { [weak self] in self?.hide() }
             )
         )
@@ -65,14 +75,22 @@ public final class PreviousInstallNotice {
         }
     }
 
-    private func hide() {
-        guard let window, window.isVisible else { return }
+    /// Fade it out, and run `completion` once it is genuinely off screen — so
+    /// what it opens is never opened behind it.
+    private func hide(then completion: @escaping () -> Void = {}) {
+        guard let window, window.isVisible else {
+            completion()
+            return
+        }
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.14
             context.allowsImplicitAnimation = true
             window.animator().alphaValue = 0
         }, completionHandler: {
-            MainActor.assumeIsolated { window.orderOut(nil) }
+            MainActor.assumeIsolated {
+                window.orderOut(nil)
+                completion()
+            }
         })
     }
 
@@ -89,6 +107,11 @@ public final class PreviousInstallNotice {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
+        // Draggable by its background: there is no title bar to grab, and
+        // these open over whatever is being worked on. Set rather than
+        // overridden — AppKit reads its own stored value here, so a computed
+        // override is not reliably consulted.
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.level = .popUpMenu
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -97,6 +120,13 @@ public final class PreviousInstallNotice {
 }
 
 /// Borderless, but it takes the keyboard so Escape closes it.
+/// Draggable by its background, because it has no title bar to grab.
+///
+/// A borderless window is immovable by default, and these are windows somebody
+/// may well want out of the way — they open in the middle of the screen, over
+/// whatever is being worked on, and there is no edge to take hold of. Turning
+/// this on makes any part of the surface that is not a control a place to drag
+/// from, which is the whole title bar's job on an ordinary window.
 final class NoticePanelWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -123,9 +153,35 @@ struct PreviousInstallNoticeView: View {
                             RoundedRectangle(cornerRadius: 9, style: .continuous)
                                 .fill(accent.opacity(0.14))
                         )
+                        .overlay(WindowDragArea())
                     Text("The old app is still on this Mac")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.white)
+                        .overlay(WindowDragArea())
+
+                    // The drag region covers the icon and the words above, not
+                    // this spacer or the button after it — a close button you
+                    // cannot press because it drags the window instead would be
+                    // a worse fault than the one being fixed.
+                    Spacer(minLength: 8)
+
+                    // A way out in the corner, where a window with no title bar
+                    // still has to have one. "Later" at the bottom does the same
+                    // thing, but the top-right cross is where the hand goes
+                    // first to be rid of something, and a window that does not
+                    // answer there reads as one you are stuck with.
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .frame(width: 22, height: 22)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.08))
+                            )
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Close")
                 }
 
                 Text("Your settings are safe. Nothing has been lost.")

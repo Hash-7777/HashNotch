@@ -170,6 +170,10 @@ public struct SettingsView: View {
             Text("HashNotch")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.92))
+                // Drag the window by its name, the way a title bar works. Only
+                // the name — the close button after the spacer must stay a
+                // button rather than become somewhere the window moves from.
+                .overlay(WindowDragArea())
             Spacer(minLength: 8)
             Button(action: onClose) {
                 Image(systemName: "xmark")

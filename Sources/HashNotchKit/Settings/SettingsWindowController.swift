@@ -11,6 +11,13 @@ import SwiftUI
 ///
 /// It can become key so the controls inside respond to the keyboard, which a
 /// borderless window does not do by default.
+/// Draggable by its background, because it has no title bar to grab.
+///
+/// A borderless window is immovable by default, and these are windows somebody
+/// may well want out of the way — they open in the middle of the screen, over
+/// whatever is being worked on, and there is no edge to take hold of. Turning
+/// this on makes any part of the surface that is not a control a place to drag
+/// from, which is the whole title bar's job on an ordinary window.
 final class SettingsPanelWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -195,6 +202,11 @@ public final class SettingsWindowController {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
+        // Draggable by its background: there is no title bar to grab, and
+        // these open over whatever is being worked on. Set rather than
+        // overridden — AppKit reads its own stored value here, so a computed
+        // override is not reliably consulted.
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         // Above the menu bar, like the island it belongs to, and present on
         // whichever Space the user is on.

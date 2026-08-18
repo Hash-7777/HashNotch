@@ -4,8 +4,19 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- **Every panel can be dragged out of the way.** The windows the app puts up —
+  the quit question, the opening window, settings, and the old-copy notice —
+  have no title bar, and until now there was nothing to take hold of. Each one
+  can now be moved by its heading, the way a title bar works.
+
 ### Fixed
 
+- **The old-copy notice has a close button, and gets out of its own way.** It
+  now has a cross in the corner, and choosing to see the old app or to open
+  Login Items closes the notice first — it used to stay on top of the very
+  window it had just opened.
 - **The app now tells you when an older copy is still installed.** If a
   `Hash D Island` from before the rename is still on the Mac, a notice explains
   what is happening and what to do about it — because from the screen there is

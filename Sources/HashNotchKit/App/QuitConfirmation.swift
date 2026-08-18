@@ -164,6 +164,11 @@ public final class QuitConfirmation {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
+        // Draggable by its background: there is no title bar to grab, and
+        // these open over whatever is being worked on. Set rather than
+        // overridden — AppKit reads its own stored value here, so a computed
+        // override is not reliably consulted.
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         // Above the island, or it is not a question — it is a hidden one. The
         // overlay floats at `.statusBar` so it can draw over the menu bar, and
@@ -181,6 +186,13 @@ public final class QuitConfirmation {
 /// Borderless, but it must take the keyboard so Return and Escape work on the
 /// buttons and the window reads as the thing being answered rather than a
 /// picture of one.
+/// Draggable by its background, because it has no title bar to grab.
+///
+/// A borderless window is immovable by default, and these are windows somebody
+/// may well want out of the way — they open in the middle of the screen, over
+/// whatever is being worked on, and there is no edge to take hold of. Turning
+/// this on makes any part of the surface that is not a control a place to drag
+/// from, which is the whole title bar's job on an ordinary window.
 final class QuitPanelWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -214,7 +226,12 @@ package struct QuitConfirmationView: View {
                     Text("Quit HashNotch?")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.white)
+                    Spacer(minLength: 0)
                 }
+                // Drag the panel by its heading, the way a title bar works.
+                // Laid over the icon and the words, which have nothing to
+                // click, so the buttons below are untouched.
+                .overlay(WindowDragArea())
                 Text("The island will disappear from your notch. Everything it was watching stops, and nothing else on your Mac is affected.")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.68))

@@ -115,6 +115,9 @@ struct FirstRunView: View {
         .padding(.horizontal, 26)
         .padding(.top, 26)
         .padding(.bottom, 20)
+        // Drag the window by its heading — there is no title bar, and this
+        // block is nothing but words.
+        .overlay(WindowDragArea())
     }
 
     private func row(_ reader: Reader) -> some View {

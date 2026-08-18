@@ -87,6 +87,11 @@ public final class FirstRunWindowController {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
+        // Draggable by its background: there is no title bar to grab, and
+        // these open over whatever is being worked on. Set rather than
+        // overridden — AppKit reads its own stored value here, so a computed
+        // override is not reliably consulted.
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.level = .modalPanel
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -109,6 +114,13 @@ public final class FirstRunWindowController {
 
 /// Borderless, but it must take the keyboard so Return works on the button and
 /// the window reads as the thing being answered rather than a picture of one.
+/// Draggable by its background, because it has no title bar to grab.
+///
+/// A borderless window is immovable by default, and these are windows somebody
+/// may well want out of the way — they open in the middle of the screen, over
+/// whatever is being worked on, and there is no edge to take hold of. Turning
+/// this on makes any part of the surface that is not a control a place to drag
+/// from, which is the whole title bar's job on an ordinary window.
 final class FirstRunPanelWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
