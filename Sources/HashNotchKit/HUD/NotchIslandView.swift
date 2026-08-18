@@ -301,11 +301,23 @@ struct NotchIslandView: View {
 
     /// The permanent base: a black shape the size of the notch, so the island
     /// reads as one piece with the hardware in every state.
+    /// The black notch shape, always present as the base layer.
+    ///
+    /// It carries NO outline, and that is not an omission. This layer is
+    /// exactly the size of the physical notch and sits directly behind it, so
+    /// the hardware covers all of it but the last point or two along the
+    /// bottom. An outline drawn here is therefore invisible except for that
+    /// bottom sliver — which appears as a stray line running along the underside
+    /// of the physical notch, in the middle of the strip, joined to nothing.
+    ///
+    /// Nothing is lost by leaving it off. The tint is only ever set while the
+    /// live strip is showing, and the strip is drawn on top of this layer and
+    /// carries the outline itself — so every state that has a colour to show
+    /// already shows it, on the shape that is actually visible.
     private var collapsedIsland: some View {
         pillShape(radius: 10)
             .fill(Color.black)
             .frame(width: state.collapsedWidth, height: state.collapsedHeight)
-            .overlay(outline(radius: 10))
     }
 
     /// The colour the island is wearing, or nil when nothing is asking for one.
@@ -347,15 +359,26 @@ struct NotchIslandView: View {
         let tint = outlineTint
         return ZStack {
             IslandOutlineShape(radius: radius)
-                .strokeBorder(tint ?? .clear, style: Self.outlineStroke)
+                .stroke(tint ?? .clear, style: Self.outlineStroke)
             IslandOutlineShape(radius: radius)
-                .strokeBorder((tint ?? .clear).opacity(0.5), style: Self.outlineGlow)
+                .stroke((tint ?? .clear).opacity(0.5), style: Self.outlineGlow)
                 .blur(radius: 3.0)
         }
-        // Everything stays inside the black. `strokeBorder` keeps the line
-        // itself in, and this keeps the blur in — a glow spilling past the pill
-        // draws a halo on the desktop below it and a smear on the bezel above.
-        .clipShape(pillShape(radius: radius))
+        // Reach BELOW the island, or the bottom of the line is not on screen.
+        //
+        // The live strip is exactly as tall as the physical notch — that is
+        // deliberate, so the idle shape has no lip poking out under the
+        // hardware — which means its bottom edge is level with the notch's
+        // underside and everything above that line, across the middle, is
+        // behind a piece of plastic. A border drawn flush with the pill
+        // therefore survives only on the two shoulders and vanishes in the
+        // middle, leaving a line broken in half with the notch sitting in the
+        // gap. It looks like a bug, and it is one.
+        //
+        // A few points lower puts the bottom of the line on screen that is
+        // actually visible, and it runs unbroken from one side to the other.
+        // Only downward: the sides stay where the island's edges are.
+        .padding(.bottom, -Self.outlineDrop)
         // The slow breath, which is what makes it catch the eye from across a
         // desk. A steady ring is easy to stop seeing.
         .opacity(outlinePulse ? 1.0 : 0.55)
@@ -370,6 +393,25 @@ struct NotchIslandView: View {
         .allowsHitTesting(false)
     }
 
+    /// The line is CENTRED on the island's edge, not tucked inside it.
+    ///
+    /// `strokeBorder` was tried, on the reasoning `NotchShape` already gives for
+    /// the island's own hairline: half a line hanging outside softens the join
+    /// with the bezel. That reasoning does not carry to the bottom edge here,
+    /// and the geometry says why. The live strip is exactly as tall as the
+    /// physical notch — `liveHeight` is the notch's own height, deliberately,
+    /// so the idle shape has no lip poking out below the hardware. So the pill's
+    /// bottom edge is level with the notch's underside, and insetting the stroke
+    /// lifted the bottom line INTO the band the hardware covers: it disappeared
+    /// behind the notch across the middle and survived only on the two
+    /// shoulders, leaving a line broken in half with the notch sitting in the
+    /// gap.
+    ///
+    /// Centred, half the line falls just below that edge, onto screen that is
+    /// actually visible, and the bottom runs unbroken from one side to the
+    /// other. The half point that hangs outside along the sides sits in the
+    /// menu-bar band, where there is nothing for it to halo against.
+    ///
     /// Round ends, because the line has two.
     ///
     /// It runs up both sides and stops where the island meets the screen. On
@@ -382,6 +424,9 @@ struct NotchIslandView: View {
     /// looked worse than what it replaced: the line thinned out and vanished a
     /// third of the way up each side, so instead of an outline the island wore
     /// two short green marks near its bottom corners with nothing joining them.
+    /// How far below the island the line is drawn — enough to clear the notch's
+    /// underside, and no more than reads as part of the same shape.
+    private static let outlineDrop: CGFloat = 3
     private static let outlineStroke = StrokeStyle(lineWidth: 2.0, lineCap: .round)
     private static let outlineGlow = StrokeStyle(lineWidth: 4.5, lineCap: .round)
 
