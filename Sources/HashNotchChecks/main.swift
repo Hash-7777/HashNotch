@@ -39,6 +39,39 @@ func check(_ name: String, _ condition: Bool) {
     }
 }
 
+/// The prefix every throwaway preference domain in this file carries.
+let checkDomainPrefix = "hashnotch.checks."
+
+/// Every throwaway domain this run has created.
+///
+/// **Recorded as they are made, not discovered on disk afterwards** — and that
+/// distinction is the entire fix for a check that used to pass while leaving
+/// litter behind.
+///
+/// Preferences are not written by this process. `cfprefsd` holds a domain in
+/// memory and flushes it on its own schedule, so at the moment the sweep ran,
+/// only some of the run's domains had reached the disk — it swept those, found
+/// the folder clean, and reported success. The rest were still sitting in
+/// `cfprefsd`, and it wrote them out AFTER this process exited, into a folder
+/// nothing was left watching. The check was true when it was asked and false a
+/// second later, which is the worst kind of green.
+///
+/// Knowing the names is what makes the difference: a domain can then be emptied
+/// AND `cfprefsd` told to forget it, rather than a file being deleted and hope
+/// being placed in the timing.
+var createdCheckDomains: [String] = []
+
+/// Names a throwaway preference domain and remembers it for the sweep.
+///
+/// Every suite in this file goes through here. Writing the name inline is what
+/// made them invisible to the cleanup, and it is exactly what the next person
+/// adding a suite would do without a function to reach for.
+func throwawaySuite(_ label: String) -> String {
+    let name = "\(checkDomainPrefix)\(label).\(UUID().uuidString)"
+    createdCheckDomains.append(name)
+    return name
+}
+
 /// A throwaway feature — proves the core is decoupled from concrete features.
 @MainActor
 private final class StubFeature: NotchFeature {
@@ -106,7 +139,7 @@ MainActor.assumeIsolated {
     // privacy promise as much as a battery one: a feature that is off must not
     // still be listing your Downloads folder or asking your browser what it is
     // playing.
-    let runSuite = "hashnotch.checks.running.\(UUID().uuidString)"
+    let runSuite = throwawaySuite("running")
     let runDefaults = UserDefaults(suiteName: runSuite)!
     let runSettings = checkStore(defaults: runDefaults)
     let onFeature = CountingFeature(id: "on")
@@ -147,7 +180,7 @@ MainActor.assumeIsolated {
     // something off afterwards is not the same as having been asked. These pin
     // the state before consent as the everything-off state itself, rather than
     // a promise about it.
-    let gateSuite = "hashnotch.checks.consent.\(UUID().uuidString)"
+    let gateSuite = throwawaySuite("consent")
     let gateSettings = checkStore(defaults: UserDefaults(suiteName: gateSuite)!, accepted: false)
     let gatedFeature = CountingFeature(id: "gated")
     let gateRegistry = FeatureRegistry()
@@ -175,7 +208,7 @@ MainActor.assumeIsolated {
     // A sideways swipe over the open panel is offered to the features until one
     // takes it. The core stays ignorant of what the gesture means — it only
     // knows the fingers went sideways over the panel.
-    let swipeSuite = "hashnotch.checks.swipe.\(UUID().uuidString)"
+    let swipeSuite = throwawaySuite("swipe")
     let swipeSettings = checkStore(defaults: UserDefaults(suiteName: swipeSuite)!)
     let quietFeature = CountingFeature(id: "quiet")
     let eagerFeature = CountingFeature(id: "eager")
@@ -244,7 +277,7 @@ MainActor.assumeIsolated {
     // would be worse than the sort it replaced: a feature switched off would
     // keep drawing, and a reorder would not land until something else happened
     // to change. So the thing actually pinned here is that it INVALIDATES.
-    let orderSuite = "hashnotch.checks.order.\(UUID().uuidString)"
+    let orderSuite = throwawaySuite("order")
     let orderDefaults = UserDefaults(suiteName: orderSuite)!
     let orderSettings = checkStore(defaults: orderDefaults)
     let orderRegistry = FeatureRegistry()
@@ -1369,7 +1402,7 @@ MainActor.assumeIsolated {
     // The remembered totals exist so the panel opens on a number rather than on
     // a zero it has not earned. A remembered number from ANOTHER day is not a
     // stale figure to be corrected — it is a different question's answer.
-    let cacheSuite = "hashnotch.checks.tokencache.\(UUID().uuidString)"
+    let cacheSuite = throwawaySuite("tokencache")
     let cacheDefaults = UserDefaults(suiteName: cacheSuite)!
     var remembered = TokenTotals()
     remembered.claude = 1234
@@ -2353,7 +2386,7 @@ MainActor.assumeIsolated {
     }
 
     // Settings: defaults, updates, and persistence round-trip.
-    let suite = "hashnotch.checks.\(UUID().uuidString)"
+    let suite = throwawaySuite("settings")
     let defaults = UserDefaults(suiteName: suite)!
     let store = checkStore(defaults: defaults)
     let stub = StubFeature(id: "x", placement: .leading)
@@ -2571,7 +2604,7 @@ MainActor.assumeIsolated {
 
     // Corrections are per display, so one screen's fix never follows onto
     // another, and resetting removes the entry rather than storing zeroes.
-    let posSuite = "hashnotch.checks.position.\(UUID().uuidString)"
+    let posSuite = throwawaySuite("position")
     let posDefaults = UserDefaults(suiteName: posSuite)!
     let positioned = checkStore(defaults: posDefaults)
     var laptop = IslandAdjustment()
@@ -2592,7 +2625,7 @@ MainActor.assumeIsolated {
     // means the overlay reshapes in place on every value, rather than being
     // rebuilt behind a debounce — which only ever landed once you let go.
     if NotchGeometry.preferredScreen() != nil {
-        let liveSuite = "hashnotch.checks.live.\(UUID().uuidString)"
+        let liveSuite = throwawaySuite("live")
         let liveDefaults = UserDefaults(suiteName: liveSuite)!
         let liveSettings = checkStore(defaults: liveDefaults)
         let liveContext = FeatureContext(settings: liveSettings)
@@ -2790,7 +2823,7 @@ MainActor.assumeIsolated {
 
     // Battery saver is one number in one place, and it is the number every
     // sampler multiplies by.
-    let scaleSuite = "hashnotch.checks.scale.\(UUID().uuidString)"
+    let scaleSuite = throwawaySuite("scale")
     let scaleDefaults = UserDefaults(suiteName: scaleSuite)!
     let scaled = checkStore(defaults: scaleDefaults)
     check("normally everything samples at its own rate", scaled.samplingScale == 1)
@@ -2850,10 +2883,10 @@ MainActor.assumeIsolated {
     // (second), "hashnotch" again (now, under a new key). A machine that has
     // been through all three has a document under both old keys, and only the
     // hashdisland one is what its owner last chose.
-    let legacySuite = "hashnotch.checks.legacy.\(UUID().uuidString)"
-    let freshSuite = "hashnotch.checks.fresh.\(UUID().uuidString)"
-    let emptySuite = "hashnotch.checks.empty.\(UUID().uuidString)"
-    let noLegacySuite = "hashnotch.checks.nolegacy.\(UUID().uuidString)"
+    let legacySuite = throwawaySuite("legacy")
+    let freshSuite = throwawaySuite("fresh")
+    let emptySuite = throwawaySuite("empty")
+    let noLegacySuite = throwawaySuite("nolegacy")
     let legacyDefaults = UserDefaults(suiteName: legacySuite)!
     let freshDefaults = UserDefaults(suiteName: freshSuite)!
     let legacyDocument = """
@@ -2883,8 +2916,8 @@ MainActor.assumeIsolated {
 
     // The name this app started with is still carried over, for somebody who
     // never ran the name in between.
-    let firstNameSuite = "hashnotch.checks.firstname.\(UUID().uuidString)"
-    let firstNameTarget = "hashnotch.checks.firstnametarget.\(UUID().uuidString)"
+    let firstNameSuite = throwawaySuite("firstname")
+    let firstNameTarget = throwawaySuite("firstnametarget")
     let firstNameDefaults = UserDefaults(suiteName: firstNameSuite)!
     firstNameDefaults.set(Data(legacyDocument.utf8), forKey: "hashnotch.settings.v2")
     check(
@@ -2898,8 +2931,8 @@ MainActor.assumeIsolated {
     // Both old names present at once: the more recent one wins. Getting this
     // backwards would hand somebody the choices they made two renames ago and
     // look exactly like settings being lost.
-    let bothSuite = "hashnotch.checks.both.\(UUID().uuidString)"
-    let bothTarget = "hashnotch.checks.bothtarget.\(UUID().uuidString)"
+    let bothSuite = throwawaySuite("both")
+    let bothTarget = throwawaySuite("bothtarget")
     let bothDefaults = UserDefaults(suiteName: bothSuite)!
     let staleDocument = """
     {"features":{"x":{"enabled":false,"placement":"leading","styleID":"stale","order":4}},"launchAtLogin":false}
@@ -3080,7 +3113,7 @@ MainActor.assumeIsolated {
 // reset that cleared it would stop every indicator with no way on screen to say
 // yes again — a settings button that bricks the app until it is restarted.
 MainActor.assumeIsolated {
-    let resetSuite = "hashnotch.checks.reset.\(UUID().uuidString)"
+    let resetSuite = throwawaySuite("reset")
     let resetDefaults = UserDefaults(suiteName: resetSuite)!
     let settings = checkStore(defaults: resetDefaults)
     let descriptors = [
@@ -3168,10 +3201,10 @@ MainActor.assumeIsolated {
 //
 // Cleaning each one where it is created was the obvious fix and the wrong one:
 // it is exactly the step the next person to add a suite will forget, and the
-// leak is invisible until somebody counts. So the sweep is by PREFIX, at the
-// end, covering every suite that exists now or is added later — and then it
+// leak is invisible until somebody counts. So every suite is NAMED by
+// `throwawaySuite`, which records it, and the sweep below works from that
+// record — covering every suite that exists now or is added later — and then it
 // checks that the sweep worked, which is the part that makes it stay true.
-let checkDomainPrefix = "hashnotch.checks."
 
 /// The throwaway domains still on disk. `CFPreferencesCopyApplicationList` is
 /// unavailable to Swift, so this reads where the domains actually live — one
@@ -3194,7 +3227,7 @@ let checkDomainPrefix = "hashnotch.checks."
 @MainActor
 func checkStore(defaults: UserDefaults, accepted: Bool = true) -> SettingsStore {
     let noLegacy = UserDefaults(
-        suiteName: "hashnotch.checks.nolegacy.\(UUID().uuidString)"
+        suiteName: throwawaySuite("nolegacy")
     )!
     let store = SettingsStore(defaults: defaults, legacyDefaults: noLegacy)
     store.hasAcceptedReading = accepted
@@ -3210,28 +3243,67 @@ func strayCheckDomains() -> [String] {
         .map { String($0.dropLast(".plist".count)) }
 }
 
-// Both steps are needed, and finding that out took measuring. Removing the
-// persistent domain empties it as far as the defaults system is concerned —
-// afterwards `defaults delete` reports "Domain not found" — but it leaves the
-// plist sitting in ~/Library/Preferences. Only deleting the file removes the
-// file. Doing just the first is what makes this leak invisible: every tool that
-// asks the defaults system says the domain is gone while the clutter builds up
-// on disk.
+// Three steps, and the third is the one that was missing.
+//
+// `removePersistentDomain` empties the domain as far as the defaults system is
+// concerned — afterwards `defaults delete` reports "Domain not found" — but it
+// leaves the plist in ~/Library/Preferences, so deleting the file is needed
+// too. Those two were here, and the check still passed while litter piled up.
+//
+// The missing third is telling `cfprefsd` to let go. Preferences are not
+// written by this process: `cfprefsd` holds each domain in memory and writes it
+// out on its own schedule. So of the domains this run created, only the ones it
+// happened to have flushed were on disk when the sweep looked — the sweep
+// removed those, the folder was clean, and the check said so honestly. Then the
+// process exited, `cfprefsd` flushed everything it was still holding, and the
+// files appeared in a folder nobody was watching any more. Measured: 14 swept,
+// 27 left behind afterwards.
+//
+// `CFPreferencesAppSynchronize` on the named domain makes it write out and drop
+// what it is holding, so after the file is deleted there is nothing left to
+// resurrect it. And the list is the RECORD of what this run created rather than
+// a scan of the folder, because the ones that had not landed yet are exactly
+// the ones a scan cannot see.
 let preferencesDirectory = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Preferences")
-let swept = strayCheckDomains()
-for name in swept {
+
+// Anything this run made, plus anything a previous run left behind — an older
+// build of these checks leaked, and running them should clear that up rather
+// than leave it for somebody to find.
+let sweepTargets = Set(createdCheckDomains).union(strayCheckDomains())
+for name in sweepTargets.sorted() {
     UserDefaults.standard.removePersistentDomain(forName: name)
+    UserDefaults(suiteName: name)?.removePersistentDomain(forName: name)
+    // Flush and forget, BEFORE the file goes — the other order writes the file
+    // back out after it has been deleted.
+    CFPreferencesAppSynchronize(name as CFString)
     try? FileManager.default.removeItem(
         at: preferencesDirectory.appendingPathComponent("\(name).plist")
     )
 }
 UserDefaults.standard.synchronize()
 
-if !swept.isEmpty {
-    print("       swept \(swept.count) throwaway preference domain(s)")
+if !sweepTargets.isEmpty {
+    print("       swept \(sweepTargets.count) throwaway preference domain(s)")
 }
 check("the checks leave no preference domains behind", strayCheckDomains().isEmpty)
+// Not the same question as the one above, and this is the one that was never
+// asked: the folder being clean now says nothing about what `cfprefsd` is still
+// holding and will write once this process is gone. Every domain the run made
+// has to be gone from the defaults system too, or the folder is clean only
+// until the exit.
+//
+// Asked with `persistentDomain`, which returns ONLY what that domain holds.
+// `dictionaryRepresentation()` is the wrong instrument and fails everything: it
+// merges the global domain in, so a perfectly empty suite still answers with
+// every system-wide default on the machine.
+let stillHeld = Set(createdCheckDomains).filter { name in
+    (UserDefaults.standard.persistentDomain(forName: name)?.isEmpty == false)
+}
+check(
+    "and nothing is left for cfprefsd to write back after this exits",
+    stillHeld.isEmpty
+)
 
 if failures == 0 {
     print("All checks passed.")
