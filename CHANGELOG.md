@@ -2,6 +2,21 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- **Upgrading no longer looks like the app losing every setting on restart.**
+  Installing HashNotch does not replace an older `Hash D Island` — the names
+  differ, so both sit in Applications, and macOS records "open at login"
+  against the old one by file reference rather than by name. Every restart
+  quietly launched the old app: its own separate settings, so the panel came
+  back with nothing you chose, and its own app identity, so the permission
+  questions were asked again. Nothing was ever lost. Building from source now
+  clears an app bundle left behind by a previous name instead of leaving it
+  sitting there launchable, and the README says plainly to bin the old app and
+  clear its Login Items entry.
+
 ## 1.2.0 — the name comes back, and the quit button works
 
 ### Changed

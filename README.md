@@ -100,6 +100,14 @@ All checks passed.
 2. First launch, macOS says it cannot verify the developer. Click **Done**, then open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**. Once only.
 3. **Hover the notch.** No Dock icon, no menu-bar item — the notch is the whole interface. The gear beside it opens settings.
 
+### Upgrading from Hash D Island
+
+**Drag the old `Hash D Island` app to the Trash.** Installing this one does not replace it — the two have different names, so both sit in Applications, and macOS remembers "open at login" against the *old* one. Leave it there and every restart quietly launches the old app instead of this one, which looks exactly like the new app losing all its settings: the panel comes back with nothing you chose, and the permission questions are asked again. They are not lost. The old app keeps its own separate settings, and you are looking at those.
+
+Then open **System Settings → General → Login Items** and remove any leftover **Hash D Island** entry with the **−** button. Deleting the app does not remove that entry on its own.
+
+Everything you set up carries over to this app the first time you open it, and the notch keeps reading the old activities folder until you re-run the Claude Code installer.
+
 ### If the app still will not open
 
 Sometimes there is no **Open Anyway** button to click, or clicking it changes nothing. That is not a broken download. When a file arrives from the internet macOS attaches a hidden "quarantine" label to it, and for an app without a paid Apple certificate macOS will sometimes refuse it outright rather than offer you the choice.

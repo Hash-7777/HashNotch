@@ -24,6 +24,30 @@ BIN_DIR="$(swift build -c release --package-path "$ROOT" --show-bin-path)"
 
 echo "Assembling app bundle…"
 rm -rf "$APP"
+
+# Clear out any OTHER app bundle left in here by a previous name.
+#
+# This is not tidiness, it is a live fault. Renaming the app leaves the old
+# bundle sitting in build/ — this only ever removes the one it is about to
+# write — and that leftover is a complete, launchable app with its OWN bundle
+# identifier and its OWN preferences domain. macOS records a login item by
+# file reference rather than by path, so the registration followed the project
+# folder through the rename and went on launching the OLD build at every
+# login: a panel whose settings all appeared to have been lost (they were in
+# the other domain), asking for permissions again (a different app identity),
+# while the new build sat here unopened. Nothing about it looked like a stale
+# bundle; it looked like the app losing its settings on every restart.
+#
+# Anything else in build/ — a disk image, anything the developer left — is
+# untouched. Only a stray .app goes.
+for stale in "$ROOT/build/"*.app; do
+  if [ -d "$stale" ] && [ "$stale" != "$APP" ]; then
+    echo "Removing an app bundle left by a previous name: $(basename "$stale")"
+    echo "  If it was ever opened, check System Settings > General > Login Items"
+    echo "  and remove any entry still pointing at it."
+    rm -rf "$stale"
+  fi
+done
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/HashNotch" "$APP/Contents/MacOS/HashNotch"
 cp "$ROOT/Packaging/Info.plist" "$APP/Contents/Info.plist"
