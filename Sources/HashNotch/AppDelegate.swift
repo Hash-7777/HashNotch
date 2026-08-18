@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// because nothing else retains it — a controller made at the moment of
     /// asking would be released before the question could be answered.
     private var quitConfirmation: QuitConfirmation?
+    /// Shown when a copy under the app's previous name is still installed.
+    /// Held for the same reason as the others: nothing else retains it.
+    private var previousInstallNotice: PreviousInstallNotice?
     /// Set for one programmatic open, so settings appears without dragging the
     /// panel open behind it. Cleared as soon as that open happens.
     private var opensSettingsAlone = false
@@ -220,6 +223,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             opensSettingsAlone = true
             openSettings(at: page)
         }
+
+        // Say something when an older copy under the previous name is still
+        // here, because the fault it causes is unreadable from the screen: that
+        // copy has its own preferences and its own permissions, and macOS can
+        // open it at login instead of this one — which looks exactly like this
+        // app forgetting everything on every restart. See `PreviousInstall`.
+        //
+        // Never during a first run. That window has to be the only thing on
+        // screen, and a second one behind it would be competing with the
+        // question the app is not allowed to start without an answer to. On a
+        // first run this is raised once the reading has been accepted instead.
+        if settings.hasAcceptedReading { showPreviousInstallNoticeIfNeeded() }
+    }
+
+    /// Put the old-copy notice up, if there is an old copy.
+    ///
+    /// Deferred a beat so it lands ON TOP of the island rather than in the
+    /// middle of the overlay being built, and so anything macOS raises at
+    /// startup has had its turn first.
+    private func showPreviousInstallNoticeIfNeeded() {
+        guard let context else { return }
+        guard let found = PreviousInstall.find() else { return }
+        let notice = PreviousInstallNotice(accent: { context.settings.accent.color })
+        previousInstallNotice = notice
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            notice.show(found)
+        }
     }
 
     /// The settings page named by `--settings-page <id>`, if any.
@@ -241,6 +271,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let registry, let context else { return }
         context.settings.hasAcceptedReading = true
         registry.syncRunning(context: context)
+        // Held back until now on a first run, so it never competes with the
+        // window asking what may be read.
+        showPreviousInstallNoticeIfNeeded()
     }
 
     /// Say no, and mean it.

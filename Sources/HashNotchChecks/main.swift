@@ -1129,6 +1129,40 @@ MainActor.assumeIsolated {
         insetOrigin.y >= inset.minY && insetOrigin.y + quitSize.height <= inset.maxY
     )
 
+    // An older copy under the app's previous name has to be recognisable.
+    //
+    // This is the fault that reads, from the screen, as the app losing every
+    // setting on restart: the old bundle keeps its own preferences domain and
+    // its own permissions, and macOS records "open at login" by file reference,
+    // so the registration survives a rename and goes on opening the old one.
+    // Nothing about it looks like a second app being installed.
+    check(
+        "the app knows the name it shipped under before this one",
+        PreviousInstall.previousBundleIDs.contains("com.hashdisland.app")
+    )
+    check(
+        "and does not count the current name as an older one",
+        PreviousInstall.previousBundleIDs.contains(Bundle.main.bundleIdentifier ?? "com.hashnotch.app") == false
+    )
+    check(
+        "every previous name is a real bundle identifier, not a display name",
+        PreviousInstall.previousBundleIDs.allSatisfy {
+            $0.hasPrefix("com.") && !$0.contains(" ") && $0.split(separator: ".").count >= 3
+        }
+    )
+    // Whatever this Mac happens to have, asking must not throw or hang, and an
+    // answer must describe the copy it found rather than a generality.
+    if let foundOld = PreviousInstall.find() {
+        check(
+            "a copy that was found is described by where it actually is",
+            foundOld.url.pathExtension == "app"
+                && PreviousInstall.previousBundleIDs.contains(foundOld.bundleID)
+        )
+        print("       an older copy IS installed on this Mac: \(foundOld.url.path)")
+    } else {
+        check("no older copy is installed on this Mac, and asking is safe", true)
+    }
+
     // A finished notice is the tool's name and nothing else.
     //
     // What posters put underneath it is which model answered — "gemini-2.5-flash"

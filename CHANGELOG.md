@@ -6,6 +6,14 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The app now tells you when an older copy is still installed.** If a
+  `Hash D Island` from before the rename is still on the Mac, a notice explains
+  what is happening and what to do about it — because from the screen there is
+  nothing to see but settings that appear to have been thrown away, and a
+  release note only reaches somebody who reads release notes. It says first
+  that nothing has been lost, then points at the old app in Finder and opens
+  Login Items. It stops appearing for good once the old app is gone, and it
+  never removes anything itself.
 - **Upgrading no longer looks like the app losing every setting on restart.**
   Installing HashNotch does not replace an older `Hash D Island` — the names
   differ, so both sit in Applications, and macOS records "open at login"
