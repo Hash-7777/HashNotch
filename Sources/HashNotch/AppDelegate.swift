@@ -33,6 +33,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // One island, or none. A second copy of this app does not add a second
+        // app, it doubles the first: two overlays drawn on top of each other,
+        // every alert appearing twice, and nothing on screen to say why —
+        // there is no Dock icon or menu-bar item to reveal that a copy is
+        // already up. See `SingleInstance`.
+        //
+        // Done before anything is built, so the copy that stands down has read
+        // no settings, started no feature and put no window on screen.
+        if SingleInstance.anotherCopyIsRunning {
+            SingleInstance.activateExistingCopy()
+            FileHandle.standardError.write(Data(
+                "HashNotch is already running; this second copy is standing down.\n".utf8
+            ))
+            NSApp.terminate(nil)
+            return
+        }
+
         let settings = SettingsStore()
         let registry = FeatureRegistry()
         registry.register(FeatureManifest.enabledFeatures())
@@ -100,8 +117,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // A locked Mac is exactly when the notch's summary of your afternoon
         // should not be readable, so the overlay leaves the screen rather than
         // relying on the login window to cover it.
-        power.onConcealed = { [weak controller] concealed in
-            concealed ? controller?.hide() : controller?.show()
+        // Asked of the CURRENT overlay, not the one that existed at launch.
+        //
+        // This used to capture `controller` directly, and a display change
+        // replaces that object — so after plugging in a second screen the
+        // closure held a controller that no longer existed and locking the Mac
+        // stopped taking the island off the screen. That is the one claim in
+        // the README where the difference between "covered" and "not there"
+        // actually matters, and it was quietly lost by any monitor being
+        // plugged in. Reading `self.controller` each time cannot go stale.
+        power.onConcealed = { [weak self] concealed in
+            concealed ? self?.controller?.hide() : self?.controller?.show()
         }
         power.begin()
 
@@ -396,7 +422,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildOverlay() {
         guard let registry, let context, let settingsWindow else { return }
+        // Take the old one off the screen and let go of it BEFORE building its
+        // replacement, so there is never a moment when two overlays exist and
+        // both are subscribed to the same presence — which is two islands, and
+        // every notice drawn twice.
         controller?.hide()
+        controller = nil
         let fresh = NotchWindowController(registry: registry, context: context)
         wire(fresh, context: context, settingsWindow: settingsWindow)
         fresh.show()

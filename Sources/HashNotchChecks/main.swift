@@ -1140,6 +1140,24 @@ MainActor.assumeIsolated {
         insetOrigin.y >= inset.minY && insetOrigin.y + quitSize.height <= inset.maxY
     )
 
+    // One island, or none. A second copy of this app doubles everything it
+    // draws — two overlays on top of each other and every alert twice — with
+    // nothing on screen to explain it, since there is no Dock icon or menu-bar
+    // item to reveal that a copy is already up.
+    check(
+        "a copy never counts itself as another copy",
+        SingleInstance.others().allSatisfy {
+            $0.processIdentifier != ProcessInfo.processInfo.processIdentifier
+        }
+    )
+    // The checks run unbundled, which is also how the app is worked on. An
+    // unbundled build has no identifier, cannot be recognised as a copy, and
+    // must never be refused a start over it.
+    check(
+        "an unbundled build is never refused a start",
+        Bundle.main.bundleIdentifier != nil || SingleInstance.anotherCopyIsRunning == false
+    )
+
     // An older copy under the app's previous name has to be recognisable.
     //
     // This is the fault that reads, from the screen, as the app losing every

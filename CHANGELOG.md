@@ -13,6 +13,16 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The notch no longer says everything twice.** Two copies of the app running
+  at once does not give you two apps — it gives you two islands drawn on top of
+  each other, so every alert appears twice, and there is no Dock icon or
+  menu-bar item to reveal that a copy was already up. A second copy now stands
+  down at once instead of starting.
+- **Plugging in a second screen no longer stops the island hiding when you lock
+  the Mac.** A display change rebuilds the overlay, and the lock was still
+  reaching for the one that existed at launch — so after connecting a monitor
+  the island stayed on screen through a lock, which is the one moment it is
+  meant not to.
 - **The old-copy notice has a close button, and gets out of its own way.** It
   now has a cross in the corner, and choosing to see the old app or to open
   Login Items closes the notice first — it used to stay on top of the very
