@@ -306,7 +306,6 @@ struct NotchIslandView: View {
             .fill(Color.black)
             .frame(width: state.collapsedWidth, height: state.collapsedHeight)
             .overlay(outline(radius: 10))
-            .frame(width: state.collapsedWidth, height: state.collapsedHeight)
     }
 
     /// The colour the island is wearing, or nil when nothing is asking for one.
@@ -377,11 +376,16 @@ struct NotchIslandView: View {
                 // as a mistake.
                 Color.black.clipShape(pillShape(radius: 14))
             )
+            // The outline goes HERE, on the same view the black pill is drawn
+            // behind — before the positioning frame below, never after.
+            //
+            // That frame is a fixed-width box the pill sits left-anchored
+            // inside, so the notch gap stays pinned while the title changes
+            // length. Tracing the box instead of the pill drew the colour
+            // around a rectangle far wider than the black, ending in mid-air
+            // past the end of the words with nothing underneath it.
+            .overlay(outline(radius: 14))
             .frame(width: state.liveWidth, height: state.liveHeight, alignment: .leading)
-            .overlay(alignment: .leading) {
-                outline(radius: 14)
-                    .frame(width: state.liveWidth, height: state.liveHeight)
-            }
     }
 
     /// The drop-down panel. It first appears as a solid-black box (matching the

@@ -6,12 +6,11 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
-- **The notch lights up around its edge, the way an iPhone does.** Put the
-  charger in and the outline breathes green until the notice passes; a
-  microphone open anywhere on the Mac holds it red for as long as it is open;
-  a battery running out shows amber. It reads from across a desk without
-  looking at any words. Colours are deliberately rare — only the moments worth
-  acting on get one, because an edge that is always lit stops meaning anything.
+- **The notch lights up around its edge, the way an iPhone does.** The colour
+  traces the black pill itself, and every battery moment has one: green going on
+  the charger and green again when it is full, blue for running on the battery,
+  orange for running out. A microphone open anywhere holds it red for as long as
+  it is open.
 
 ### Changed
 

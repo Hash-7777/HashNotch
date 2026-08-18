@@ -1154,12 +1154,21 @@ MainActor.assumeIsolated {
             && BatteryFeature.tint(for: .lowBattery(8)) != BatteryFeature.tint(for: .pluggedIn(42))
     )
     check(
-        "coming off the charger lights nothing",
-        BatteryFeature.tint(for: .unplugged(80)) == nil
+        "coming off the charger lights it too",
+        BatteryFeature.tint(for: .unplugged(80)) != nil
     )
     check(
-        "reaching full lights nothing",
-        BatteryFeature.tint(for: .fullyCharged(100)) == nil
+        "reaching full lights it as good news, like going on",
+        BatteryFeature.tint(for: .fullyCharged(100)) == BatteryFeature.tint(for: .pluggedIn(42))
+    )
+    check(
+        "running out does not look like running on battery",
+        BatteryFeature.tint(for: .lowBattery(8)) != BatteryFeature.tint(for: .unplugged(80))
+    )
+    check(
+        "every battery announcement carries a colour",
+        [BatteryEvent.pluggedIn(1), .unplugged(1), .lowBattery(1), .fullyCharged(1)]
+            .allSatisfy { BatteryFeature.tint(for: $0) != nil }
     )
     check(
         "and a quiet battery lights nothing at all",

@@ -125,6 +125,7 @@ public final class NotchWindowController {
         self.state = NotchState(geometry: geometry)
         self.notchRect = geometry.notchRect
         self.islandTop = geometry.islandTop
+        self.displayKey = screen.map { NotchGeometry.displayKey(for: $0) }
 
         let initial = Self.frame(
             for: geometry.notchRect,
@@ -317,6 +318,14 @@ public final class NotchWindowController {
     package var openZone: CGRect { collapsedHoverRect }
     /// The measured notch this overlay is built around.
     package var currentNotchRect: CGRect { notchRect }
+
+    /// Which display this overlay was built for.
+    ///
+    /// Used to tell "the island's own screen changed" apart from "some other
+    /// screen was plugged in", which are the same notification and want
+    /// opposite responses. Nil only when there was no screen at all when this
+    /// was built, which is a launch race rather than a state to reason about.
+    public private(set) var displayKey: String?
 
     /// Where the open panel sits on screen, for anything that hangs off it.
     public var panelAnchor: CGRect {

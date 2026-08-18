@@ -422,6 +422,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildOverlay() {
         guard let registry, let context, let settingsWindow else { return }
+
+        // A screen change is not always a change to OUR screen.
+        //
+        // `didChangeScreenParameters` fires for anything about any display —
+        // and the commonest case by far is a second screen being plugged in,
+        // which does not move the notch, does not resize it, and does not
+        // change a single thing about the island. Rebuilding anyway threw away
+        // a working overlay and built a fresh one, and a fresh island has never
+        // shown anything: whatever was live at that moment was announced a
+        // SECOND time, with its entrance animation, as though it had just
+        // happened again.
+        //
+        // That is exactly what a charging hub does. Plugging one in connects
+        // the power and the monitor in the same instant, so "Charger connected"
+        // appeared, the display change rebuilt the overlay underneath it, and
+        // the new island announced "Charger connected" all over again. Two
+        // alerts, one event, and only ever on the machine with the hub.
+        //
+        // So the island's own display is what decides. Same screen: reshape the
+        // overlay in place, which is what the position sliders already do all
+        // day and what keeps everything that is live exactly as live as it was.
+        // A different screen — moving to a display that has a notch, or losing
+        // the one we were on — genuinely needs the overlay built again.
+        if let controller,
+           let screen = NotchGeometry.preferredScreen(),
+           controller.displayKey == NotchGeometry.displayKey(for: screen) {
+            controller.refreshGeometry()
+            return
+        }
+
         // Take the old one off the screen and let go of it BEFORE building its
         // replacement, so there is never a moment when two overlays exist and
         // both are subscribed to the same presence — which is two islands, and

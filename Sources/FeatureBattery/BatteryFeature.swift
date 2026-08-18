@@ -31,23 +31,38 @@ public final class BatteryFeature: NotchFeature {
 
     public init() {}
 
-    /// Green going on, amber running out — the two the iPhone lights its edge
-    /// for, and the two worth seeing without reading anything.
-    ///
-    /// Deliberately nothing for unplugged or fully charged. Those are also
-    /// moments, but neither of them needs acting on, and a colour that appears
-    /// for everything stops meaning anything: the low warning has to be the one
-    /// that pulls the eye.
     public var outlineTint: Color? { Self.tint(for: monitor.event) }
 
-    /// Pure, and package-visible, because "which moments are worth a colour" is
-    /// a decision rather than a detail — and one that is easy to widen by
-    /// accident until every event has a colour and none of them mean anything.
+    /// Every battery moment gets its own colour, and they are different from
+    /// each other on purpose.
+    ///
+    /// This started out lighting only the charger going in and the battery
+    /// running out, on the argument that a colour appearing for everything
+    /// stops meaning anything. That argument was wrong here, and the reason is
+    /// worth keeping: these four are not "everything". The strip already only
+    /// appears for a moment worth announcing, so by the time one of them is on
+    /// screen the decision to interrupt has been taken — and an announcement
+    /// that arrives with no colour beside three that do reads as the colour
+    /// having failed, not as restraint.
+    ///
+    /// Pure and package-visible, because which colour goes with which moment is
+    /// a decision rather than a detail.
     package static func tint(for event: BatteryEvent?) -> Color? {
         switch event {
-        case .pluggedIn: return Color(red: 0.30, green: 0.85, blue: 0.39)
-        case .lowBattery: return Color(red: 1.0, green: 0.72, blue: 0.20)
-        default: return nil
+        // Going on, and the charge being done: both good news, both green, the
+        // colour the phone uses for exactly this.
+        case .pluggedIn, .fullyCharged:
+            return Color(red: 0.30, green: 0.85, blue: 0.39)
+        // Running out. The one that needs doing something about, so it takes
+        // the colour the eye is quickest to.
+        case .lowBattery:
+            return Color(red: 1.0, green: 0.55, blue: 0.10)
+        // Off the charger and running on its own — a statement of fact rather
+        // than a warning, so it is cool and quiet where the others are warm.
+        case .unplugged:
+            return Color(red: 0.45, green: 0.72, blue: 1.0)
+        case .none:
+            return nil
         }
     }
 
