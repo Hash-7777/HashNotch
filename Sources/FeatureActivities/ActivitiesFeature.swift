@@ -23,15 +23,16 @@ public final class ActivitiesFeature: NotchFeature {
     /// colour can never describe different things.
     public var outlineTint: Color? { Self.tint(for: monitor.activities.first) }
 
-    /// Blue for something that has finished, amber for something waiting on
+    /// Green for something that has finished, amber for something waiting on
     /// you, nothing for work still going on.
     ///
     /// The distinction is the one the feed already makes, and it is the
     /// difference between a fact and a request. A notice — anything posted with
     /// a time to dismiss itself after — is a job reporting that it is over: an
     /// AI tool finishing a turn, a build completing. Nothing is being asked of
-    /// you, so it is blue, the app's own colour, which says "read me" without
-    /// saying "now".
+    /// you and nothing went wrong, so it is green — the same green the battery
+    /// wears when it is charging or full, because it is being used to say the
+    /// same thing: this is fine, and there is nothing for you to do.
     ///
     /// Something posted with a deadline and no dismissal is waiting for an
     /// answer — the tool that stopped to ask permission, and cannot go on
@@ -46,9 +47,20 @@ public final class ActivitiesFeature: NotchFeature {
     /// Deliberately not written in terms of any particular tool. The feed is
     /// open to anything on the Mac that wants to post to it, and the rule is
     /// asked of every poster alike.
+    /// The colour for the badge beside the words: the activity's own colour
+    /// where it has one, and the app's accent for work that is merely in
+    /// progress and lights no edge at all.
+    ///
+    /// One rule for both the badge and the ring around the notch, because they
+    /// are one signal. A green ring with an accent-coloured badge inside it
+    /// would read as two things happening at once.
+    package static func markTint(for activity: LiveActivity, accent: Color) -> Color {
+        tint(for: activity) ?? accent
+    }
+
     package static func tint(for activity: LiveActivity?) -> Color? {
         guard let activity else { return nil }
-        if activity.isNotice { return Color(red: 0.25, green: 0.55, blue: 1.0) }
+        if activity.isNotice { return Color(red: 0.30, green: 0.85, blue: 0.39) }
         if activity.showsCountdown { return Color(red: 1.0, green: 0.72, blue: 0.20) }
         return nil
     }

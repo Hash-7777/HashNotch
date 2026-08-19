@@ -1422,6 +1422,32 @@ MainActor.assumeIsolated {
         "something that finished lights the island",
         ActivitiesFeature.tint(for: finishedAlert) != nil
     )
+    // Green, and the same green the battery wears when it is charging or full:
+    // both are saying "this is fine, there is nothing for you to do", and two
+    // greens a shade apart would read as two different meanings.
+    check(
+        "and it lights it green, the colour that means nothing is wanted of you",
+        ActivitiesFeature.tint(for: finishedAlert) == Color(red: 0.30, green: 0.85, blue: 0.39)
+    )
+    // The badge beside the words and the ring around the notch are one signal,
+    // so they are asked of one rule. If the mark ever picks its own colour, a
+    // green ring with an orange badge inside it is what it would look like.
+    check(
+        "the badge beside the words wears the same colour as the ring",
+        ActivitiesFeature.markTint(for: finishedAlert, accent: .orange)
+            == ActivitiesFeature.tint(for: finishedAlert)
+    )
+    check(
+        "and the one waiting on you does too",
+        ActivitiesFeature.markTint(for: waitingAlert, accent: .orange)
+            == ActivitiesFeature.tint(for: waitingAlert)
+    )
+    // Work in progress lights no edge, so the badge falls back to the accent
+    // rather than to nothing.
+    check(
+        "work in progress keeps the accent for its badge",
+        ActivitiesFeature.markTint(for: workingAlert, accent: .orange) == .orange
+    )
     check(
         "something waiting on you lights it too",
         ActivitiesFeature.tint(for: waitingAlert) != nil

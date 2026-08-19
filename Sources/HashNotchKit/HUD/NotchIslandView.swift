@@ -43,6 +43,9 @@ struct NotchIslandView: View {
     /// ~0.2s later — the glass and its contents fade in. That black beat makes
     /// the panel read as the physical notch stretching open before it reveals.
     @State private var panelRevealed = false
+    /// How many pixels the display gives a point, so the outline can be exactly
+    /// one of them.
+    @Environment(\.displayScale) private var displayScale
 
     // ── The settle, and why it is a spring rather than an effect ────────────
     //
@@ -372,10 +375,10 @@ struct NotchIslandView: View {
         let tint = outlineTint
         return ZStack {
             IslandOutlineShape(radius: radius)
-                .stroke(tint ?? .clear, style: Self.outlineStroke)
+                .stroke(tint ?? .clear, style: outlineStroke(displayScale))
             IslandOutlineShape(radius: radius)
-                .stroke((tint ?? .clear).opacity(0.45), style: Self.outlineGlow)
-                .blur(radius: 2.2)
+                .stroke((tint ?? .clear).opacity(0.28), style: outlineGlow(displayScale))
+                .blur(radius: 1.0)
         }
         // Reach BELOW the island, or the bottom of the line is not on screen.
         //
@@ -448,15 +451,25 @@ struct NotchIslandView: View {
     /// reading as the island being lit and started reading as a border drawn
     /// around it, and the wide blurred pass left a halo on the black.
     ///
-    /// Chosen by rendering four weights offscreen at the strip's real
+    /// Chosen by rendering the weights offscreen at the strip's real
     /// proportions, with the hardware notch masked in front, and looking at
-    /// them side by side rather than reasoning about numbers. At 1 point the
-    /// line is crisp and still unmistakable from across a desk; at 0.8 it is
-    /// cleaner still on this Mac, but a point is also the thinnest line that
-    /// survives a display that is not Retina, where 0.8 has no whole pixel to
-    /// land on and smears.
-    private static let outlineStroke = StrokeStyle(lineWidth: 1.0, lineCap: .round)
-    private static let outlineGlow = StrokeStyle(lineWidth: 2.6, lineCap: .round)
+    /// them side by side rather than reasoning about numbers. A point was too
+    /// heavy and its glow left a visible bloom on the black; what reads as
+    /// modern is a bright hairline with barely any halo behind it.
+    ///
+    /// So the line is **one device pixel**, whatever the display: half a point
+    /// on Retina, a whole point where there is no Retina to halve. Asked of the
+    /// environment rather than hard-coded, because 0.5 on a display that cannot
+    /// draw it is not a finer line, it is a smeared one.
+    private func outlineStroke(_ scale: CGFloat) -> StrokeStyle {
+        StrokeStyle(lineWidth: 1 / max(scale, 1), lineCap: .round)
+    }
+
+    /// A whisper of glow, so the line has depth without a halo. Kept in
+    /// proportion to the line rather than fixed, for the same reason.
+    private func outlineGlow(_ scale: CGFloat) -> StrokeStyle {
+        StrokeStyle(lineWidth: 2.4 / max(scale, 1), lineCap: .round)
+    }
 
     private var liveIsland: some View {
         // The black pill HUGS its content (no trailing dead space after the

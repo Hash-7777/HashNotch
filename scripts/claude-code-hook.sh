@@ -17,7 +17,7 @@ set -euo pipefail
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
 # months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
-HOOK_VERSION=5
+HOOK_VERSION=6
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -78,11 +78,17 @@ function run(argv) {
     subtitle = String(payload.message || '').slice(0, 120) || null;
     waitSeconds = 180;
   } else {
-    // A tick is what every notification on the machine uses, which makes it
-    // the one symbol that says nothing about WHAT finished. Angle brackets are
-    // the universal mark for code, and on a black notch beside the word
-    // "Claude" they read instantly as a coding tool having finished its turn.
-    icon = 'chevron.left.forwardslash.chevron.right';
+    // The word "finished" is already in the title and the notch wears green
+    // while it shows, so both "done" and "nothing to do" are said before the
+    // symbol says anything. That leaves it free to say WHAT finished, which is
+    // the part neither of the others can carry.
+    //
+    // Angle brackets were tried and say "code" rather than "the assistant".
+    // A tick repeats the colour. Rendered against the real strip, the filled
+    // variants — a tick in a bubble, in a seal, in a speech mark — are a solid
+    // glyph inside a solid disc, which reads as heavy at 21 points and pushes
+    // the title onto a second line it does not have room for.
+    icon = 'sparkles';
     title = 'Claude finished';
     // No subtitle. This carried the working folder's name, which on a glance
     // surface is noise: it is usually the folder you are already looking at,

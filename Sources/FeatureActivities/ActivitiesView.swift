@@ -66,6 +66,13 @@ struct ActivityMark: View {
     let theme: Theme
     let size: CGFloat
 
+    /// The same colour the island's edge is wearing for this activity, asked of
+    /// the same rule rather than chosen again here — a green ring around the
+    /// notch with an accent-coloured badge inside it would read as two
+    /// different things happening at once. Falls back to the accent for work
+    /// that is merely in progress, which lights no edge at all.
+    private var tint: Color { ActivitiesFeature.markTint(for: activity, accent: theme.accent) }
+
     var body: some View {
         if let path = activity.imagePath, let image = ActivityLogoCache.image(atPath: path) {
             Image(nsImage: image)
@@ -77,12 +84,12 @@ struct ActivityMark: View {
         } else {
             Image(systemName: activity.icon)
                 .font(.system(size: size * 0.52, weight: .bold))
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(tint)
                 .frame(width: size, height: size)
                 .background(
                     Circle()
-                        .fill(theme.accent.opacity(0.16))
-                        .overlay(Circle().strokeBorder(theme.accent.opacity(0.22), lineWidth: 0.6))
+                        .fill(tint.opacity(0.16))
+                        .overlay(Circle().strokeBorder(tint.opacity(0.22), lineWidth: 0.6))
                 )
         }
     }
