@@ -361,8 +361,8 @@ struct NotchIslandView: View {
             IslandOutlineShape(radius: radius)
                 .stroke(tint ?? .clear, style: Self.outlineStroke)
             IslandOutlineShape(radius: radius)
-                .stroke((tint ?? .clear).opacity(0.5), style: Self.outlineGlow)
-                .blur(radius: 3.0)
+                .stroke((tint ?? .clear).opacity(0.45), style: Self.outlineGlow)
+                .blur(radius: 2.2)
         }
         // Reach BELOW the island, or the bottom of the line is not on screen.
         //
@@ -427,8 +427,23 @@ struct NotchIslandView: View {
     /// How far below the island the line is drawn — enough to clear the notch's
     /// underside, and no more than reads as part of the same shape.
     private static let outlineDrop: CGFloat = 3
-    private static let outlineStroke = StrokeStyle(lineWidth: 2.0, lineCap: .round)
-    private static let outlineGlow = StrokeStyle(lineWidth: 4.5, lineCap: .round)
+
+    /// A hairline, not a band.
+    ///
+    /// This began at 2 points with a 4.5-point glow behind it, which on a strip
+    /// only 28 points tall is a stripe rather than an edge — the colour stopped
+    /// reading as the island being lit and started reading as a border drawn
+    /// around it, and the wide blurred pass left a halo on the black.
+    ///
+    /// Chosen by rendering four weights offscreen at the strip's real
+    /// proportions, with the hardware notch masked in front, and looking at
+    /// them side by side rather than reasoning about numbers. At 1 point the
+    /// line is crisp and still unmistakable from across a desk; at 0.8 it is
+    /// cleaner still on this Mac, but a point is also the thinnest line that
+    /// survives a display that is not Retina, where 0.8 has no whole pixel to
+    /// land on and smears.
+    private static let outlineStroke = StrokeStyle(lineWidth: 1.0, lineCap: .round)
+    private static let outlineGlow = StrokeStyle(lineWidth: 2.6, lineCap: .round)
 
     private var liveIsland: some View {
         // The black pill HUGS its content (no trailing dead space after the

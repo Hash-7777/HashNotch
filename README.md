@@ -15,7 +15,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-610%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="610 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-615%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="615 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -79,7 +79,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 610 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 615 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
@@ -202,7 +202,7 @@ Let the notch tell you the moment a tool is done — a checkmark landing on the 
 ./scripts/install-claude-hooks.sh
 ```
 
-The island lights up when **Claude Code** finishes a reply, or is **waiting for your permission** — click that one and the waiting window comes to the front. **HashCortX** and **HashCerebrum** are built in.
+The island lights up when **Claude Code** finishes a reply — the notch wears a blue edge for a moment — or is **waiting for your permission**, which holds that edge amber until you answer; click that one and the waiting window comes to the front. **HashCortX** and **HashCerebrum** are built in.
 
 Setup, and the local feed any script or Shortcut can write to: **[docs/ACTIVITIES.md](docs/ACTIVITIES.md)**.
 

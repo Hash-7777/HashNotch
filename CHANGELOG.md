@@ -18,13 +18,17 @@ All notable changes to HashNotch are recorded here.
   it — the panel says from when it has been counting rather than quietly
   understating the number.
 
-- **The notch lights up around its edge, the way an iPhone does.** The colour
-  traces the black pill itself, down the sides and around the bottom — never
-  across the top, where there is bezel rather than screen — and fades out as it
-  reaches up under it. Every battery moment has a colour: green going on the
-  charger and green again when it is full, white for running on the battery,
+- **The notch lights up around its edge, the way an iPhone does.** A hairline of
+  colour traces the black pill itself, down the sides and around the bottom —
+  never across the top, where there is bezel rather than screen — and fades out
+  as it reaches up under it. Every battery moment has a colour: green going on
+  the charger and green again when it is full, white for running on the battery,
   orange for running out. A microphone open anywhere holds it red for as long as
-  it is open.
+  it is open. And anything posted to the activity feed lights it too: blue when
+  a job has finished — an AI tool ending its turn, a build completing — and
+  amber when something is waiting on an answer and cannot go on until it gets
+  one. Work merely in progress lights nothing, because a colour that appears for
+  everything announces nothing.
 
 ### Changed
 

@@ -1241,6 +1241,44 @@ MainActor.assumeIsolated {
             previously: nil
         ) == false
     )
+
+    // The colour the island wears for something posted to the feed. The rule
+    // is the difference between a fact and a request, and it is asked of every
+    // poster alike — no tool is named anywhere in it.
+    let finishedAlert = LiveActivity(
+        id: "claude-code", icon: "checkmark", title: "Claude finished", subtitle: "notch",
+        progress: nil, endsAt: Date().addingTimeInterval(3), dismissAfter: 3
+    )
+    let waitingAlert = LiveActivity(
+        id: "claude-code", icon: "questionmark", title: "Claude needs you", subtitle: "notch",
+        progress: nil, endsAt: Date().addingTimeInterval(45), dismissAfter: nil
+    )
+    let workingAlert = LiveActivity(
+        id: "build", icon: "hammer", title: "Building", subtitle: nil,
+        progress: 0.4, endsAt: nil, dismissAfter: nil
+    )
+    check(
+        "something that finished lights the island",
+        ActivitiesFeature.tint(for: finishedAlert) != nil
+    )
+    check(
+        "something waiting on you lights it too",
+        ActivitiesFeature.tint(for: waitingAlert) != nil
+    )
+    check(
+        "and the two do not look the same",
+        ActivitiesFeature.tint(for: finishedAlert) != ActivitiesFeature.tint(for: waitingAlert)
+    )
+    // Work still going on is already described by the strip. Lighting the whole
+    // island for it would spend the signal on something nobody has to act on.
+    check(
+        "work still in progress lights nothing",
+        ActivitiesFeature.tint(for: workingAlert) == nil
+    )
+    check(
+        "and an empty feed lights nothing",
+        ActivitiesFeature.tint(for: nil) == nil
+    )
     check(
         "an activity with no image still has its symbol",
         ActivitiesReader.read(from: tempFile("[{\"id\":\"S\",\"title\":\"Sym\",\"icon\":\"bolt.fill\"}]"))
