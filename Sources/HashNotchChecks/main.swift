@@ -2162,8 +2162,26 @@ MainActor.assumeIsolated {
     )
 
     // Reaching a browser needs Accessibility, and the app must not pretend to
-    // have it. These checks run from a bare executable, which does not.
-    check("without permission nothing can be pressed", MediaControl.hasPermission == false)
+    // have it.
+    //
+    // This used to assert that the permission was absent, on the reasoning that
+    // these checks run from a bare executable. That is a fact about the machine
+    // rather than about the app: it holds on a Mac whose terminal has never
+    // been granted Accessibility, and fails on one where it has — including
+    // GitHub's runners, which grant it to the process that starts the job. A
+    // check that a contributor fails for having a window manager installed is
+    // telling them about their Mac, not about this code.
+    //
+    // What is true everywhere is that both halves of the behaviour give the same
+    // answer: what the settings window says about the permission, and whether a
+    // key press is actually sent. Be clear about what this catches and what it
+    // does not — a second plain call to the same system function would agree
+    // with the first, so this does not stop the duplication coming back. It
+    // fails when the two answers can differ: one of them caching what it was
+    // told at launch while the other asks live, or either being pointed at a
+    // different signal. That is the shape the bug would really take, because
+    // the permission is revoked and granted while the app is running.
+    check("the panel and the key press agree about the permission", MediaKeys.isTrusted == MediaControl.hasPermission)
 
     // Whether the app can be a login item is a question about the BUNDLE, not
     // about whether it is already registered. Asking the registration made the

@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import HashNotchKit
 
 /// Presses the keyboard's own media keys.
 ///
@@ -24,13 +25,18 @@ package enum MediaKeys {
     package static let previous: Int32 = 20
 
     /// Whether macOS will currently let this app post those keys.
-    package static var isTrusted: Bool { AXIsProcessTrusted() }
+    ///
+    /// Asked of `MediaControl` rather than of macOS directly. The settings
+    /// window asks the same question through that type, and the two answers
+    /// decide different halves of one behaviour — what the panel tells you
+    /// about the permission, and whether a key is actually sent. Two copies of
+    /// the same call can drift apart; one cannot.
+    package static var isTrusted: Bool { MediaControl.hasPermission }
 
     /// Asks, once, with the system's own prompt — which offers to open the
     /// right pane rather than describing where it is.
     package static func requestTrust() {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+        MediaControl.requestPermission()
     }
 
     /// Sends one press. Silently does nothing without permission — macOS drops
