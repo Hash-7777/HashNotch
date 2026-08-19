@@ -3154,6 +3154,29 @@ MainActor.assumeIsolated {
             ) > screen.height * 0.8
         )
 
+        // Before the panel has ever been measured, the window reserves the
+        // whole column rather than guessing at a height. Asking for everything
+        // has to come back as the room that exists, or the first open of a
+        // launch would put the window off the bottom of the screen instead of
+        // merely being generous.
+        //
+        // Too much window costs nothing — it is transparent and click-through.
+        // Too little clips the panel mid-drop and makes the window step down
+        // underneath it, which is measurable: before this, one opening set the
+        // window three times, at 84 points, then 592, then 632.
+        check(
+            "asking for every point there is comes back as the room there is",
+            NotchWindowController.expandedContentHeight(
+                measured: .greatestFiniteMagnitude, islandTop: top, screenFrame: screen
+            ) == top - screen.minY - NotchWindowController.panelBottomMargin
+        )
+        check(
+            "and it is still a finite height",
+            NotchWindowController.expandedContentHeight(
+                measured: .greatestFiniteMagnitude, islandTop: top, screenFrame: screen
+            ).isFinite
+        )
+
         // Settings hangs off the panel's right edge, sharing its top edge so
         // the two read as one surface rather than as a window that happened to
         // appear nearby.

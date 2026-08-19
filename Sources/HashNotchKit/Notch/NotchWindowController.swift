@@ -62,6 +62,42 @@ public final class NotchWindowController {
     private static let hoverSuppression: TimeInterval = 1.2
     private var cancellables = Set<AnyCancellable>()
     private var lastIslandSize: CGSize?
+
+    /// The height the panel measured the last time it was OPEN.
+    ///
+    /// Kept apart from `lastIslandSize` because that holds whatever was on
+    /// screen most recently, and at the instant the panel starts opening that
+    /// is the collapsed notch — 28 points. The window was therefore sized for
+    /// the notch while the panel animated inside it, and only caught up in two
+    /// jumps once SwiftUI reported the panel's real size: measured over a
+    /// cycle, 84 points tall at the start, then 592, then 632. The panel's
+    /// first frames were being drawn into a window barely taller than the
+    /// notch, so the drop was clipped and the window's bottom edge stepped
+    /// down twice underneath it. That is the stutter.
+    ///
+    /// `provisionalExpandedHeight` was written for exactly this moment and
+    /// could never fire: it only applies when the measurement is nil, and this
+    /// one was never nil after the first open — merely wrong.
+    ///
+    /// Remembered across opens, so the second open onwards uses the height the
+    /// panel actually was rather than an estimate.
+    private var lastExpandedHeight: CGFloat?
+
+    /// The panel's height for sizing purposes: what it measured last time it
+    /// was open, or, before it has ever been seen, everything there is.
+    ///
+    /// Reserving the whole column for that first open is deliberate. Too much
+    /// window costs nothing — it is transparent and click-through, so the only
+    /// thing below the panel is desktop either way — while too little clips the
+    /// panel mid-drop and makes the window step down underneath it. There is no
+    /// symmetry between the two mistakes, so the estimate is generous and the
+    /// settle pass takes the extra back 0.7s later.
+    ///
+    /// `expandedContentHeight` clamps this to the room actually below the
+    /// island, which is what makes asking for everything safe.
+    private var expandedHeightEstimate: CGFloat {
+        lastExpandedHeight ?? .greatestFiniteMagnitude
+    }
     private var settleWork: DispatchWorkItem?
     private var isPinnedOpen = false
 
@@ -93,6 +129,10 @@ public final class NotchWindowController {
     /// leaves comfortably more than the shadow can reach.
     private static let expandedShadow: (CGFloat, CGFloat) = (26, 56)
     /// Room reserved while the panel is opening, before its first measurement.
+    ///
+    /// Only reached when nothing has asked for a height at all — see
+    /// `expandedHeightEstimate`, which reserves the whole column instead for
+    /// the one open that happens before the panel has ever been measured.
     private static let provisionalExpandedHeight: CGFloat = 480
 
     public init(registry: FeatureRegistry, context: FeatureContext) {
@@ -330,7 +370,7 @@ public final class NotchWindowController {
     /// Where the open panel sits on screen, for anything that hangs off it.
     public var panelAnchor: CGRect {
         let height = Self.expandedContentHeight(
-            measured: lastIslandSize?.height, islandTop: islandTop, screenFrame: screenFrame
+            measured: expandedHeightEstimate, islandTop: islandTop, screenFrame: screenFrame
         )
         return CGRect(
             x: notchRect.midX - state.expandedWidth / 2,
@@ -447,7 +487,7 @@ public final class NotchWindowController {
             islandTop: top,
             width: state.expandedWidth,
             height: Self.expandedContentHeight(
-                measured: lastIslandSize?.height,
+                measured: expandedHeightEstimate,
                 islandTop: top,
                 screenFrame: screenFrame
             ),
@@ -463,7 +503,7 @@ public final class NotchWindowController {
             state: state,
             expanded: state.isExpanded,
             live: context.presence.hasLive,
-            islandHeight: lastIslandSize?.height,
+            islandHeight: state.isExpanded ? expandedHeightEstimate : lastIslandSize?.height,
             topEdge: islandTop,
             in: screenFrame
         )
@@ -558,6 +598,10 @@ public final class NotchWindowController {
 
     private func islandSizeChanged(_ size: CGSize) {
         lastIslandSize = size
+        // Only a measurement taken while the panel is open describes the panel.
+        // A measurement of the collapsed notch is what made the window open at
+        // the notch's own size and then step down to the panel's.
+        if state.isExpanded { lastExpandedHeight = size.height }
         // The keep-open zone is derived from this, so it has to be rebuilt the
         // moment the panel's real height is known — and again whenever it
         // changes, because turning an indicator on makes the panel taller.

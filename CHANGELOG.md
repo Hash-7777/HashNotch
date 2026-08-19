@@ -39,6 +39,14 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The panel opens in one movement.** The window it is drawn in was being
+  sized from whatever was on screen a moment earlier — which, at the instant the
+  panel starts opening, is the collapsed notch. So the panel began its drop
+  inside a window barely taller than the notch itself, and the window then
+  caught up in two jumps while the panel was still moving, clipping it on the
+  way. Measured over one opening: the window was set three times, at 84 points,
+  then 592, then 632. It is now sized for the panel before the panel starts to
+  move, so an opening sets it once.
 - **The notch no longer says everything twice.** Two copies of the app running
   at once does not give you two apps — it gives you two islands drawn on top of
   each other, so every alert appears twice, and there is no Dock icon or
