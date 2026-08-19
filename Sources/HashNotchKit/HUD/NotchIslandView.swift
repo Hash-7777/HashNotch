@@ -116,9 +116,19 @@ struct NotchIslandView: View {
             if expanded {
                 panelClosedAt = nil
                 panelRevealed = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                // Begins while the panel is still on its way down, not after it
+                // has landed. At 0.2s the box arrived, paused, and then filled
+                // — two events where there is one movement, which is what reads
+                // as a stutter even when every frame was drawn on time. Starting
+                // at 0.1s and fading over 0.24s has the contents arriving with
+                // the panel rather than after it.
+                //
+                // Scaled by the motion setting like everything else, so calm
+                // does not end up with the contents appearing before a panel
+                // that is still moving.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.10 * motionScale) {
                     guard state.isExpanded else { return }
-                    withAnimation(.easeOut(duration: 0.28)) { panelRevealed = true }
+                    withAnimation(.easeOut(duration: 0.24 * motionScale)) { panelRevealed = true }
                 }
             } else {
                 panelClosedAt = Date()
@@ -257,14 +267,17 @@ struct NotchIslandView: View {
         // springs are fully damped, because a bouncing close reads as a crash.
         // The motion setting scales all four responses together, so calm and
         // lively stay recognisably the same animation.
-        // Opening undershoots its damping so the panel overshoots its height
-        // slightly and rings down — the drop landing. Closing is fully damped,
-        // because a bouncing close reads as a crash. This spring IS the wobble;
-        // see the note above for the transform that used to do it and why it
-        // could not stay.
+        // Opening keeps a trace of overshoot — the drop landing — but only a
+        // trace. At 0.62 the panel visibly bounced past its height and rang
+        // back, which reads as the panel wobbling rather than as it arriving,
+        // and any bounce is a stretch of motion during which the whole panel is
+        // being scaled and redrawn for no reason anybody asked for. At 0.82 it
+        // overshoots by a hair and settles, which is the difference between a
+        // drop landing and a drop splashing. Closing stays fully damped,
+        // because a bouncing close reads as a crash.
         .animation(
             showExpanded
-                ? .spring(response: 0.52 * motionScale, dampingFraction: 0.62)
+                ? .spring(response: 0.52 * motionScale, dampingFraction: 0.82)
                 : .spring(response: 0.42 * motionScale, dampingFraction: 0.98),
             value: showExpanded
         )
@@ -479,7 +492,7 @@ struct NotchIslandView: View {
     }
 
     /// The drop-down panel. It first appears as a solid-black box (matching the
-    /// notch) and, once `panelRevealed` flips ~0.2s later, crossfades to
+    /// notch) and, once `panelRevealed` flips shortly after, crossfades to
     /// Control-Center glass while its contents fade in. The content is always
     /// laid out (just invisible at first) so the black box is full panel size
     /// from the start and nothing resizes on the reveal.

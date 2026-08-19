@@ -390,7 +390,7 @@ public final class NotchWindowController {
         guard isPinnedOpen != pinned else { return }
         isPinnedOpen = pinned
         if pinned {
-            state.setExpanded(true)
+            openPanel()
         } else {
             updateHover()
         }
@@ -571,6 +571,46 @@ public final class NotchWindowController {
         )
     }
 
+    /// Open the panel, having first given the window the size it will need.
+    ///
+    /// The order is the whole point. `state.$isExpanded` is watched by a sink
+    /// that refits the window, and that sink defers to the next runloop turn on
+    /// purpose — `@Published` fires in `willSet`, so reading the state
+    /// synchronously there gives the value before the change. The consequence
+    /// was that the window resized ONE FRAME INTO the opening spring, and a
+    /// window resize makes `NSHostingView` lay the whole panel out again: a
+    /// full layout pass landing on the second frame of the animation, which is
+    /// exactly where a hitch is most visible.
+    ///
+    /// Sizing here, before the state flips, moves that layout pass to before
+    /// any motion has started. The deferred refit still runs and finds the
+    /// frame already correct, so it does nothing.
+    ///
+    /// Every path that opens the panel goes through this. Closing deliberately
+    /// does not: the window is transparent, so staying large for the length of
+    /// the closing spring costs nothing and the settle takes it back.
+    private func openPanel() {
+        growForExpanded()
+        state.setExpanded(true)
+    }
+
+    /// Give the window the room the open panel needs, without shrinking it.
+    private func growForExpanded() {
+        let target = Self.frame(
+            for: notchRect,
+            state: state,
+            expanded: true,
+            live: context.presence.hasLive,
+            islandHeight: expandedHeightEstimate,
+            topEdge: islandTop,
+            in: screenFrame
+        )
+        let union = window.frame.union(target)
+        guard union != window.frame else { return }
+        window.setFrame(union, display: true)
+        debugLog("open-prepare")
+    }
+
     /// Grow immediately (the animation needs room), settle to the exact fit
     /// once the spring is done. All frames share the notch's center and the
     /// screen's top edge, so growing and shrinking never moves the island.
@@ -652,7 +692,7 @@ public final class NotchWindowController {
         Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 open.toggle()
-                self?.state.setExpanded(open)
+                if open { self?.openPanel() } else { self?.state.setExpanded(false) }
             }
         }
     }
@@ -740,7 +780,7 @@ public final class NotchWindowController {
         if !state.isExpanded, fingersDown {
             guard collapsedHoverRect.contains(location) else { return }
             lastSwipe = Date()
-            state.setExpanded(true)
+            openPanel()
         } else if state.isExpanded, !fingersDown {
             guard expandedHoverRect.contains(location)
                 || collapsedHoverRect.contains(location) else { return }
@@ -931,7 +971,7 @@ public final class NotchWindowController {
         // Held open beats hover: while settings is open beside the panel,
         // the cursor is expected to be away from the island.
         guard !holdsPanelOpen else {
-            state.setExpanded(true)
+            openPanel()
             return
         }
         let location = NSEvent.mouseLocation
@@ -942,6 +982,6 @@ public final class NotchWindowController {
         } else {
             inside = collapsedHoverRect.contains(location)
         }
-        state.setExpanded(inside)
+        if inside { openPanel() } else { state.setExpanded(false) }
     }
 }
