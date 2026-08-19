@@ -26,13 +26,13 @@ Both are the gate, and they are yours to run — nothing catches a broken push f
 you.
 
 The same two commands run again on GitHub (`.github/workflows/build.yml`) for
-every **pull request**, and on demand from the Actions tab. Not on every push:
-macOS runners are billed at ten times the Linux rate, and re-confirming a result
-you just watched succeed is not worth that. Run it by hand when a second machine
-genuinely tells you something — before a release, or after a change too large to
-trust to one. That job also builds the release configuration, assembles and
-verifies the `.app`, and checks that the README's "checks passing" badge still
-matches the number that actually ran.
+every **push to main** and every **pull request**, and on demand from the
+Actions tab. This repository is public, so GitHub's hosted runners cost nothing
+and a second machine is worth having on every change — both to catch what one
+machine agrees with itself about, and so that anybody reading the repository can
+see whether what is on main builds. That job also builds the release
+configuration, assembles and verifies the `.app`, and checks that the README's
+"checks passing" badge still matches the number that actually ran.
 
 ## The one rule that matters
 

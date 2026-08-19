@@ -4,13 +4,13 @@ name: Build and check
 # is not the developer's. That is the whole point: everything here has always
 # been runnable locally, and something that only ever runs locally is a habit
 # rather than a gate.
-# Pull requests and manual runs only — deliberately NOT every push to main.
-# This repository is private, where GitHub bills macOS runners at ten times the
-# rate of Linux ones, and the developer already runs both commands locally
-# before every push. Paying that multiplier a second time for a result he has
-# just seen buys nothing. Run it by hand from the Actions tab when it matters —
-# before cutting a release, or after a change too large to trust to one machine.
+# On every push to main as well as every pull request. This repository is
+# public, where GitHub does not bill for its hosted runners, so the second
+# machine costs nothing and anybody reading the repository can see for
+# themselves whether what is on main builds and passes.
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -26,10 +26,13 @@ jobs:
     # Apple Silicon, which is what the app is built for. The app reads
     # Apple Silicon sensors and macOS media interfaces, so an Intel runner
     # would be testing a machine nobody ships to.
-    runs-on: macos-14
+    # The image also has to carry Swift 6 or newer, because the package
+    # declares tools version 6.0 — an older image cannot read Package.swift
+    # at all, let alone build it.
+    runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Show the toolchain
         run: swift --version
@@ -37,31 +40,46 @@ jobs:
       # Debug and release are built separately on purpose: release turns on
       # optimisation and whole-module builds, and has caught warnings that a
       # debug build does not surface.
+      #
+      # `set -o pipefail` is the whole gate. Without it the shell reports the
+      # exit status of `tee`, which always succeeds, so a build that failed
+      # outright passed this step in silence — and the warning grep below did
+      # not catch it either, because a toolchain refusing to read the package
+      # says `error:` at the start of the line rather than mid-sentence.
       - name: Build (debug)
-        run: swift build 2>&1 | tee build-debug.log
+        run: |
+          set -o pipefail
+          swift build 2>&1 | tee build-debug.log
 
       - name: Build (release)
-        run: swift build -c release 2>&1 | tee build-release.log
+        run: |
+          set -o pipefail
+          swift build -c release 2>&1 | tee build-release.log
 
       # The project ships zero warnings and says so. A warning that lands
       # quietly is one nobody reads afterwards.
       - name: Refuse any warning
         run: |
-          if grep -E ': (warning|error):' build-debug.log build-release.log; then
+          if grep -E '(^|: )(warning|error): ' build-debug.log build-release.log; then
             echo "::error::The build produced warnings or errors (see above)."
             exit 1
           fi
           echo "No warnings in either configuration."
 
+      # Run once, keep the output, and count from what was kept. Running the
+      # checks a second time to count them would let the two disagree, and the
+      # count is the thing the badge is judged against.
       - name: Run the checks
-        run: swift run HashNotchChecks
+        run: |
+          set -o pipefail
+          swift run HashNotchChecks 2>&1 | tee checks.log
 
       # The README carries a "checks passing" badge. A badge is a claim, so
       # it has to be true — and it is the kind of claim that rots silently,
       # because adding a check is exactly when nobody thinks about the README.
       - name: The badge must match the checks
         run: |
-          counted=$(swift run HashNotchChecks | grep -c '^  ok' || true)
+          counted=$(grep -c '^  ok' checks.log || true)
           claimed=$(grep -oE 'checks-[0-9]+%20passing' README.md | grep -oE '[0-9]+' | head -1)
           echo "checks that ran: $counted"
           echo "README badge:    ${claimed:-<none found>}"
