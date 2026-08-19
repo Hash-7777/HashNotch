@@ -110,9 +110,12 @@ struct NetworkDetailView: View {
     let period: NetworkUsagePeriod
 
     var body: some View {
+        // Speed, then the shape of the last half-minute, then the total. The
+        // graph belongs directly under the numbers it is a picture of; the
+        // total is a different question and reads as an answer to the graph if
+        // it is put between them.
         VStack(alignment: .leading, spacing: 5) {
             row
-            used
             if style == .graph {
                 ZStack {
                     Sparkline(values: scaled(monitor.upHistory), tint: theme.upColor)
@@ -120,6 +123,7 @@ struct NetworkDetailView: View {
                 }
                 .frame(width: Panel.rowWidth, height: 26)
             }
+            used
         }
     }
 
