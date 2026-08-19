@@ -1,5 +1,4 @@
 import Foundation
-import Darwin
 import HashNotchKit
 
 /// Reads live upload/download throughput by diffing the kernel's per-interface
@@ -11,6 +10,9 @@ public final class NetworkMonitor: ObservableObject {
     /// Recent rates, oldest first, for the graph styles.
     @Published public private(set) var upHistory: [Double] = []
     @Published public private(set) var downHistory: [Double] = []
+    /// How much has gone through the network over the span the settings ask
+    /// for. Counted from the same readings the speed is measured from.
+    @Published package private(set) var usage = NetworkUsageTotals()
 
     /// Half a minute of samples. Held here rather than in the view so the shape
     /// survives a redraw.
@@ -34,25 +36,121 @@ public final class NetworkMonitor: ObservableObject {
     private var lastTx: UInt64 = 0
     private var lastTime: TimeInterval = 0
 
+    /// How often the ledger is brought up to date when nothing is watching.
+    ///
+    /// Unlike the speed, a running total has to keep counting whether or not
+    /// the panel is open — a figure for the day that only counted the moments
+    /// somebody was looking at it would be worthless. This is the cheapest
+    /// reading in the app: one call into the kernel, in process, no subprocess
+    /// and no permission, and a minute of it costs less than a single one of
+    /// the media polls that run all day.
+    ///
+    /// A minute is also the most that can be lost if the app is killed rather
+    /// than quit, and the least that is worth waking a sleeping Mac for.
+    private static let usageInterval: TimeInterval = 60
+
+    private var usageSampler: PollingSampler?
+    private var ledger = NetworkUsageLedger()
+    private var period: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod
+    private var defaults: UserDefaults = .standard
+    private var lastPersist: Date = .distantPast
+
     public init() {}
 
-    public func start(visibility: PanelVisibility, scale: Double = 1) {
-        let counters = Self.counters()
-        lastRx = counters.rx
-        lastTx = counters.tx
+    public func start(
+        visibility: PanelVisibility,
+        scale: Double = 1,
+        period: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod,
+        defaults: UserDefaults = .standard
+    ) {
+        self.period = period
+        self.defaults = defaults
+        ledger = NetworkUsageStore.load(from: defaults) ?? NetworkUsageLedger()
+
+        let reading = NetworkInterfaces.read()
+        let counters = NetworkInterfaces.totalBytes(reading)
+        lastRx = counters.received
+        lastTx = counters.sent
         lastTime = Date().timeIntervalSinceReferenceDate
         effectiveInterval = Self.interval * scale
+
+        // The first fold of a launch carries no bytes of its own — every
+        // interface is met where its counters currently stand — but it does
+        // catch a counter that restarted while the app was not running, which
+        // is what a restart of the Mac looks like from here.
+        fold(reading: reading, now: Date())
+
         // Throughput is only ever drawn in the panel, so it is measured only
         // while the panel is open.
         sampler = VisibleSampler(interval: effectiveInterval, visibility: visibility) { [weak self] in
             self?.sample()
         }
         sampler?.start()
+
+        // The total, unlike the speed, keeps counting with the panel shut.
+        usageSampler = PollingSampler(interval: Self.usageInterval * scale) { [weak self] in
+            self?.sampleUsage()
+        }
+        usageSampler?.start()
     }
 
     public func stop() {
         sampler?.stop()
         sampler = nil
+        usageSampler?.stop()
+        usageSampler = nil
+        // Stopping is a sleep, a display change, or the indicator being
+        // switched off — all moments after which this may not run again, so
+        // what has been counted is written down rather than left in memory.
+        sampleUsage(persist: true)
+    }
+
+    /// Follows the settings while running, so choosing a different span shows
+    /// the answer straight away rather than at the next reading.
+    public func setPeriod(_ period: NetworkUsagePeriod) {
+        guard period != self.period else { return }
+        self.period = period
+        publishUsage(now: Date())
+    }
+
+    /// Starts the count again, for the span that is counted from a reset.
+    ///
+    /// The day-by-day record is left alone: today and this month are read from
+    /// the same days and have every right to them.
+    public func resetUsage() {
+        ledger = NetworkUsageMath.afterReset(ledger, now: Date())
+        NetworkUsageStore.save(ledger, to: defaults)
+        lastPersist = Date()
+        publishUsage(now: Date())
+    }
+
+    /// Reads the counters, folds them in, and writes the record down.
+    private func sampleUsage(persist: Bool = true) {
+        let now = Date()
+        fold(reading: NetworkInterfaces.read(now: now), now: now)
+        if persist { persistIfDue(now: now) }
+    }
+
+    private func fold(reading: [String: InterfaceBytes], now: Date) {
+        ledger = NetworkUsageMath.folded(ledger, reading: reading, now: now)
+        publishUsage(now: now)
+    }
+
+    private func publishUsage(now: Date) {
+        let totals = NetworkUsageMath.totals(ledger, period: period, now: now)
+        if totals != usage { usage = totals }
+    }
+
+    /// Writes at most once a minute however often the counters are read.
+    ///
+    /// With the panel open the ledger is folded every second, because the
+    /// figure people are looking at should climb while they look at it. Saving
+    /// on every one of those would be a preference write a second for as long
+    /// as the panel is up, to record a number that has moved by a few kilobytes.
+    private func persistIfDue(now: Date) {
+        guard now.timeIntervalSince(lastPersist) >= Self.usageInterval else { return }
+        NetworkUsageStore.save(ledger, to: defaults)
+        lastPersist = now
     }
 
     /// Whether the previous reading is too old to diff against.
@@ -73,20 +171,28 @@ public final class NetworkMonitor: ObservableObject {
     }
 
     private func sample() {
-        let now = Date().timeIntervalSinceReferenceDate
+        let sampledAt = Date()
+        let now = sampledAt.timeIntervalSinceReferenceDate
         let dt = max(0.001, now - lastTime)
-        let counters = Self.counters()
+        let reading = NetworkInterfaces.read(now: sampledAt)
+        let counters = NetworkInterfaces.totalBytes(reading)
+
+        // The same reading serves both figures: the speed below, and the
+        // running total, which climbs while the panel is open rather than
+        // waiting for the minute timer.
+        fold(reading: reading, now: sampledAt)
+        persistIfDue(now: sampledAt)
 
         guard !Self.isStaleBaseline(dt: dt, interval: effectiveInterval) else {
-            lastRx = counters.rx
-            lastTx = counters.tx
+            lastRx = counters.received
+            lastTx = counters.sent
             lastTime = now
             return
         }
 
         // Counters can wrap (32-bit) or reset; treat a decrease as zero delta.
-        let dRx = counters.rx >= lastRx ? counters.rx - lastRx : 0
-        let dTx = counters.tx >= lastTx ? counters.tx - lastTx : 0
+        let dRx = counters.received >= lastRx ? counters.received - lastRx : 0
+        let dTx = counters.sent >= lastTx ? counters.sent - lastTx : 0
 
         let newDownload = Double(dRx) / dt
         let newUpload = Double(dTx) / dt
@@ -110,34 +216,8 @@ public final class NetworkMonitor: ObservableObject {
             downHistory.removeFirst(downHistory.count - Self.historyLength)
         }
 
-        lastRx = counters.rx
-        lastTx = counters.tx
+        lastRx = counters.received
+        lastTx = counters.sent
         lastTime = now
-    }
-
-    /// Sum of received/sent bytes across all non-loopback link-layer interfaces.
-    private static func counters() -> (rx: UInt64, tx: UInt64) {
-        var rx: UInt64 = 0
-        var tx: UInt64 = 0
-
-        var addrs: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&addrs) == 0, let first = addrs else { return (0, 0) }
-        defer { freeifaddrs(addrs) }
-
-        var cursor: UnsafeMutablePointer<ifaddrs>? = first
-        while let pointer = cursor {
-            let interface = pointer.pointee
-            if let sockaddr = interface.ifa_addr,
-               sockaddr.pointee.sa_family == UInt8(AF_LINK) {
-                let name = String(cString: interface.ifa_name)
-                if !name.hasPrefix("lo"), let data = interface.ifa_data {
-                    let stats = data.assumingMemoryBound(to: if_data.self).pointee
-                    rx += UInt64(stats.ifi_ibytes)
-                    tx += UInt64(stats.ifi_obytes)
-                }
-            }
-            cursor = interface.ifa_next
-        }
-        return (rx, tx)
     }
 }

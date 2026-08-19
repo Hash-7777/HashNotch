@@ -6,6 +6,18 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
+- **How much you have used, not just how fast it is going.** The panel now says
+  how many gigabytes have gone down and up — today by default, or this month, or
+  since you last reset it, whichever you pick under Settings → General. It is
+  counted from the same readings the speed has always been measured from, so it
+  costs one reading of your Mac's own counters a minute and asks for no
+  permission and no network. Traffic through a VPN, a bridge or a virtual
+  machine is counted once rather than twice, on the way past the real
+  connection. And when the figures cover less than the stretch they are named
+  after — the first day you have it, or a month that began before you installed
+  it — the panel says from when it has been counting rather than quietly
+  understating the number.
+
 - **The notch lights up around its edge, the way an iPhone does.** The colour
   traces the black pill itself, down the sides and around the bottom — never
   across the top, where there is bezel rather than screen — and fades out as it

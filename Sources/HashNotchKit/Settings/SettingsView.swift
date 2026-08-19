@@ -313,6 +313,26 @@ public struct SettingsView: View {
                     .labelsHidden()
                     .frame(width: 200)
                 }
+
+                SettingDivider()
+
+                // Which span, not whether to count: the counting is the same
+                // work whatever is shown, and all three spans are read from the
+                // same day-by-day record, so this changes what the panel adds
+                // up rather than what it collects.
+                SettingRow(
+                    "Data used counts",
+                    detail: "How much has gone through your network, over the stretch you pick. \"Since I reset it\" is started again from the panel.",
+                    stacked: true
+                ) {
+                    Picker("", selection: $settings.networkUsagePeriod) {
+                        ForEach(NetworkUsagePeriod.allCases, id: \.self) { period in
+                            Text(period.label).tag(period)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 200)
+                }
             }
 
             // The two switches that hand the app a power it does not otherwise

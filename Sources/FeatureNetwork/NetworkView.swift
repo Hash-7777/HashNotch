@@ -107,10 +107,12 @@ struct NetworkDetailView: View {
     @ObservedObject var monitor: NetworkMonitor
     let theme: Theme
     let style: NetworkStyle
+    let period: NetworkUsagePeriod
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             row
+            used
             if style == .graph {
                 ZStack {
                     Sparkline(values: scaled(monitor.upHistory), tint: theme.upColor)
@@ -159,6 +161,76 @@ struct NetworkDetailView: View {
                     speed("arrow.down", monitor.downloadBytesPerSec, theme.downColor)
                 }
             }
+        }
+    }
+
+    /// How much has gone through, over the span the settings ask for.
+    ///
+    /// A second row rather than a second pair of numbers in the first one:
+    /// speed and total are different questions — what is happening now, and
+    /// what has happened — and a row that answered both at once would have to
+    /// be read twice to answer either.
+    private var used: some View {
+        NotchRow("Used \(period.caption)", theme: theme) {
+            HStack(spacing: 12) {
+                amount("arrow.down", monitor.usage.received, theme.downColor)
+                amount("arrow.up", monitor.usage.sent, theme.upColor)
+                // Only where it means something. A span counted from the
+                // beginning of a day or a month starts itself; this one is the
+                // one that has to be started by hand, and the button belongs
+                // beside the figure it clears rather than in a settings window
+                // two clicks away from it.
+                if period == .sinceReset {
+                    Button {
+                        monitor.resetUsage()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(theme.subtitleColor)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Start counting again from now")
+                }
+            }
+        }
+        // Said, rather than left to be assumed, whenever the figures cover less
+        // than the span they are named after — the first day of use, or a month
+        // that began before the app was installed. A total that quietly
+        // understates itself is worse than one that explains itself.
+        .overlay(alignment: .bottomLeading) {
+            if !monitor.usage.coversWholeSpan, let since = monitor.usage.countedSince {
+                Text("counted since \(Self.sinceText(since))")
+                    .font(.system(size: 8))
+                    .foregroundStyle(theme.subtitleColor)
+                    .offset(y: 9)
+            }
+        }
+        .padding(.bottom, monitor.usage.coversWholeSpan ? 0 : 10)
+    }
+
+    /// The day for anything older than today, the time for today itself —
+    /// "counted since 09:12" reads as this morning, where a date would leave
+    /// somebody working out whether it means this morning.
+    private static func sinceText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        if Calendar.current.isDateInToday(date) {
+            formatter.dateFormat = "HH:mm"
+        } else {
+            formatter.dateFormat = "d MMM"
+        }
+        return formatter.string(from: date)
+    }
+
+    private func amount(_ symbol: String, _ bytes: UInt64, _ color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(color)
+            Text(Formatters.bytes(Int64(clamping: bytes)))
+                .foregroundStyle(theme.textColor)
+                .monospacedDigit()
+                .rollingDigits()
+                .animation(.snappy, value: bytes)
         }
     }
 

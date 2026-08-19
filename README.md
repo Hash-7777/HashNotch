@@ -15,7 +15,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-567%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="567 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-610%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="610 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -47,7 +47,7 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Microphone** — the moment any app opens your microphone, a live dot and a running timer appear beside the notch, with that app's own icon: FaceTime, Zoom, Teams, a browser call, a voice memo. It asks macOS one yes-or-no question — *does this app have an input stream open* — and **never listens, records or transcribes**. It holds no microphone permission of its own, and could not use one.
 
-**Internet** — live upload and download, with the last half-minute graphed underneath.
+**Internet** — live upload and download, with the last half-minute graphed underneath, and how much has gone through: today, this month, or since you last reset it. Your choice of which, under Settings → General.
 
 **Battery** — level, time left, time to full, adapter wattage, Low Power Mode. Capped at 80% for its health? It counts down to *that*, not to a full charge it will never reach.
 
@@ -79,7 +79,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 567 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 610 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks

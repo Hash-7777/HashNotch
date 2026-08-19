@@ -138,6 +138,39 @@ public enum TokenScanInterval: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// The stretch of time the "data used" figures are counted over.
+///
+/// A total of bytes means nothing without the period it covers, and which
+/// period is useful is a question about the person rather than about the
+/// network: a data plan is monthly, a tethered afternoon is daily, and
+/// somebody watching one particular job wants to start the count themselves.
+///
+/// The figures for all three come from the same record of daily totals, so
+/// changing this reads a different span of what is already known rather than
+/// starting again from zero.
+public enum NetworkUsagePeriod: String, Codable, CaseIterable, Sendable {
+    case today
+    case thisMonth
+    case sinceReset
+
+    public var label: String {
+        switch self {
+        case .today: return "Today"
+        case .thisMonth: return "This month"
+        case .sinceReset: return "Since I reset it"
+        }
+    }
+
+    /// How the panel names the span beside the figures.
+    public var caption: String {
+        switch self {
+        case .today: return "today"
+        case .thisMonth: return "this month"
+        case .sinceReset: return "since reset"
+        }
+    }
+}
+
 /// How alerts behave.
 public struct AlertSettings: Codable, Equatable {
     /// How long a "something finished" notice stays on the notch. The poster
@@ -163,6 +196,7 @@ private struct SettingsDocument: Codable {
     var appearance: AppearanceSettings?
     var alerts: AlertSettings?
     var tokenScanInterval: TokenScanInterval?
+    var networkUsagePeriod: NetworkUsagePeriod?
     /// Hand-made position corrections, keyed by display.
     var adjustments: [String: IslandAdjustment]?
     /// Which music services may be asked for a cover. Absent means all of them.
@@ -197,6 +231,20 @@ public final class SettingsStore: ObservableObject {
     /// Named once so the value and its fallback cannot drift apart, and so the
     /// checks can pin it.
     public static let defaultTokenScanInterval: TokenScanInterval = .thirtyMinutes
+
+    /// What a fresh install counts data used over.
+    ///
+    /// The day, not the month. A daily figure is one anybody can check against
+    /// their own memory of what they did — a month's is a number you have to
+    /// take on trust — and it is the one that is right on the first day, when a
+    /// monthly figure would be counting from part-way through a month it cannot
+    /// see the beginning of.
+    ///
+    /// Named once so the value and its fallback cannot drift apart, and so the
+    /// checks can pin it.
+    /// `nonisolated` so a feature can name it as a default argument without
+    /// hopping to the main actor to read a constant.
+    public nonisolated static let defaultNetworkUsagePeriod: NetworkUsagePeriod = .today
 
     /// Bumped whenever the stored feature configuration changes.
     ///
@@ -237,6 +285,8 @@ public final class SettingsStore: ObservableObject {
     @Published public var alerts = AlertSettings()
     /// How often the AI token count is brought up to date.
     @Published public var tokenScanInterval: TokenScanInterval = SettingsStore.defaultTokenScanInterval
+    /// The span the data-used figures cover.
+    @Published public var networkUsagePeriod: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod
     /// Position corrections per display. A display with no entry is automatic.
     @Published public var adjustments: [String: IslandAdjustment] = [:]
 
@@ -352,6 +402,7 @@ public final class SettingsStore: ObservableObject {
             self.appearance = document.appearance ?? AppearanceSettings()
             self.alerts = document.alerts ?? AlertSettings()
             self.tokenScanInterval = document.tokenScanInterval ?? SettingsStore.defaultTokenScanInterval
+            self.networkUsagePeriod = document.networkUsagePeriod ?? SettingsStore.defaultNetworkUsagePeriod
             self.adjustments = (document.adjustments ?? [:]).mapValues(\.clamped)
             self.artworkServices = document.artworkServices ?? [:]
             self.isFirstRun = false
@@ -478,6 +529,7 @@ public final class SettingsStore: ObservableObject {
         appearance = AppearanceSettings()
         alerts = AlertSettings()
         tokenScanInterval = Self.defaultTokenScanInterval
+        networkUsagePeriod = Self.defaultNetworkUsagePeriod
         batterySaver = false
         canSwitchLowPowerMode = false
         canPressMediaKeys = false
@@ -528,6 +580,7 @@ public final class SettingsStore: ObservableObject {
             appearance: appearance,
             alerts: alerts,
             tokenScanInterval: tokenScanInterval,
+            networkUsagePeriod: networkUsagePeriod,
             adjustments: adjustments,
             artworkServices: artworkServices,
             hasAcceptedReading: hasAcceptedReading

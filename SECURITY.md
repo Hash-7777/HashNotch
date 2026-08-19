@@ -45,10 +45,16 @@ anywhere.
 Almost nothing. The app itself writes **no files at all** — its only persistent
 state is its own settings, stored where every Mac app stores them
 (`~/Library/Preferences/com.hashnotch.app.plist`). Alongside your choices,
-that holds one small piece of remembered state: the last AI token totals and the
-day they belong to, so the panel opens on a number rather than on a zero it has
-not earned. It is four integers and a date, and a set from any day but today is
-discarded rather than shown. It never writes to the files it reads, and artwork
+that holds two small pieces of remembered state. The last AI token totals and
+the day they belong to, so the panel opens on a number rather than on a zero it
+has not earned — four integers and a date, and a set from any day but today is
+discarded rather than shown. And, for the data-used figures, how many bytes went
+through on each of the last sixty-two days, together with where this Mac's own
+network interfaces had got to when they were last read, which is what makes it
+possible to tell a day's traffic from a counter that has been running since the
+machine was switched on. That record is bytes and dates and the names of your
+own interfaces — never an address, a site, or anything about where any of it
+went, none of which the app can see in the first place. It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.
 
 The one folder that carries HashNotch's name, `~/.hashnotch`, is written by
@@ -93,7 +99,7 @@ as a privacy one.
 
 | What | How | Why |
 | --- | --- | --- |
-| Network speed | Kernel per-interface byte counters (`getifaddrs`) | The up/down readout. It counts bytes only — it can never see what you send or receive. |
+| Network speed and data used | Kernel per-interface byte counters (`getifaddrs`) | The up/down readout, and the running total of how much has gone through. It counts bytes only — it can never see what you send or receive. The totals are kept per day in your preferences (see "What it writes"); tunnels, bridges and loopback are left out of them so the same traffic is not counted twice. Read once a minute with the panel shut, since a total that only counted the moments you were looking at it would not be one. |
 | Battery | IOKit power-source info, the connected adapter's own rating (`IOPSCopyExternalPowerAdapterDetails`), and the system's Low Power Mode flag (`ProcessInfo`) | Level, whether it is charging / held / full, time remaining or time to full, how many watts the adapter supplies, and whether Low Power Mode is on. All read-only. macOS offers no public way to *switch* Low Power Mode, so the panel's row opens System Settings at the Battery pane — unless you turn on "Switch Low Power Mode from the panel", which runs the one command that can and therefore asks macOS for an administrator password every time. |
 | Temperatures | Apple Silicon on-die sensors via the IOKit HID event system | The temperature readout. Read-only. |
 | AirPods battery | A short `/usr/sbin/system_profiler SPBluetoothDataType` subprocess — the same public report the System Information app shows you | The AirPods readout. That report lists every paired Bluetooth device; the app reads the battery percentages under the AirPods entry and discards the rest. Read-only, runs out of process so it can never wedge the app, and is killed if it takes more than 5 seconds. |

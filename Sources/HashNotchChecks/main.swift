@@ -849,6 +849,196 @@ MainActor.assumeIsolated {
     check("a slightly late reading is usable", NetworkMonitor.isStaleBaseline(dt: 2.5, interval: 1.0) == false)
     check("a reading from minutes ago is not", NetworkMonitor.isStaleBaseline(dt: 600, interval: 1.0))
 
+    // Data used. The figure is built from the kernel's per-interface counters,
+    // which count from whenever each interface came up, so every rule below is
+    // about turning a number that only grows into "how much of it is mine, and
+    // when".
+    check("loopback is not data used", NetworkUsageMath.counts("lo0") == false)
+    check("a VPN tunnel is not counted twice", NetworkUsageMath.counts("utun3") == false)
+    check("nor is an IPsec tunnel", NetworkUsageMath.counts("ipsec0") == false)
+    check("AirDrop is not internet", NetworkUsageMath.counts("awdl0") == false)
+    check("a bridge is the same bytes again", NetworkUsageMath.counts("bridge0") == false)
+    check("so is a virtual machine's link", NetworkUsageMath.counts("vmenet0") == false)
+    check("so is sharing this Mac's connection", NetworkUsageMath.counts("ap1") == false)
+    check("the processors' own link is not the internet", NetworkUsageMath.counts("anpi0") == false)
+    check("wi-fi is counted", NetworkUsageMath.counts("en0"))
+    check("so is a second ethernet", NetworkUsageMath.counts("en7"))
+    // Left in rather than left out: an interface nobody here anticipated is
+    // counted, because a figure that is too high can be noticed and reported
+    // and one that is too low looks exactly like a quiet day.
+    check("an unfamiliar interface is counted rather than dropped", NetworkUsageMath.counts("wwan0"))
+
+    check("a counter seen for the first time contributes nothing",
+          NetworkUsageMath.delta(previous: nil, current: 8_000_000_000) == 0)
+    check("a counter that grew contributes the difference",
+          NetworkUsageMath.delta(previous: 100, current: 250) == 150)
+    check("a counter that restarted contributes all it now holds",
+          NetworkUsageMath.delta(previous: 900, current: 120) == 120)
+    check("a counter that did not move contributes nothing",
+          NetworkUsageMath.delta(previous: 500, current: 500) == 0)
+
+    let usageCalendar = Calendar.current
+    let usageNow = usageCalendar.date(from: DateComponents(year: 2026, month: 8, day: 19, hour: 14))!
+    func reading(_ received: UInt64, _ sent: UInt64, at: Date, on name: String = "en0") -> [String: InterfaceBytes] {
+        [name: InterfaceBytes(received: received, sent: sent, seenAt: at)]
+    }
+
+    // A fresh install meeting counters that already hold gigabytes must report
+    // nothing, or its first second reads as the heaviest day of the month.
+    let firstFold = NetworkUsageMath.folded(
+        NetworkUsageLedger(),
+        reading: reading(5_000_000_000, 1_000_000_000, at: usageNow),
+        now: usageNow,
+        calendar: usageCalendar
+    )
+    check("the first reading of all counts nothing",
+          firstFold.days.first?.received == 0 && firstFold.days.first?.sent == 0)
+    check("and the moment counting began is remembered", firstFold.countingSince == usageNow)
+
+    let secondFold = NetworkUsageMath.folded(
+        firstFold,
+        reading: reading(5_000_300_000, 1_000_100_000, at: usageNow.addingTimeInterval(60)),
+        now: usageNow.addingTimeInterval(60),
+        calendar: usageCalendar
+    )
+    check("the second reading counts what arrived between them",
+          secondFold.days.first?.received == 300_000 && secondFold.days.first?.sent == 100_000)
+    check("and it lands on one day rather than two", secondFold.days.count == 1)
+
+    // Wi-Fi switched off and on, or the Mac restarted: the counter starts again
+    // and everything it holds now arrived since it did.
+    let afterRestart = NetworkUsageMath.folded(
+        secondFold,
+        reading: reading(40_000, 10_000, at: usageNow.addingTimeInterval(120)),
+        now: usageNow.addingTimeInterval(120),
+        calendar: usageCalendar
+    )
+    check("a restarted counter adds what it holds, not a negative",
+          afterRestart.days.first?.received == 340_000)
+
+    // Tomorrow is a different question's answer, not a correction to today's.
+    let nextDay = usageNow.addingTimeInterval(24 * 60 * 60)
+    let acrossMidnight = NetworkUsageMath.folded(
+        afterRestart,
+        reading: reading(90_000, 30_000, at: nextDay),
+        now: nextDay,
+        calendar: usageCalendar
+    )
+    check("a new day opens its own entry", acrossMidnight.days.count == 2)
+    check("and yesterday keeps what it had", acrossMidnight.days.first?.received == 340_000)
+    check("while today holds only today's", acrossMidnight.days.last?.received == 50_000)
+
+    let todayTotals = NetworkUsageMath.totals(
+        acrossMidnight, period: .today, now: nextDay, calendar: usageCalendar
+    )
+    check("today's figure is today's alone", todayTotals.received == 50_000)
+    let monthTotals = NetworkUsageMath.totals(
+        acrossMidnight, period: .thisMonth, now: nextDay, calendar: usageCalendar
+    )
+    check("the month's figure is both days", monthTotals.received == 390_000)
+
+    // Saying so when the figure covers less than its name claims.
+    check("a month counted from part-way through says so", monthTotals.coversWholeSpan == false)
+    check("and says from when", monthTotals.countedSince == usageNow)
+    check("a day counted from before it began does not", todayTotals.coversWholeSpan)
+
+    // An interface that disappears is remembered, so that its counters
+    // restarting while it was away is still noticed when it comes back.
+    let dockGone = NetworkUsageMath.folded(
+        acrossMidnight,
+        reading: [:],
+        now: nextDay.addingTimeInterval(60),
+        calendar: usageCalendar
+    )
+    check("an interface missing from a reading is remembered", dockGone.lastSeen["en0"] != nil)
+    check("and a reading with nothing in it counts nothing",
+          dockGone.days.last?.received == 50_000)
+
+    // Reset: the day-by-day record is left alone, because today and this month
+    // are read from the same days and have every right to them.
+    let resetAt = nextDay.addingTimeInterval(120)
+    let afterReset = NetworkUsageMath.afterReset(acrossMidnight, now: resetAt, calendar: usageCalendar)
+    check("resetting keeps every day already counted", afterReset.days == acrossMidnight.days)
+    check("and today still reads the same", NetworkUsageMath.totals(
+        afterReset, period: .today, now: resetAt, calendar: usageCalendar
+    ).received == 50_000)
+    check("while the reset figure starts at nothing", NetworkUsageMath.totals(
+        afterReset, period: .sinceReset, now: resetAt, calendar: usageCalendar
+    ).received == 0)
+
+    let afterResetAndUse = NetworkUsageMath.folded(
+        afterReset,
+        reading: reading(90_000 + 7_000, 30_000 + 2_000, at: resetAt.addingTimeInterval(60)),
+        now: resetAt.addingTimeInterval(60),
+        calendar: usageCalendar
+    )
+    check("the reset figure counts only what came after it", NetworkUsageMath.totals(
+        afterResetAndUse, period: .sinceReset, now: resetAt.addingTimeInterval(60), calendar: usageCalendar
+    ).received == 7_000)
+    check("and the day's own figure still counts all of it", NetworkUsageMath.totals(
+        afterResetAndUse, period: .today, now: resetAt.addingTimeInterval(60), calendar: usageCalendar
+    ).received == 57_000)
+
+    // The subtraction the reset performs is on unsigned numbers, and a day that
+    // has been pruned out of the record would make it go below zero — which on
+    // these types is not a negative, it is a number near eighteen quintillion.
+    var pruned = afterResetAndUse
+    pruned.days = pruned.days.map { DayUsage(day: $0.day, received: 0, sent: 0) }
+    check("a figure that cannot be worked out is nothing, never a vast number",
+          NetworkUsageMath.totals(pruned, period: .sinceReset, now: resetAt, calendar: usageCalendar).received == 0)
+
+    // The record cannot grow without end: two months of days, and a ceiling on
+    // how many interface names are remembered.
+    var longRun = NetworkUsageLedger()
+    for day in 0..<80 {
+        let at = usageNow.addingTimeInterval(Double(day) * 24 * 60 * 60)
+        longRun = NetworkUsageMath.folded(
+            longRun,
+            reading: reading(UInt64(day) * 1_000, UInt64(day) * 100, at: at),
+            now: at,
+            calendar: usageCalendar
+        )
+    }
+    check("only two months of days are kept", longRun.days.count == NetworkUsageMath.historyLength)
+
+    var manyInterfaces = NetworkUsageLedger()
+    for index in 0..<50 {
+        let at = usageNow.addingTimeInterval(Double(index))
+        manyInterfaces = NetworkUsageMath.folded(
+            manyInterfaces,
+            reading: reading(1_000, 100, at: at, on: "en\(index)"),
+            now: at,
+            calendar: usageCalendar
+        )
+    }
+    check("the remembered interfaces have a ceiling",
+          manyInterfaces.lastSeen.count == NetworkUsageMath.interfaceLimit)
+
+    // An interface gone long enough is forgotten, so a machine that names them
+    // differently every time cannot fill the record with strangers.
+    let staleAt = usageNow.addingTimeInterval(NetworkUsageMath.forgetInterfaceAfter + 60)
+    let forgotten = NetworkUsageMath.folded(
+        firstFold,
+        reading: reading(1_000, 100, at: staleAt, on: "en9"),
+        now: staleAt,
+        calendar: usageCalendar
+    )
+    check("an interface gone for a month is forgotten", forgotten.lastSeen["en0"] == nil)
+
+    // The record is kept in preferences, like the token count's cache, so the
+    // promise that the app writes no files stays true.
+    let usageDefaults = InMemoryDefaults()
+    NetworkUsageStore.save(acrossMidnight, to: usageDefaults)
+    check("the record survives a relaunch", NetworkUsageStore.load(from: usageDefaults) == acrossMidnight)
+    NetworkUsageStore.clear(in: usageDefaults)
+    check("and can be cleared", NetworkUsageStore.load(from: usageDefaults) == nil)
+
+    // What the app actually reads from this Mac, checked against the rule.
+    let liveReading = NetworkInterfaces.read()
+    check("this Mac's own interfaces are read", liveReading.isEmpty == false)
+    check("and none of them is one the rule excludes",
+          liveReading.keys.allSatisfy { NetworkUsageMath.counts($0) })
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))

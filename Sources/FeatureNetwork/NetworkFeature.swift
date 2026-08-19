@@ -37,7 +37,14 @@ public final class NetworkFeature: NotchFeature {
 
     public init() {}
 
-    public func start(context: FeatureContext) { monitor.start(visibility: context.visibility, scale: context.settings.samplingScale) }
+    public func start(context: FeatureContext) {
+        monitor.start(
+            visibility: context.visibility,
+            scale: context.settings.samplingScale,
+            period: context.settings.networkUsagePeriod
+        )
+    }
+
     public func stop() { monitor.stop() }
 
     public func makeView(context: FeatureContext) -> AnyView {
@@ -46,10 +53,15 @@ public final class NetworkFeature: NotchFeature {
     }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
-        AnyView(NetworkDetailView(
+        // The span is read here rather than held by the monitor alone, so a
+        // change in settings reaches the figures the next time the panel is
+        // drawn — which is before anybody can have seen the old ones.
+        monitor.setPeriod(context.settings.networkUsagePeriod)
+        return AnyView(NetworkDetailView(
             monitor: monitor,
             theme: context.theme,
-            style: NetworkStyle(rawValue: context.settings.style(for: id)) ?? .both
+            style: NetworkStyle(rawValue: context.settings.style(for: id)) ?? .both,
+            period: context.settings.networkUsagePeriod
         ))
     }
 }
