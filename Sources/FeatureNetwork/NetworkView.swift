@@ -198,18 +198,31 @@ struct NetworkDetailView: View {
             }
         }
         // Said, rather than left to be assumed, whenever the figures cover less
-        // than the span they are named after — the first day of use, or a month
-        // that began before the app was installed. A total that quietly
-        // understates itself is worse than one that explains itself.
+        // than the span they are named after. Two different admissions, and
+        // they are not the same sentence: the count started late (the first day
+        // of use, or a month that began before the app was installed), or there
+        // is a hole in the middle of it (the app was closed across days, and
+        // what went through in between belongs to no day in particular).
         .overlay(alignment: .bottomLeading) {
-            if !monitor.usage.coversWholeSpan, let since = monitor.usage.countedSince {
-                Text("counted since \(Self.sinceText(since))")
+            if let note = caption {
+                Text(note)
                     .font(.system(size: 8))
                     .foregroundStyle(theme.subtitleColor)
                     .offset(y: 9)
             }
         }
-        .padding(.bottom, monitor.usage.coversWholeSpan ? 0 : 10)
+        .padding(.bottom, caption == nil ? 0 : 10)
+    }
+
+    /// What to admit under the figures, or nothing when they are whole.
+    private var caption: String? {
+        if !monitor.usage.coversWholeSpan, let since = monitor.usage.countedSince {
+            return "counted since \(Self.sinceText(since))"
+        }
+        if monitor.usage.missedTime {
+            return "some time not counted"
+        }
+        return nil
     }
 
     /// The day for anything older than today, the time for today itself —

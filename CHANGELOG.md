@@ -39,6 +39,18 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The data-used figures cannot silently lose 4 GB at a time.** The counters
+  the app was reading are 32 bits wide, so they roll over every 4.29 GB — an
+  evening of video — and a counter that has rolled over looks exactly like one
+  that restarted. macOS keeps the same counters at 64 bits, which is what the
+  app reads now.
+- **Closing the app no longer loses the day's traffic, or invents it.** The
+  counters keep running while the app does not, so reopening it finds what went
+  through in between. Quit at nine and reopen at five the same day and all of it
+  is yours, today, and it is counted. Quit on Friday and reopen on Monday and
+  there is no honest way to split it across three days, so it is not counted at
+  all and the panel says a stretch of the time went uncounted rather than
+  inventing the heaviest day of the month out of a weekend.
 - **The panel opens in one movement.** The window it is drawn in was being
   sized from whatever was on screen a moment earlier — which, at the instant the
   panel starts opening, is the collapsed notch. So the panel began its drop

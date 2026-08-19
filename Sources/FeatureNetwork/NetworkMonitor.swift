@@ -132,8 +132,32 @@ public final class NetworkMonitor: ObservableObject {
     }
 
     private func fold(reading: [String: InterfaceBytes], now: Date) {
+        let before = NetworkUsageMath.totals(ledger, period: period, now: now)
         ledger = NetworkUsageMath.folded(ledger, reading: reading, now: now)
         publishUsage(now: now)
+        Self.usageTrace(before: before, after: usage, reading: reading, now: now)
+    }
+
+    /// Development aid, off unless `HASHNOTCH_DEBUG=usage` asks for it. Every
+    /// fold, what it added, and what the counters read when it did — the only
+    /// way to tell a total climbing too fast apart from counters that are, and
+    /// to see how many folds are happening at all.
+    private static func usageTrace(
+        before: NetworkUsageTotals,
+        after: NetworkUsageTotals,
+        reading: [String: InterfaceBytes],
+        now: Date
+    ) {
+        guard (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "").contains("usage") else { return }
+        let counters = reading.sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.received)/\($0.value.sent)" }
+            .joined(separator: " ")
+        let addedIn = after.received &- before.received
+        let addedOut = after.sent &- before.sent
+        let stamp = Int(now.timeIntervalSince1970)
+        let line = "[usage] \(stamp) added in \(addedIn) out \(addedOut)"
+            + " | total in \(after.received) out \(after.sent) | \(counters)\n"
+        FileHandle.standardError.write(Data(line.utf8))
     }
 
     private func publishUsage(now: Date) {

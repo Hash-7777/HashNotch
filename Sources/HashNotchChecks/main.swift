@@ -916,22 +916,49 @@ MainActor.assumeIsolated {
     check("a restarted counter adds what it holds, not a negative",
           afterRestart.days.first?.received == 340_000)
 
-    // Tomorrow is a different question's answer, not a correction to today's.
-    let nextDay = usageNow.addingTimeInterval(24 * 60 * 60)
-    let acrossMidnight = NetworkUsageMath.folded(
+    // QUITTING AND REOPENING THE SAME DAY. The counters keep running while the
+    // app does not, so what went through in between is found on the next
+    // reading — and it all belongs to today, which is not in doubt. Counting it
+    // is what makes the row "used today" rather than "used while the app
+    // happened to be open".
+    let sameDayGap = NetworkUsageMath.folded(
         afterRestart,
-        reading: reading(90_000, 30_000, at: nextDay),
-        now: nextDay,
+        reading: reading(40_000 + 6_000_000, 10_000 + 900_000, at: usageNow.addingTimeInterval(6 * 3600)),
+        now: usageNow.addingTimeInterval(6 * 3600),
+        calendar: usageCalendar
+    )
+    check(
+        "hours with the app closed still count, on the same day",
+        sameDayGap.days.first?.received == 6_340_000
+    )
+    check("and the day is still a whole day", sameDayGap.days.first?.isPartial == false)
+
+    // Midnight with the app running: one reading before, one after, a minute
+    // apart. An ordinary reading that lands on the new day.
+    let lateNight = usageCalendar.date(from: DateComponents(year: 2026, month: 8, day: 19, hour: 23, minute: 59, second: 30))!
+    let justAfter = lateNight.addingTimeInterval(60)
+    let atMidnight = NetworkUsageMath.folded(
+        afterRestart,
+        reading: reading(60_000, 20_000, at: lateNight),
+        now: lateNight,
+        calendar: usageCalendar
+    )
+    let acrossMidnight = NetworkUsageMath.folded(
+        atMidnight,
+        reading: reading(90_000, 30_000, at: justAfter),
+        now: justAfter,
         calendar: usageCalendar
     )
     check("a new day opens its own entry", acrossMidnight.days.count == 2)
-    check("and yesterday keeps what it had", acrossMidnight.days.first?.received == 340_000)
-    check("while today holds only today's", acrossMidnight.days.last?.received == 50_000)
+    check("and yesterday keeps what it had", acrossMidnight.days.first?.received == 360_000)
+    check("while today holds only today's", acrossMidnight.days.last?.received == 30_000)
+    check("and neither day is called incomplete", acrossMidnight.days.allSatisfy { !$0.isPartial })
 
+    let nextDay = justAfter
     let todayTotals = NetworkUsageMath.totals(
         acrossMidnight, period: .today, now: nextDay, calendar: usageCalendar
     )
-    check("today's figure is today's alone", todayTotals.received == 50_000)
+    check("today's figure is today's alone", todayTotals.received == 30_000)
     let monthTotals = NetworkUsageMath.totals(
         acrossMidnight, period: .thisMonth, now: nextDay, calendar: usageCalendar
     )
@@ -941,6 +968,49 @@ MainActor.assumeIsolated {
     check("a month counted from part-way through says so", monthTotals.coversWholeSpan == false)
     check("and says from when", monthTotals.countedSince == usageNow)
     check("a day counted from before it began does not", todayTotals.coversWholeSpan)
+
+    // AWAY FOR DAYS. Quit on Friday, reopen on Monday: the bytes in between are
+    // real and are spread across three days in proportions nothing on this Mac
+    // records. Putting them on Monday would invent the heaviest day of the
+    // month out of a weekend, so they are refused and said to be missing.
+    let mondayMorning = usageNow.addingTimeInterval(3 * 24 * 3600)
+    let afterWeekend = NetworkUsageMath.folded(
+        afterRestart,
+        reading: reading(9_000_000_000, 2_000_000_000, at: mondayMorning),
+        now: mondayMorning,
+        calendar: usageCalendar
+    )
+    let mondayTotals = NetworkUsageMath.totals(
+        afterWeekend, period: .today, now: mondayMorning, calendar: usageCalendar
+    )
+    check("a weekend away is not dumped on the day you come back", mondayTotals.received == 0)
+    check("the day you come back says a stretch of it went uncounted", mondayTotals.missedTime)
+    check(
+        "and the days away are marked too, so the month admits the hole",
+        NetworkUsageMath.totals(
+            afterWeekend, period: .thisMonth, now: mondayMorning, calendar: usageCalendar
+        ).missedTime
+    )
+    check(
+        "what was counted before the gap is still counted",
+        NetworkUsageMath.totals(
+            afterWeekend, period: .thisMonth, now: mondayMorning, calendar: usageCalendar
+        ).received == 340_000
+    )
+    // The next reading after coming back counts normally from the new footing,
+    // rather than the refusal poisoning everything that follows.
+    let backAtWork = NetworkUsageMath.folded(
+        afterWeekend,
+        reading: reading(9_000_500_000, 2_000_200_000, at: mondayMorning.addingTimeInterval(60)),
+        now: mondayMorning.addingTimeInterval(60),
+        calendar: usageCalendar
+    )
+    check(
+        "and counting resumes properly from where it came back",
+        NetworkUsageMath.totals(
+            backAtWork, period: .today, now: mondayMorning.addingTimeInterval(60), calendar: usageCalendar
+        ).received == 500_000
+    )
 
     // An interface that disappears is remembered, so that its counters
     // restarting while it was away is still noticed when it comes back.
@@ -952,7 +1022,7 @@ MainActor.assumeIsolated {
     )
     check("an interface missing from a reading is remembered", dockGone.lastSeen["en0"] != nil)
     check("and a reading with nothing in it counts nothing",
-          dockGone.days.last?.received == 50_000)
+          dockGone.days.last?.received == 30_000)
 
     // Reset: the day-by-day record is left alone, because today and this month
     // are read from the same days and have every right to them.
@@ -961,7 +1031,7 @@ MainActor.assumeIsolated {
     check("resetting keeps every day already counted", afterReset.days == acrossMidnight.days)
     check("and today still reads the same", NetworkUsageMath.totals(
         afterReset, period: .today, now: resetAt, calendar: usageCalendar
-    ).received == 50_000)
+    ).received == 30_000)
     check("while the reset figure starts at nothing", NetworkUsageMath.totals(
         afterReset, period: .sinceReset, now: resetAt, calendar: usageCalendar
     ).received == 0)
@@ -977,7 +1047,7 @@ MainActor.assumeIsolated {
     ).received == 7_000)
     check("and the day's own figure still counts all of it", NetworkUsageMath.totals(
         afterResetAndUse, period: .today, now: resetAt.addingTimeInterval(60), calendar: usageCalendar
-    ).received == 57_000)
+    ).received == 37_000)
 
     // The subtraction the reset performs is on unsigned numbers, and a day that
     // has been pruned out of the record would make it go below zero — which on
@@ -1038,6 +1108,97 @@ MainActor.assumeIsolated {
     check("this Mac's own interfaces are read", liveReading.isEmpty == false)
     check("and none of them is one the rule excludes",
           liveReading.keys.allSatisfy { NetworkUsageMath.counts($0) })
+
+    // The reading is parsed out of a run of variable-length kernel messages, so
+    // it is cross-checked here against a completely different call that answers
+    // the same question — `getifaddrs`, which the app deliberately does NOT use
+    // because its counters are 32 bits wide and roll over every 4.29 GB.
+    //
+    // That narrowness is what makes it useful here: the low 32 bits of a
+    // correct 64-bit reading are exactly what the old call reports. A
+    // misaligned parse would not agree to within a few megabytes, it would
+    // disagree by orders of magnitude.
+    func getifaddrsBytes() -> [String: (received: UInt64, sent: UInt64)] {
+        var out: [String: (received: UInt64, sent: UInt64)] = [:]
+        var addrs: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&addrs) == 0, let first = addrs else { return out }
+        defer { freeifaddrs(addrs) }
+        var cursor: UnsafeMutablePointer<ifaddrs>? = first
+        while let pointer = cursor {
+            let interface = pointer.pointee
+            if let sockaddr = interface.ifa_addr,
+               sockaddr.pointee.sa_family == UInt8(AF_LINK),
+               let data = interface.ifa_data {
+                let name = String(cString: interface.ifa_name)
+                if NetworkUsageMath.counts(name) {
+                    let stats = data.assumingMemoryBound(to: if_data.self).pointee
+                    out[name] = (UInt64(stats.ifi_ibytes), UInt64(stats.ifi_obytes))
+                }
+            }
+            cursor = interface.ifa_next
+        }
+        return out
+    }
+
+    let independent = getifaddrsBytes()
+    check(
+        "the same interfaces are found by a completely different call",
+        Set(liveReading.keys) == Set(independent.keys)
+    )
+    // Generous, because the two readings are taken microseconds apart on a live
+    // machine and a busy link moves between them. Tight enough that a wrong
+    // offset — which yields nonsense in the exabytes — cannot pass.
+    let tolerance: UInt64 = 50_000_000
+    let wrap = UInt64(UInt32.max) + 1
+    var agree = true
+    for (name, bytes) in liveReading {
+        guard let other = independent[name] else { agree = false; continue }
+        let lowReceived = bytes.received % wrap
+        let lowSent = bytes.sent % wrap
+        let dr = lowReceived > other.received ? lowReceived - other.received : other.received - lowReceived
+        let ds = lowSent > other.sent ? lowSent - other.sent : other.sent - lowSent
+        if dr > tolerance || ds > tolerance { agree = false }
+    }
+    check("and it agrees with them, to the bit where the old call runs out", agree)
+
+    // The property the whole figure rests on: folding a run of readings adds up
+    // to exactly the difference between the first and the last. Nothing is
+    // counted twice and nothing is dropped in between, however many readings
+    // there are — and it is why macOS rounding each reading down to a kilobyte
+    // cannot accumulate: the rounding cancels between one reading and the next,
+    // leaving at most the last one's remainder outstanding.
+    var telescoping = NetworkUsageLedger()
+    let base: UInt64 = 4_000_000_000
+    let steps: [UInt64] = [0, 1_024, 50_000, 3_000_000, 3_000_001, 900_000_000]
+    for (index, step) in steps.enumerated() {
+        let at = usageNow.addingTimeInterval(Double(index) * 60)
+        telescoping = NetworkUsageMath.folded(
+            telescoping,
+            reading: reading(base + step, base + step / 2, at: at),
+            now: at,
+            calendar: usageCalendar
+        )
+    }
+    check(
+        "a run of readings adds up to exactly the distance between the ends",
+        telescoping.days.first?.received == steps.last! - steps.first!
+    )
+    check(
+        "and the same holds for what was sent",
+        telescoping.days.first?.sent == steps.last! / 2 - steps.first! / 2
+    )
+
+    // Counters only ever climb. A reading that went backwards between two looks
+    // a moment apart would mean the parse is picking up a different field each
+    // time, which is the failure this whole feature would be built on.
+    let secondReading = NetworkInterfaces.read()
+    check(
+        "reading twice never goes backwards",
+        liveReading.allSatisfy { name, bytes in
+            guard let later = secondReading[name] else { return true }
+            return later.received >= bytes.received && later.sent >= bytes.sent
+        }
+    )
 
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import HashNotchKit
 
 /// How much has gone through the network, kept as a day-by-day record.
@@ -21,11 +22,20 @@ package struct DayUsage: Codable, Equatable, Sendable {
     package var day: Date
     package var received: UInt64
     package var sent: UInt64
+    /// Whether some of this day went by uncounted — the app was not running
+    /// across a stretch of it that could not be attributed to one day.
+    ///
+    /// Optional so a record written before this existed still decodes; absent
+    /// means the day is whole.
+    package var partial: Bool?
 
-    package init(day: Date, received: UInt64 = 0, sent: UInt64 = 0) {
+    package var isPartial: Bool { partial == true }
+
+    package init(day: Date, received: UInt64 = 0, sent: UInt64 = 0, partial: Bool? = nil) {
         self.day = day
         self.received = received
         self.sent = sent
+        self.partial = partial
     }
 }
 
@@ -92,17 +102,27 @@ package struct NetworkUsageTotals: Equatable, Sendable {
     /// day of use, and for a month that began before the app was installed —
     /// the moment a total would otherwise quietly understate itself.
     package var coversWholeSpan: Bool
+    /// Whether a stretch INSIDE the span went by uncounted: the app was not
+    /// running across days, so what happened in between could not be put
+    /// against any one of them and was not counted at all.
+    ///
+    /// Separate from `coversWholeSpan`, because they are different admissions.
+    /// One says the count started late; this says there is a hole in the
+    /// middle of it.
+    package var missedTime: Bool
 
     package init(
         received: UInt64 = 0,
         sent: UInt64 = 0,
         countedSince: Date? = nil,
-        coversWholeSpan: Bool = true
+        coversWholeSpan: Bool = true,
+        missedTime: Bool = false
     ) {
         self.received = received
         self.sent = sent
         self.countedSince = countedSince
         self.coversWholeSpan = coversWholeSpan
+        self.missedTime = missedTime
     }
 }
 
@@ -124,6 +144,30 @@ package enum NetworkUsageMath {
     /// A ceiling on how many interfaces are remembered, so a machine that
     /// invents new interface names cannot grow this record without end.
     package static let interfaceLimit = 32
+
+    /// How long a gap between two readings may be, when it crosses midnight,
+    /// before what happened in it is refused rather than guessed at.
+    ///
+    /// The counters keep running while the app is not, so reopening it always
+    /// finds bytes that arrived in between. Which day those belong to is the
+    /// whole question. Quit at nine and reopen at five the same day and the
+    /// answer is not in doubt: it was all today, and counting it is what makes
+    /// "used today" true rather than "used while the app happened to be open".
+    ///
+    /// Quit on Friday and reopen on Monday and there is no answer. The bytes
+    /// are real and they are spread across three days in proportions nothing
+    /// on this Mac records. Putting them on Monday would invent the busiest day
+    /// of the month out of a weekend, so they are refused, the counters are
+    /// taken as a new starting point, and the days involved are marked as
+    /// having gone by uncounted — which the panel then says out loud.
+    ///
+    /// Five minutes, so that the ordinary tick across midnight — the app
+    /// running the whole time, one reading at 23:59 and the next at 00:00 —
+    /// stays an ordinary reading and lands on the new day. At most that
+    /// misplaces a few seconds of traffic; refusing it would throw away the
+    /// same seconds and call the day incomplete, which is worse for being
+    /// louder.
+    package static let maximumGapAcrossDays: TimeInterval = 5 * 60
 
     /// Whether an interface's bytes are data used.
     ///
@@ -183,10 +227,24 @@ package enum NetworkUsageMath {
         var next = ledger
         next.countingSince = ledger.countingSince ?? now
 
+        // A reading whose predecessor was taken on an earlier day, long enough
+        // ago that the app was plainly not running in between, cannot be
+        // attributed. See `maximumGapAcrossDays`.
+        var refused = false
+        var earliestRefused: Date?
         var received: UInt64 = 0
         var sent: UInt64 = 0
         for (name, bytes) in reading {
             let previous = ledger.lastSeen[name]
+            if let previous,
+               !calendar.isDate(previous.seenAt, inSameDayAs: now),
+               now.timeIntervalSince(previous.seenAt) > maximumGapAcrossDays {
+                refused = true
+                if earliestRefused == nil || previous.seenAt < earliestRefused! {
+                    earliestRefused = previous.seenAt
+                }
+                continue
+            }
             received &+= delta(previous: previous?.received, current: bytes.received)
             sent &+= delta(previous: previous?.sent, current: bytes.sent)
         }
@@ -195,8 +253,27 @@ package enum NetworkUsageMath {
         if let index = next.days.firstIndex(where: { $0.day == day }) {
             next.days[index].received &+= received
             next.days[index].sent &+= sent
+            if refused { next.days[index].partial = true }
         } else {
-            next.days.append(DayUsage(day: day, received: received, sent: sent))
+            next.days.append(DayUsage(day: day, received: received, sent: sent, partial: refused ? true : nil))
+        }
+
+        // The days the app was away for are marked too, so a month containing
+        // them does not read as though nothing happened on them.
+        if refused, let from = earliestRefused {
+            var marked = calendar.startOfDay(for: from)
+            let today = calendar.startOfDay(for: now)
+            var guard_ = 0
+            while marked < today, guard_ < historyLength {
+                if let index = next.days.firstIndex(where: { $0.day == marked }) {
+                    next.days[index].partial = true
+                } else {
+                    next.days.append(DayUsage(day: marked, partial: true))
+                }
+                guard let step = calendar.date(byAdding: .day, value: 1, to: marked) else { break }
+                marked = step
+                guard_ += 1
+            }
         }
         next.days.sort { $0.day < $1.day }
         if next.days.count > historyLength {
@@ -278,11 +355,15 @@ package enum NetworkUsageMath {
             countedSince = reset.at
         }
         let covers = countedSince <= start
+        // A hole in the middle of the span: days the app was away for across
+        // midnight, whose traffic could not be put against any one day.
+        let missed = ledger.days.contains { $0.day >= fromDay && $0.isPartial }
         return NetworkUsageTotals(
             received: received,
             sent: sent,
             countedSince: covers ? start : countedSince,
-            coversWholeSpan: covers
+            coversWholeSpan: covers,
+            missedTime: missed
         )
     }
 
@@ -308,31 +389,66 @@ package enum NetworkUsageMath {
 /// Reads the kernel's per-interface byte counters.
 package enum NetworkInterfaces {
     /// Every interface whose bytes count as data used, with what its counters
-    /// currently read. Public API only: `getifaddrs`, the same call the speed
-    /// readout has always used.
+    /// currently read.
+    ///
+    /// Read through `sysctl(NET_RT_IFLIST2)`, which hands back `if_data64`,
+    /// and NOT through `getifaddrs`, which was the obvious call and is the
+    /// wrong one. `getifaddrs` fills in a plain `if_data`, whose `ifi_ibytes`
+    /// and `ifi_obytes` are **32 bits wide** — measured on this Mac, four bytes
+    /// each. They therefore roll over every 4.29 GB, which an evening of video
+    /// passes, and a counter that has rolled over looks exactly like one that
+    /// restarted: it went backwards. The day's total would then quietly lose
+    /// everything between the last reading and the ceiling — up to 4 GB at a
+    /// time, with nothing on screen to say so.
+    ///
+    /// `if_data64` carries the same fields at 64 bits, where the ceiling is 16
+    /// exabytes and a rollover is not a thing that happens. It is the same
+    /// source `netstat -ib` reads, which is what makes the two comparable.
+    ///
+    /// There is no fallback to the 32-bit call on purpose. If this fails there
+    /// is no reading, and the panel says nothing — which is the right answer,
+    /// because the alternative is a figure that is wrong in a way nobody can
+    /// see.
     package static func read(now: Date = Date()) -> [String: InterfaceBytes] {
+        var mib: [Int32] = [CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, 0]
+        var size = 0
+        guard sysctl(&mib, 6, nil, &size, nil, 0) == 0, size > 0 else { return [:] }
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 6, &buffer, &size, nil, 0) == 0 else { return [:] }
+
         var result: [String: InterfaceBytes] = [:]
+        buffer.withUnsafeBytes { raw in
+            var offset = 0
+            // The buffer is a run of variable-length messages, so each one is
+            // read at whatever offset the last finished at — never assume the
+            // alignment a struct would normally get.
+            while offset + MemoryLayout<if_msghdr>.size <= size {
+                let header = raw.loadUnaligned(fromByteOffset: offset, as: if_msghdr.self)
+                let length = Int(header.ifm_msglen)
+                guard length > 0, offset + length <= size else { break }
+                defer { offset += length }
+                guard header.ifm_type == RTM_IFINFO2 else { continue }
 
-        var addrs: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&addrs) == 0, let first = addrs else { return result }
-        defer { freeifaddrs(addrs) }
+                let message = raw.loadUnaligned(fromByteOffset: offset, as: if_msghdr2.self)
+                // The interface's name follows the header as a link-layer
+                // address, whose own length field says how much of it is the
+                // name. Nothing here is null-terminated.
+                let linkOffset = offset + MemoryLayout<if_msghdr2>.size
+                guard linkOffset + MemoryLayout<sockaddr_dl>.size <= size else { continue }
+                let link = raw.loadUnaligned(fromByteOffset: linkOffset, as: sockaddr_dl.self)
+                let nameLength = Int(link.sdl_nlen)
+                guard nameLength > 0 else { continue }
+                let nameOffset = linkOffset + MemoryLayout.offset(of: \sockaddr_dl.sdl_data)!
+                guard nameOffset + nameLength <= size else { continue }
+                let name = String(decoding: raw[nameOffset..<(nameOffset + nameLength)], as: UTF8.self)
 
-        var cursor: UnsafeMutablePointer<ifaddrs>? = first
-        while let pointer = cursor {
-            let interface = pointer.pointee
-            if let sockaddr = interface.ifa_addr,
-               sockaddr.pointee.sa_family == UInt8(AF_LINK) {
-                let name = String(cString: interface.ifa_name)
-                if NetworkUsageMath.counts(name), let data = interface.ifa_data {
-                    let stats = data.assumingMemoryBound(to: if_data.self).pointee
-                    result[name] = InterfaceBytes(
-                        received: UInt64(stats.ifi_ibytes),
-                        sent: UInt64(stats.ifi_obytes),
-                        seenAt: now
-                    )
-                }
+                guard NetworkUsageMath.counts(name) else { continue }
+                result[name] = InterfaceBytes(
+                    received: message.ifm_data.ifi_ibytes,
+                    sent: message.ifm_data.ifi_obytes,
+                    seenAt: now
+                )
             }
-            cursor = interface.ifa_next
         }
         return result
     }
