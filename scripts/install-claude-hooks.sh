@@ -6,7 +6,8 @@
 # What it does — nothing more:
 #   1. Copies claude-code-hook.sh to ~/.hashnotch/ (the hook writes only the
 #      local activities feed).
-#   2. Registers it as a Stop + Notification hook in ~/.claude/settings.json,
+#   2. Registers it for Stop, Notification, UserPromptSubmit and PreToolUse in
+#      ~/.claude/settings.json (the last two only take a request back down),
 #      backing the file up first. Safe to re-run; already-installed is a no-op.
 #
 # Uninstall: delete the two entries mentioning claude-code-hook.sh from
@@ -155,7 +156,21 @@ function run(argv) {
   settings.hooks = settings.hooks || {};
   let added = 0;
   let removed = 0;
-  const pairs = [['Stop', 'stop'], ['Notification', 'notification']];
+  // Stop says a turn finished. Notification says Claude is asking for
+  // something. The other two take that request back down the moment it has
+  // been dealt with — a prompt submitted, or a tool about to run because
+  // permission was granted — rather than leaving it on the notch until Claude
+  // happens to finish, which can be minutes later.
+  //
+  // Those two fire constantly, several times a turn, so the hook is written to
+  // check for a feed entry of its own and exit before starting any subprocess
+  // when there is nothing to take down.
+  const pairs = [
+    ['Stop', 'stop'],
+    ['Notification', 'notification'],
+    ['UserPromptSubmit', 'clear'],
+    ['PreToolUse', 'clear'],
+  ];
 
   // True for any entry that runs THIS hook script, wherever it currently lives
   // or used to live. Matching on the script's file name rather than its full

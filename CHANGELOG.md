@@ -30,6 +30,22 @@ All notable changes to HashNotch are recorded here.
   gets one. Work merely in progress lights nothing, because a colour that
   appears for everything announces nothing. The badge beside the words wears the
   same colour as the line, because they are one signal.
+- **The line now traces the island instead of floating under it.** The strip was
+  exactly as tall as the notch, so a line along its bottom edge sat behind the
+  hardware for the notch's whole width — present on the shoulders, missing in
+  the middle. Drawing it lower fixed the middle and spoiled the shoulders, where
+  it left the black and hung over the desktop with a gap between the pill and
+  its own outline. Neither is fixable while the pill ends exactly where the
+  hardware does, so the strip now hangs three points lower than the notch and
+  the line sits on black the whole way round. The idle shape is untouched: a
+  notch with nothing to say still shows no lip at all.
+- **"Claude needs you" leaves as soon as you have dealt with it.** It waits
+  rather than dismissing itself, because it is asking for something — but the
+  only thing that used to take it down was Claude finishing its turn, which can
+  be minutes after you answered. It now goes the moment the session moves again:
+  a prompt submitted, or a tool running because you granted permission. A
+  finished notice is left alone to run out its few seconds. **Re-run
+  `./scripts/install-claude-hooks.sh` for this** — it registers two more events.
 - **The Claude hook says which tool finished, not what kind of work it was.**
   The symbol it posts is now the one macOS itself uses for anything to do with
   an assistant. **Re-run `./scripts/install-claude-hooks.sh` to pick it up** —

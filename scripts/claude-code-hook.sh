@@ -17,7 +17,7 @@ set -euo pipefail
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
 # months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
-HOOK_VERSION=6
+HOOK_VERSION=7
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -27,6 +27,23 @@ LOGO="$HOME/.hashnotch/logos/claude.png"
 PAYLOAD="$(cat 2>/dev/null || true)"
 FEED="$HOME/.hashnotch/activities.json"
 mkdir -p "$(dirname "$FEED")"
+
+# "Claude needs you" waits rather than dismissing itself, because it is asking
+# for something — and until now the only thing that took it down was answering
+# AND Claude then finishing its turn, which can be minutes later. So it sat on
+# the notch long after it had been dealt with.
+#
+# `clear` is fired the moment the session moves again: a prompt submitted, or a
+# tool about to run because permission was granted. It takes down a request and
+# leaves everything else alone.
+#
+# It is registered on events that fire constantly, so it gets out of the way
+# before doing anything expensive: no feed, or no entry of ours in it, and this
+# exits without starting a subprocess at all.
+if [ "$EVENT" = "clear" ]; then
+  [ -f "$FEED" ] || exit 0
+  grep -q '"claude-code"' "$FEED" 2>/dev/null || exit 0
+fi
 
 # Which app is Claude running inside — the terminal, the editor, or Claude's own
 # desktop app. Written into the activity so that clicking "Claude needs you" in
@@ -71,6 +88,32 @@ function run(argv) {
   // and leaves, with no timer counting down beside it. "Needs you" is a
   // standing request — it waits, because dismissing it after a few seconds
   // would hide the very thing it is asking you to deal with.
+  // Take down a standing request, and only that. A notice that has finished
+  // keeps its few seconds — it is already leaving on its own, and cutting it
+  // short would mean the answer you just gave erased the news that the last
+  // one had finished.
+  if (event === 'clear') {
+    let items = [];
+    const existing = $.NSString.stringWithContentsOfFileEncodingError(
+      feedPath, $.NSUTF8StringEncoding, null);
+    if (existing && !existing.isNil()) {
+      try { items = JSON.parse(ObjC.unwrap(existing)); } catch (e) { items = []; }
+    }
+    if (!Array.isArray(items)) items = [];
+    const before = items.length;
+    items = items.filter(function (a) {
+      if (!a || a.id !== 'claude-code') return true;
+      // A request is the kind that waits: a deadline and no dismissal.
+      const waiting = a.endsAt && (a.dismissAfter === undefined || a.dismissAfter === null);
+      return !waiting;
+    });
+    if (items.length !== before) {
+      $.NSString.alloc.initWithUTF8String(JSON.stringify(items, null, 2))
+        .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
+    }
+    return;
+  }
+
   let icon, title, subtitle, dismissAfter = null, waitSeconds = null;
   if (event === 'notification') {
     icon = 'hand.raised.fill';

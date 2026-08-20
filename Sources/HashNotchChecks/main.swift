@@ -404,6 +404,17 @@ MainActor.assumeIsolated {
     check("collapsed matches notch", state.collapsedWidth == 200)
     check("expanded is larger", state.expandedWidth > state.collapsedWidth && state.expandedHeight > state.collapsedHeight)
 
+    // The idle shape is exactly the hardware, so a notch with nothing to say
+    // has no lip showing below it. The LIVE strip deliberately does hang lower:
+    // the coloured line is drawn along its bottom edge, and if that edge were
+    // level with the notch's own, the line would be behind the hardware for the
+    // notch's whole width — visible on the shoulders, missing in the middle.
+    // Drawing it lower than the pill instead put a gap between the pill and its
+    // own outline. The lip is what lets the line sit on black the whole way.
+    check("the idle shape is exactly the notch", state.collapsedHeight == state.notchHeight)
+    check("the live strip hangs a little below it", state.liveHeight == state.notchHeight + NotchState.liveLip)
+    check("but only a little", NotchState.liveLip > 0 && NotchState.liveLip <= 4)
+
     // Rate formatter scales units.
     check("rate B", Formatters.rate(512).unit == "B/s")
     check("rate KB", Formatters.rate(9_216).value == "9" && Formatters.rate(9_216).unit == "KB/s")

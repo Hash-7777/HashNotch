@@ -380,21 +380,19 @@ struct NotchIslandView: View {
                 .stroke((tint ?? .clear).opacity(0.28), style: outlineGlow(displayScale))
                 .blur(radius: 1.0)
         }
-        // Reach BELOW the island, or the bottom of the line is not on screen.
+        // Flush with the island's own edge, all the way round.
         //
-        // The live strip is exactly as tall as the physical notch — that is
-        // deliberate, so the idle shape has no lip poking out under the
-        // hardware — which means its bottom edge is level with the notch's
-        // underside and everything above that line, across the middle, is
-        // behind a piece of plastic. A border drawn flush with the pill
-        // therefore survives only on the two shoulders and vanishes in the
-        // middle, leaving a line broken in half with the notch sitting in the
-        // gap. It looks like a bug, and it is one.
+        // It used to be drawn a few points BELOW the pill, because the strip
+        // was exactly as tall as the physical notch: its bottom edge was level
+        // with the notch's underside, so a flush line was behind the hardware
+        // for the notch's whole width and survived only on the two shoulders.
+        // Dropping it fixed the middle and spoiled the shoulders — there the
+        // line left the black and floated over the desktop, a hairline with a
+        // visible gap between it and the pill it belongs to.
         //
-        // A few points lower puts the bottom of the line on screen that is
-        // actually visible, and it runs unbroken from one side to the other.
-        // Only downward: the sides stay where the island's edges are.
-        .padding(.bottom, -Self.outlineDrop)
+        // The strip now hangs `NotchState.liveLip` points below the notch, so
+        // there is black under the hardware for the line to sit on, and the
+        // line can go back to tracing the edge exactly. See `liveLip`.
         // The slow breath, which is what makes it catch the eye from across a
         // desk. A steady ring is easy to stop seeing.
         .opacity(outlinePulse ? 1.0 : 0.55)
@@ -440,10 +438,6 @@ struct NotchIslandView: View {
     /// looked worse than what it replaced: the line thinned out and vanished a
     /// third of the way up each side, so instead of an outline the island wore
     /// two short green marks near its bottom corners with nothing joining them.
-    /// How far below the island the line is drawn — enough to clear the notch's
-    /// underside, and no more than reads as part of the same shape.
-    private static let outlineDrop: CGFloat = 3
-
     /// A hairline, not a band.
     ///
     /// This began at 2 points with a 4.5-point glow behind it, which on a strip
