@@ -54,7 +54,13 @@ network interfaces had got to when they were last read, which is what makes it
 possible to tell a day's traffic from a counter that has been running since the
 machine was switched on. That record is bytes and dates and the names of your
 own interfaces — never an address, a site, or anything about where any of it
-went, none of which the app can see in the first place. It never writes to the files it reads, and artwork
+went, none of which the app can see in the first place.
+
+If you switch on answering permission questions from the notch (see
+[docs/ACTIVITIES.md](docs/ACTIVITIES.md)), your answer to one is left in the same
+place under `hashnotch.answers.v1`, where the tool that asked collects it. It is
+a letterbox rather than a record: only the last handful are kept, they say
+nothing about what was asked, and the app keeps no log of what you have allowed. It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.
 
 The one folder that carries HashNotch's name, `~/.hashnotch`, is written by

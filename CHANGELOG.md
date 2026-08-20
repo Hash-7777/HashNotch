@@ -6,6 +6,16 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
+- **Allow or deny from the notch.** An agent that needs permission stops and
+  asks in its own window, which means finding that window. It can ask here
+  instead: hover the island and the panel shows what it wants to do, with Allow
+  and Deny on it. Off until you name the tools you want to be asked about, one
+  per line in `~/.hashnotch/ask-tools.txt`, and every way it can go wrong ends
+  in the ordinary prompt — the app not running, nobody answering within twenty
+  seconds, or the hook failing at all. Deny is drawn no louder than Allow: a
+  pair of buttons where one is styled as the obvious answer is a pair that gets
+  clicked without reading, and the reading is the point.
+
 - **How much you have used, not just how fast it is going.** The panel now says
   how many gigabytes have gone down and up — today by default, or this month, or
   since you last reset it, whichever you pick under Settings → General. It is

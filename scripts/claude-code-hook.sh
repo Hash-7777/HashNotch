@@ -17,7 +17,7 @@ set -euo pipefail
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
 # months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
-HOOK_VERSION=8
+HOOK_VERSION=9
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -40,9 +40,55 @@ mkdir -p "$(dirname "$FEED")"
 # It is registered on events that fire constantly, so it gets out of the way
 # before doing anything expensive: no feed, or no entry of ours in it, and this
 # exits without starting a subprocess at all.
+# Tools you want to be asked about ON THE NOTCH rather than in the window,
+# one name per line — Bash, Write, Edit, WebFetch. No file, no interception:
+# the whole feature is inert until you write it, and it stays inert for every
+# tool you leave out of it.
+ASK_LIST="$HOME/.hashnotch/ask-tools.txt"
+ASK_SECONDS="${HASHNOTCH_ASK_SECONDS:-20}"
+
+# What the tool is called, out of the payload PreToolUse hands us. Read with a
+# plain match rather than a JSON parser because this runs before every single
+# tool call, and the answer is only used to decide whether to do any real work.
+tool_name() {
+  printf '%s' "$PAYLOAD" | sed -n 's/.*"tool_name" *: *"\([^"]*\)".*/\1/p' | head -1
+}
+
+# Whether this is a tool the owner asked to be consulted about.
+wants_asking() {
+  [ -f "$ASK_LIST" ] || return 1
+  local name="$1"
+  [ -n "$name" ] || return 1
+  grep -qxF "$name" "$ASK_LIST" 2>/dev/null
+}
+
+TOKEN=""
+TOOL=""
 if [ "$EVENT" = "clear" ]; then
-  [ -f "$FEED" ] || exit 0
-  grep -q '"claude-code"' "$FEED" 2>/dev/null || exit 0
+  HAS_OURS=no
+  if [ -f "$FEED" ] && grep -q '"claude-code"' "$FEED" 2>/dev/null; then
+    HAS_OURS=yes
+  fi
+  TOOL="$(tool_name)"
+  if [ "$HAS_OURS" = "yes" ]; then
+    # A request was standing and this tool call is the session moving again —
+    # take it down, and do not turn round and ask about the very thing that was
+    # just approved.
+    :
+  elif wants_asking "$TOOL"; then
+    # Nobody can answer a question if the app is not up. Asking anyway would
+    # stall the tool call for the whole waiting period and then fall back to
+    # the ordinary prompt — slower than never having asked.
+    if pgrep -x HashNotch >/dev/null 2>&1; then
+      EVENT="ask"
+      TOKEN="ask-$(od -An -N8 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')"
+      [ -n "$TOKEN" ] || exit 0
+    else
+      exit 0
+    fi
+  else
+    exit 0
+  fi
 fi
 
 # Which app is Claude running inside — the terminal, the editor, or Claude's own
@@ -74,13 +120,15 @@ APP="$(owning_app || true)"
 
 # All JSON handling in JavaScript-for-Automation (always present on macOS —
 # no jq or python needed). Arguments pass as argv, so payload quoting is safe.
-osascript -l JavaScript - "$FEED" "$EVENT" "$PAYLOAD" "$LOGO" "$APP" >/dev/null <<'JXA'
+osascript -l JavaScript - "$FEED" "$EVENT" "$PAYLOAD" "$LOGO" "$APP" "$TOKEN" "$TOOL" >/dev/null <<'JXA'
 function run(argv) {
   ObjC.import('Foundation');
   const feedPath = argv[0];
   const event = argv[1];
   const logoPath = argv[3] || '';
   const appPath = argv[4] || '';
+  const token = argv[5] || '';
+  const toolName = argv[6] || '';
   let payload = {};
   try { payload = JSON.parse(argv[2] || '{}'); } catch (e) {}
 
@@ -88,6 +136,45 @@ function run(argv) {
   // and leaves, with no timer counting down beside it. "Needs you" is a
   // standing request — it waits, because dismissing it after a few seconds
   // would hide the very thing it is asking you to deal with.
+  // A question the notch can answer. Posted with a token; the app files the
+  // answer against that token and the shell below collects it.
+  if (event === 'ask' || event === 'clear-ask') {
+    let items = [];
+    const existing = $.NSString.stringWithContentsOfFileEncodingError(
+      feedPath, $.NSUTF8StringEncoding, null);
+    if (existing && !existing.isNil()) {
+      try { items = JSON.parse(ObjC.unwrap(existing)); } catch (e) { items = []; }
+    }
+    if (!Array.isArray(items)) items = [];
+    items = items.filter(function (a) { return a && a.id && a.id !== 'claude-ask'; });
+
+    if (event === 'ask') {
+      // What is actually about to happen, in as few words as carry the
+      // decision. A permission question you cannot see the substance of is
+      // one you answer by habit, which is the same as not being asked.
+      let detail = '';
+      try {
+        const input = (payload && payload.tool_input) || {};
+        detail = String(input.command || input.file_path || input.url || input.path || '');
+      } catch (e) {}
+      if (detail.length > 90) detail = detail.slice(0, 89) + '…';
+      const activity = {
+        id: 'claude-ask',
+        icon: 'hand.raised.fill',
+        title: 'Allow ' + (toolName || 'this') + '?',
+        asks: token,
+        endsAt: stamp(Date.now() + 120000),
+      };
+      if (detail) activity.subtitle = detail;
+      if (appPath) activity.app = appPath;
+      items.push(activity);
+    }
+
+    $.NSString.alloc.initWithUTF8String(JSON.stringify(items, null, 2))
+      .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
+    return;
+  }
+
   // Take down a standing request, and only that. A notice that has finished
   // keeps its few seconds — it is already leaving on its own, and cutting it
   // short would mean the answer you just gave erased the news that the last
@@ -183,3 +270,70 @@ function run(argv) {
     .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
 }
 JXA
+
+# ── Waiting for the answer ───────────────────────────────────────────────────
+#
+# Only ever reached for a tool the owner listed. The question is now on the
+# notch; this waits for it to be answered and tells Claude Code what was said.
+#
+# Every way out of here is safe:
+#   answered      -> allow or deny, exactly as clicked
+#   not answered  -> "escalate", which is Claude's own prompt, exactly as if
+#                    this hook had never run
+#   anything else -> nothing printed at all, which is also the ordinary flow
+#
+# The answer is left in this app's own preferences rather than in a file — the
+# app promises it writes none — and a read costs about five milliseconds, so
+# looking four times a second for twenty seconds is cheaper than the osascript
+# call that posted the question.
+if [ "$EVENT" = "ask" ] && [ -n "$TOKEN" ]; then
+  DECISION=""
+  DEADLINE=$(( $(date +%s) + ASK_SECONDS ))
+  while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+    # `|| true` matters: there is no answers key until the first answer is ever
+    # given, `defaults read` fails when it is missing, and this script runs
+    # under `pipefail` — without it the very first question kills the hook
+    # before it can wait for anything.
+    ANSWER="$({ defaults read com.hashnotch.app hashnotch.answers.v1 2>/dev/null || true; } \
+      | sed -n "s/^ *\"*${TOKEN}\"* *= *\"*\([a-z][a-z]*\).*/\1/p")"
+    case "$ANSWER" in
+      allow|deny) DECISION="$ANSWER"; break ;;
+    esac
+    sleep 0.25
+  done
+
+  # Take the question down whichever way it went — it has been answered, or it
+  # is about to be asked again in the window, and either way it is stale.
+  osascript -l JavaScript - "$FEED" "clear-ask" "" "" "" "" "" >/dev/null 2>&1 <<'JXA2'
+function run(argv) {
+  ObjC.import('Foundation');
+  const feedPath = argv[0];
+  let items = [];
+  const existing = $.NSString.stringWithContentsOfFileEncodingError(
+    feedPath, $.NSUTF8StringEncoding, null);
+  if (existing && !existing.isNil()) {
+    try { items = JSON.parse(ObjC.unwrap(existing)); } catch (e) { items = []; }
+  }
+  if (!Array.isArray(items)) items = [];
+  const kept = items.filter(function (a) { return a && a.id && a.id !== 'claude-ask'; });
+  if (kept.length !== items.length) {
+    $.NSString.alloc.initWithUTF8String(JSON.stringify(kept, null, 2))
+      .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
+  }
+}
+JXA2
+
+  case "$DECISION" in
+    allow)
+      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Allowed from the notch"}}\n'
+      ;;
+    deny)
+      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Denied from the notch"}}\n'
+      ;;
+    *)
+      # Nobody answered. Hand it back to Claude Code to ask in its own window,
+      # which is what would have happened without any of this.
+      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"escalate","permissionDecisionReason":"No answer on the notch"}}\n'
+      ;;
+  esac
+fi

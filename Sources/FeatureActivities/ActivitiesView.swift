@@ -196,6 +196,48 @@ struct ActivitiesDetailView: View {
         )
     }
 
+    /// Answer a question from here, rather than going to find the window that
+    /// asked it.
+    ///
+    /// Deny is drawn no louder than allow. A pair of buttons where one is
+    /// styled as the obvious answer is a pair that gets clicked without
+    /// reading, and the whole point of being asked is the reading.
+    ///
+    /// Only in the panel, never on the strip. The strip is glanceable and
+    /// cannot be clicked; something that grants permission should cost a
+    /// deliberate movement — hovering the notch to open the panel — rather than
+    /// sitting under a cursor that happens to be passing the top of the screen.
+    private func answerButtons(token: String) -> some View {
+        HStack(spacing: 8) {
+            answerButton("Allow", token: token, decision: .allow, tint: theme.accent)
+            answerButton("Deny", token: token, decision: .deny, tint: theme.subtitleColor)
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 2)
+    }
+
+    private func answerButton(
+        _ label: String,
+        token: String,
+        decision: PermissionAnswers.Decision,
+        tint: Color
+    ) -> some View {
+        Button {
+            PermissionAnswers.record(token: token, decision: decision)
+        } label: {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule().fill(tint.opacity(0.14))
+                        .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 0.6))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
     private func rowBody(_ activity: LiveActivity, showsJump: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
@@ -227,6 +269,9 @@ struct ActivitiesDetailView: View {
                 ProgressView(value: min(max(progress, 0), 1))
                     .tint(theme.accent)
                     .scaleEffect(x: 1, y: 0.7)
+            }
+            if let token = activity.asks {
+                answerButtons(token: token)
             }
         }
         .frame(width: Panel.rowWidth, alignment: .leading)

@@ -190,7 +190,15 @@ function run(argv) {
     const kept = existing.filter(function (entry) { return !isOurs(entry); });
     removed += existing.length - kept.length;
 
-    kept.push({ hooks: [{ type: 'command', command: command }] });
+    // A timeout, because one of these can WAIT. The PreToolUse hook offers a
+    // permission question on the notch and waits for it to be answered, and
+    // Claude Code's own default for a command hook is ten minutes — far too
+    // long to hold a turn if anything here ever goes wrong. Thirty seconds is
+    // comfortably more than the hook's own twenty-second wait, so the hook
+    // always finishes first and hands back an ordinary prompt.
+    const entry = { type: 'command', command: command };
+    if (name === 'PreToolUse') entry.timeout = 30;
+    kept.push({ hooks: [entry] });
     added++;
     settings.hooks[name] = kept;
   }

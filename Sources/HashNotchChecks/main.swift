@@ -1485,6 +1485,59 @@ MainActor.assumeIsolated {
     check("a calm line breathes slowly", IslandPulse.period(urgency: 0) > IslandPulse.period(urgency: 1))
     check("and dims further than an urgent one", IslandPulse.floor(urgency: 0) < IslandPulse.floor(urgency: 1))
     check("it never becomes a flash", IslandPulse.period(urgency: 1) >= 0.7)
+
+    // A question the notch can answer, and the token the answer is filed
+    // under. It becomes a key in this app's own preferences, so it is held to
+    // letters, digits and three punctuation marks, and anything else is refused
+    // outright rather than trimmed — a half-accepted token would file an answer
+    // where the asker is not looking, leaving it waiting for a reply already
+    // given.
+    check("a plain token is accepted", ActivitiesReader.safeToken("ask-9f2b7c") == "ask-9f2b7c")
+    check("an empty one is not", ActivitiesReader.safeToken("") == nil)
+    check("nor one with a space", ActivitiesReader.safeToken("ask 1") == nil)
+    check("nor one that could be read as structure", ActivitiesReader.safeToken("a\"b") == nil)
+    check("nor a path", ActivitiesReader.safeToken("../../etc/passwd") == nil)
+    check(
+        "nor one longer than the cap",
+        ActivitiesReader.safeToken(String(repeating: "a", count: ActivitiesReader.maxTokenLength + 1)) == nil
+    )
+    check(
+        "and one exactly at the cap is fine",
+        ActivitiesReader.safeToken(String(repeating: "a", count: ActivitiesReader.maxTokenLength)) != nil
+    )
+
+    let asked = tempFile("""
+    [
+      {"id": "q", "title": "Allow Bash?", "asks": "ask-9f2b7c"},
+      {"id": "r", "title": "Allow Bash?", "asks": "../nope"},
+      {"id": "s", "title": "Just telling you"}
+    ]
+    """)
+    let askedFeed = ActivitiesReader.read(from: asked)
+    check("a question carries its token through the feed", askedFeed.first?.asks == "ask-9f2b7c")
+    check("a bad token is dropped, the activity is not", askedFeed.dropFirst().first?.asks == nil)
+    check("and an ordinary activity asks nothing", askedFeed.last?.asks == nil)
+
+    // The letterbox the answer is left in. Preferences rather than a file,
+    // deliberately — the app promises it writes none.
+    let answers = InMemoryDefaults()
+    check("nothing is answered to begin with", PermissionAnswers.decision(for: "ask-1", in: answers) == nil)
+    PermissionAnswers.record(token: "ask-1", decision: .allow, to: answers)
+    check("an answer can be collected", PermissionAnswers.decision(for: "ask-1", in: answers) == .allow)
+    PermissionAnswers.record(token: "ask-2", decision: .deny, to: answers)
+    check("and does not disturb another", PermissionAnswers.decision(for: "ask-1", in: answers) == .allow)
+    check("the second stands on its own", PermissionAnswers.decision(for: "ask-2", in: answers) == .deny)
+    check("an answer nobody gave is nothing", PermissionAnswers.decision(for: "ask-3", in: answers) == nil)
+
+    // A letterbox, not a record of what you have allowed — that would be a log
+    // of your decisions, which this app has no business keeping.
+    var manyAnswers: [String: String] = [:]
+    for index in 0..<40 { manyAnswers["ask-\(index)"] = "allow \(1_700_000_000 + index)" }
+    let keptAnswers = PermissionAnswers.pruned(manyAnswers, limit: PermissionAnswers.limit)
+    check("only the newest few answers are kept", keptAnswers.count == PermissionAnswers.limit)
+    check("and it is the newest that are kept", keptAnswers["ask-39"] != nil && keptAnswers["ask-0"] == nil)
+    PermissionAnswers.clear(in: answers)
+    check("and they can all be cleared", PermissionAnswers.decision(for: "ask-1", in: answers) == nil)
     check("and never stops breathing altogether", IslandPulse.floor(urgency: 1) < 1)
 
     // A logo is drawn larger than a symbol — it has no disc around it, so the
