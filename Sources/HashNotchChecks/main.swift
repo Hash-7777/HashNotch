@@ -1460,6 +1460,33 @@ MainActor.assumeIsolated {
         ActivitiesFeature.markTint(for: workingAlert, accent: .orange) == .orange
     )
 
+    // How long something has waited, said plainly. A request used to show the
+    // time LEFT before it gave up — a countdown on a question, which measures
+    // when the app stops asking rather than how long the answer has been owed.
+    check("nothing is said for the first minute", Formatters2.waited(45) == nil)
+    check("then it counts up", Formatters2.waited(60) == "1 min")
+    check("and keeps counting", Formatters2.waited(11 * 60 + 30) == "11 min")
+    check("past an hour it says hours", Formatters2.waited(3 * 3600 + 240) == "3h 4m")
+
+    // A wait presses harder as it goes on: the line breathes faster and stops
+    // dimming as far. Gentle at both ends — this is the whole escalation, and
+    // it never becomes a flash.
+    check("a request just arrived is not urgent yet", ActivitiesFeature.urgency(waitedSeconds: 5) == 0)
+    check("nor at half a minute", ActivitiesFeature.urgency(waitedSeconds: 30) == 0)
+    check("it grows with the wait", ActivitiesFeature.urgency(waitedSeconds: 300) > 0.4)
+    check("and stops at full", ActivitiesFeature.urgency(waitedSeconds: 86_400) == 1)
+    check(
+        "urgency only ever rises",
+        stride(from: 0.0, through: 900.0, by: 30.0).reduce((true, -1.0)) { carry, seconds in
+            let value = ActivitiesFeature.urgency(waitedSeconds: seconds)
+            return (carry.0 && value >= carry.1, value)
+        }.0
+    )
+    check("a calm line breathes slowly", IslandPulse.period(urgency: 0) > IslandPulse.period(urgency: 1))
+    check("and dims further than an urgent one", IslandPulse.floor(urgency: 0) < IslandPulse.floor(urgency: 1))
+    check("it never becomes a flash", IslandPulse.period(urgency: 1) >= 0.7)
+    check("and never stops breathing altogether", IslandPulse.floor(urgency: 1) < 1)
+
     // A logo is drawn larger than a symbol — it has no disc around it, so the
     // room a badge spends on its disc is artwork instead, and a mark made of
     // fine lines needs every point of it to survive being drawn 40 pixels tall.

@@ -23,6 +23,11 @@ public final class ActivitiesMonitor: ObservableObject {
     /// how long it wants to be shown for, not when it should go: the writer has
     /// no idea when the app will next look at the file.
     private var firstSeen: [String: (activity: LiveActivity, at: Date)] = [:]
+
+    /// When this activity first arrived, for anything that wants to say how
+    /// long it has been standing there rather than how long it has left.
+    package func arrived(_ activity: LiveActivity) -> Date? { firstSeen[activity.id]?.at }
+
     private var dismissalWork: DispatchWorkItem?
 
     public init() {}

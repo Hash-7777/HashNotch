@@ -132,7 +132,7 @@ struct ActivitiesTitleView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if let text = Formatters2.timeLeft(activity.secondsLeft(now: monitor.now)) {
+                if let text = Formatters2.waitedText(activity, monitor: monitor, now: monitor.now) {
                     Text(text)
                         .foregroundStyle(theme.subtitleColor)
                         .monospacedDigit()
@@ -145,6 +145,7 @@ struct ActivitiesTitleView: View {
             .transition(.opacity.combined(with: .offset(x: -6)))
         }
     }
+
 }
 
 /// Expanded detail: every active activity as a row with a progress bar.
@@ -211,7 +212,7 @@ struct ActivitiesDetailView: View {
                     }
                 }
                 Spacer(minLength: 8)
-                if let text = Formatters2.timeLeft(activity.secondsLeft(now: monitor.now)) {
+                if let text = Formatters2.waitedText(activity, monitor: monitor, now: monitor.now) {
                     Text(text)
                         .foregroundStyle(theme.textColor)
                         .monospacedDigit()
@@ -234,10 +235,41 @@ struct ActivitiesDetailView: View {
 }
 
 /// Small local formatter (kept here to avoid growing the core for one feature).
-enum Formatters2 {
+package enum Formatters2 {
+    /// How long this has been waiting, for anything that stands rather than
+    /// passes. A notice on its way out says nothing — it is already leaving.
+    @MainActor
+    static func waitedText(
+        _ activity: LiveActivity,
+        monitor: ActivitiesMonitor,
+        now: Date
+    ) -> String? {
+        guard activity.showsCountdown, let arrived = monitor.arrived(activity) else { return nil }
+        return waited(Int(now.timeIntervalSince(arrived)))
+    }
+
     static func timeLeft(_ seconds: Int?) -> String? {
         guard let seconds else { return nil }
         if seconds < 60 { return "\(seconds)s" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes) min" }
+        return "\(minutes / 60)h \(minutes % 60)m"
+    }
+
+    /// How long something has been waiting on you.
+    ///
+    /// A standing request used to show the time LEFT before it gave up and
+    /// left the screen — a countdown on a question, which measures the wrong
+    /// thing entirely: it says how long until the app stops asking, when what
+    /// matters is how long the answer has been owed. Now that a request is
+    /// taken down the moment it is dealt with, it does not need to expire, and
+    /// the number can be the honest one.
+    ///
+    /// Nothing at all for the first minute. A request that has just arrived is
+    /// news, and "0 min" beside it is furniture. After that it counts up, which
+    /// is its own quiet pressure.
+    package static func waited(_ seconds: Int) -> String? {
+        guard seconds >= 60 else { return nil }
         let minutes = seconds / 60
         if minutes < 60 { return "\(minutes) min" }
         return "\(minutes / 60)h \(minutes % 60)m"

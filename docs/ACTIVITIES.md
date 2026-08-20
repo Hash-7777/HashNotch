@@ -102,6 +102,55 @@ installed.
 
 ---
 
+## Every other AI tool
+
+Nothing about the notch is Claude-specific. Anything that can run a command when
+it finishes can light it, and most agents can — either through a hook of their
+own or, failing that, by putting a command after theirs.
+
+Give yourself one word for it. Add this to `~/.zshrc`:
+
+```sh
+notch() { "/Applications/HashNotch.app/Contents/Resources/scripts/post-activity.sh" "$@"; }
+```
+
+Then any tool, hooks or no hooks:
+
+```sh
+codex exec "refactor the parser" ; notch --notice 3 "Codex finished" "" sparkles
+aider --message "add tests"      ; notch --notice 3 "Aider finished" "" sparkles
+gemini -p "review this diff"     ; notch --notice 3 "Gemini finished" "" sparkles
+```
+
+`;` rather than `&&` on purpose: a tool that fails is exactly the one you want
+to be told about. To say which way it went:
+
+```sh
+my-agent "..." && notch --notice 3 "Agent finished" "" checkmark \
+                || notch --notice 5 "Agent failed" "" exclamationmark.triangle
+```
+
+Something long-running can hold the notch while it works and hand it back at the
+end. The two commands share an `--id`, so the second replaces the first rather
+than stacking up:
+
+```sh
+notch --id train "Training" "epoch 1/20" brain 45
+./train.sh
+notch --id train --notice 4 "Training finished" "" brain
+```
+
+If your tool has a hook system — most agents do — point it at the same command
+and it will fire without you wrapping anything. Every field it can post, and
+what the app refuses, is documented in "The feed" above; the app treats it as
+untrusted whoever writes it.
+
+> Symbols are [SF Symbols](https://developer.apple.com/sf-symbols/) names, so
+> anything in Apple's set works: `sparkles`, `hammer`, `checkmark`, `brain`,
+> `terminal`, `exclamationmark.triangle`.
+
+---
+
 ## Your AI usage
 
 Today's token use, one glance away. The strip shows a running total; the panel

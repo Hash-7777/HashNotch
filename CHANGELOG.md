@@ -59,6 +59,20 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **A request says how long it has been waiting, and presses harder the longer
+  it does.** "Claude needs you" used to show the time LEFT before it gave up and
+  left the screen — a countdown on a question, which measures when the app stops
+  asking rather than how long the answer has been owed. It now counts up, says
+  nothing for the first minute, and the line around the notch breathes a little
+  faster and dims a little less as the wait goes on. That is the whole
+  escalation: no growing, no second alert, no sound. And because answering now
+  takes it down, it no longer has to expire while you are still thinking.
+- **Any AI tool can light the notch, not just the ones named here.** The docs
+  now carry the generic route — one line in your shell profile, then a `;` after
+  whatever you already run. Worked examples for tools with no hook system at
+  all, including telling success from failure and holding the notch through a
+  long job.
+
 - **Every panel can be dragged out of the way.** The windows the app puts up —
   the quit question, the opening window, settings, and the old-copy notice —
   have no title bar, and until now there was nothing to take hold of. Each one

@@ -108,6 +108,21 @@ public protocol NotchFeature: AnyObject {
     /// makes the ones that mean something invisible.
     var outlineTint: Color? { get }
 
+    /// How pressing this has become, from 0 to 1.
+    ///
+    /// The colour says WHAT is happening; this says how long it has been
+    /// happening without you. A request that has stood for ten minutes is the
+    /// same colour as one that arrived a second ago, and it should not feel the
+    /// same — so the line pulses faster and stops dimming as far.
+    ///
+    /// Nothing else changes: no size, no sound, no second alert. Something you
+    /// have not dealt with should press a little harder, not shout, and an
+    /// alert that grows is one you end up hiding.
+    ///
+    /// Zero for everything by default. Only a feature that can be WAITING on
+    /// somebody has any business returning more.
+    var outlineUrgency: Double { get }
+
     /// Act on a sideways swipe over the open panel. Return `true` if this
     /// feature took it, `false` (the default) to let another feature try.
     ///
@@ -139,6 +154,7 @@ public extension NotchFeature {
     func stop() {}
     var livePriority: Int { LivePriority.ongoing }
     var outlineTint: Color? { nil }
+    var outlineUrgency: Double { 0 }
     func handleSwipe(_ direction: SwipeDirection) -> Bool { false }
 }
 

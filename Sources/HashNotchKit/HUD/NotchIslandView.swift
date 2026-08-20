@@ -345,6 +345,13 @@ struct NotchIslandView: View {
         liveVisible ? liveFeature?.outlineTint : nil
     }
 
+    /// How hard the line should press, from the same feature that gave it its
+    /// colour — so what is said and how insistently it is said cannot disagree.
+    private var outlineUrgency: Double {
+        liveVisible ? (liveFeature?.outlineUrgency ?? 0) : 0
+    }
+
+
     /// A line of colour traced around the island's own edge.
     ///
     /// Drawn as a stroke on the island's own outline rather than as a shadow
@@ -395,9 +402,10 @@ struct NotchIslandView: View {
         // line can go back to tracing the edge exactly. See `liveLip`.
         // The slow breath, which is what makes it catch the eye from across a
         // desk. A steady ring is easy to stop seeing.
-        .opacity(outlinePulse ? 1.0 : 0.55)
+        .opacity(outlinePulse ? 1.0 : IslandPulse.floor(urgency: outlineUrgency))
         .animation(
-            .easeInOut(duration: 1.4 * motionScale).repeatForever(autoreverses: true),
+            .easeInOut(duration: IslandPulse.period(urgency: outlineUrgency) * motionScale)
+                .repeatForever(autoreverses: true),
             value: outlinePulse
         )
         // And the colour itself cross-fades, so a handover between features is

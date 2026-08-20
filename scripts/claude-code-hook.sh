@@ -17,7 +17,7 @@ set -euo pipefail
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
 # months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
-HOOK_VERSION=7
+HOOK_VERSION=8
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -119,7 +119,7 @@ function run(argv) {
     icon = 'hand.raised.fill';
     title = 'Claude needs you';
     subtitle = String(payload.message || '').slice(0, 120) || null;
-    waitSeconds = 180;
+    waitSeconds = 1800;
   } else {
     // The word "finished" is already in the title and the notch wears green
     // while it shows, so both "done" and "nothing to do" are said before the

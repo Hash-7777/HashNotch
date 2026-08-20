@@ -72,6 +72,29 @@ public final class ActivitiesFeature: NotchFeature {
         min(size * 1.3, size + 8)
     }
 
+    /// How pressing the standing request has become.
+    ///
+    /// Only a request counts. A notice is already leaving and a job in progress
+    /// is not waiting on anybody, so both stay at nothing.
+    public var outlineUrgency: Double {
+        guard let activity = monitor.activities.first,
+              activity.showsCountdown,
+              let arrived = monitor.arrived(activity)
+        else { return 0 }
+        return Self.urgency(waitedSeconds: monitor.now.timeIntervalSince(arrived))
+    }
+
+    /// Nothing for the first half minute — long enough to reach for the
+    /// keyboard — then rising to full over ten minutes, which is about the
+    /// point where a blocked agent has stopped being a pause and started being
+    /// a waste of the machine.
+    package static func urgency(waitedSeconds: TimeInterval) -> Double {
+        let start: TimeInterval = 30
+        let full: TimeInterval = 600
+        guard waitedSeconds > start else { return 0 }
+        return min(1, (waitedSeconds - start) / (full - start))
+    }
+
     package static func markTint(for activity: LiveActivity, accent: Color) -> Color {
         tint(for: activity) ?? accent
     }
