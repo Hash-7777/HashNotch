@@ -79,7 +79,7 @@ struct ActivityMark: View {
                 .resizable()
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
-                .frame(width: size, height: size)
+                .frame(width: ActivitiesFeature.logoSide(for: size), height: ActivitiesFeature.logoSide(for: size))
                 .clipShape(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous))
         } else {
             Image(systemName: activity.icon)

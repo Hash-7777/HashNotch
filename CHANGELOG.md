@@ -46,6 +46,11 @@ All notable changes to HashNotch are recorded here.
   a prompt submitted, or a tool running because you granted permission. A
   finished notice is left alone to run out its few seconds. **Re-run
   `./scripts/install-claude-hooks.sh` for this** — it registers two more events.
+- **A logo on the notch is drawn larger than a symbol.** A symbol's size is the
+  glyph plus the tinted disc behind it; a logo has no disc, so that same room is
+  all artwork. It matters more than it sounds for a mark made of fine lines,
+  which has to survive being drawn about forty pixels tall — a stroke that lands
+  under a pixel breaks up instead of drawing.
 - **The Claude hook says which tool finished, not what kind of work it was.**
   The symbol it posts is now the one macOS itself uses for anything to do with
   an assistant. **Re-run `./scripts/install-claude-hooks.sh` to pick it up** —

@@ -54,6 +54,24 @@ public final class ActivitiesFeature: NotchFeature {
     /// One rule for both the badge and the ring around the notch, because they
     /// are one signal. A green ring with an accent-coloured badge inside it
     /// would read as two things happening at once.
+    /// A logo is drawn larger than a symbol, because it is not sitting in one.
+    ///
+    /// `size` is the room a SYMBOL takes: the glyph plus the tinted disc behind
+    /// it. A logo has no disc, so that same room is all artwork, and it can use
+    /// more of the strip's height than a badge would.
+    ///
+    /// It matters more than it sounds. A mark made of fine lines has to survive
+    /// being drawn about forty pixels tall — this one's median stroke lands at
+    /// three quarters of a pixel at 21 points, which is why it broke up rather
+    /// than drew. Every extra point is stroke width it gets back, and rendered
+    /// side by side at 21 and 27 the difference is the whole legibility of it.
+    ///
+    /// Capped well inside the strip's own height so the artwork can never push
+    /// the pill taller than the shape it is supposed to sit in.
+    package static func logoSide(for size: CGFloat) -> CGFloat {
+        min(size * 1.3, size + 8)
+    }
+
     package static func markTint(for activity: LiveActivity, accent: Color) -> Color {
         tint(for: activity) ?? accent
     }

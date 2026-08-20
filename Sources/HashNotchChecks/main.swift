@@ -1459,6 +1459,15 @@ MainActor.assumeIsolated {
         "work in progress keeps the accent for its badge",
         ActivitiesFeature.markTint(for: workingAlert, accent: .orange) == .orange
     )
+
+    // A logo is drawn larger than a symbol — it has no disc around it, so the
+    // room a badge spends on its disc is artwork instead, and a mark made of
+    // fine lines needs every point of it to survive being drawn 40 pixels tall.
+    // Bounded, because artwork that outgrows the strip would push the pill
+    // taller than the shape it is meant to sit inside.
+    check("a logo is drawn larger than a symbol", ActivitiesFeature.logoSide(for: 21) > 21)
+    check("but never by much", ActivitiesFeature.logoSide(for: 21) <= 21 + 8)
+    check("and the cap holds at any size", ActivitiesFeature.logoSide(for: 100) <= 108)
     check(
         "something waiting on you lights it too",
         ActivitiesFeature.tint(for: waitingAlert) != nil
