@@ -58,6 +58,21 @@ public struct NotchRow<Trailing: View>: View {
         HStack(spacing: 12) {
             Text(label)
                 .foregroundStyle(emphasized ? theme.textColor : theme.subtitleColor)
+                // A row is one line, always.
+                //
+                // The row is a fixed width, so when the value beside it grows —
+                // "9.55 GB" where there was "212 MB", two figures where there
+                // was one — the label is what gets squeezed, and SwiftUI's
+                // answer to a squeezed label is to wrap it. "Used today"
+                // becomes two lines, the row becomes twice as tall, and every
+                // row below it steps down. That is a panel whose shape depends
+                // on how much data somebody has used, which is not a panel.
+                //
+                // So the label holds its line and gives up a little size
+                // instead, down to four fifths — the difference between a label
+                // that is momentarily smaller and a layout that jumps.
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
             trailing
         }

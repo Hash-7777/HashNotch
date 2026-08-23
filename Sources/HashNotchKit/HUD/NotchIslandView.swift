@@ -480,6 +480,19 @@ struct NotchIslandView: View {
         // never shifts as the title changes; only the visible pill shrinks to
         // fit.
         liveContent
+            // The pill is the notch PLUS the lip, and the content sits in the
+            // notch's own band at the top of it — the lip below is black for
+            // the outline to sit on and nothing is ever drawn in it.
+            //
+            // Without this the pill was only as tall as the notch and the
+            // positioning frame below centred it inside a box a lip taller,
+            // which split the difference: half a lip of bare screen appeared
+            // above the pill, and every badge and title on the strip sat half
+            // a lip BELOW the notch's own centre line. That line is the one
+            // the eye compares against — the hardware is right there — so an
+            // offset of a point and a half reads as a badge that is not
+            // centred, which is exactly what it is.
+            .frame(height: state.liveHeight, alignment: .top)
             .background(
                 // No shadow. The strip is pretending to BE the notch — the same
                 // piece of black glass, just wider — and a shadow underneath
