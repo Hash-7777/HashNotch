@@ -129,6 +129,24 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The by-app list no longer judders as it opens.** Two faults, one in each
+  half. The window the panel lives in was following the list's height one
+  measurement at a time while it animated, so the panel was clipped by a sliver
+  for the whole of the opening and its bottom edge stepped along underneath it —
+  the same fault the panel's own drop had, fixed the same way it was: ask for the
+  room up front, animate inside a window that is already big enough, and give the
+  extra back afterwards. Measured, it is now one window resize per change instead
+  of one per frame. And the list itself was sliding in from the top edge while
+  the stack around it was changing height for the same reason — two motions
+  describing one event — so the rows appeared to arrive from the wrong place. The
+  height change is the motion now; the fade only stops the rows being drawn
+  before there is room for them.
+
+- **The battery sits beside the word "Battery", not over with the numbers.** It
+  is a picture of what the row is about, which belongs to the label. On the
+  right it read as one more value competing with the figures, which is the one
+  thing it is not.
+
 - **Everything on the live strip sat a point and a half too low.** The strip
   hangs slightly below the notch so the coloured outline has black to sit on,
   but its contents were being centred in the whole shape rather than in the

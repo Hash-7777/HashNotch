@@ -153,21 +153,28 @@ struct BatteryDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             NotchRow("Battery", theme: theme) {
+                // Beside the word, not over with the figures.
+                //
+                // The drawn battery is a picture of what this row is ABOUT, so
+                // it belongs to the label. On the right it sat among the
+                // numbers and read as one more value competing with them,
+                // which is the one thing it is not.
+                //
+                // It is the real thing, filled to the level it is actually at,
+                // rather than a symbol standing in for one — and it carries the
+                // state as well, the bolt while charging and the pause while
+                // held, so the separate state symbol that used to sit on the
+                // right has nothing left to say that this does not say better.
+                if style != .percent {
+                    BatteryGlyph(
+                        percentage: monitor.percentage,
+                        state: monitor.state,
+                        isLowPowerMode: monitor.isLowPowerMode,
+                        theme: theme
+                    )
+                }
+            } trailing: {
                 HStack(spacing: 6) {
-                    // The real thing, filled to the level it is actually at,
-                    // rather than a symbol standing in for one. It carries the
-                    // state too — the bolt while charging, the pause while
-                    // held — so the separate state symbol that used to sit
-                    // here has nothing left to say that this does not say
-                    // better, and in a shape people already know how to read.
-                    if style != .percent {
-                        BatteryGlyph(
-                            percentage: monitor.percentage,
-                            state: monitor.state,
-                            isLowPowerMode: monitor.isLowPowerMode,
-                            theme: theme
-                        )
-                    }
                     if let detail = detailText {
                         Text(detail)
                             .font(.system(size: 9))

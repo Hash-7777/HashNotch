@@ -36,26 +36,42 @@ public struct NotchSectionHeader: View {
 
 /// A label on the left and caller-styled trailing content on the right, aligned
 /// to a shared width so columns line up.
-public struct NotchRow<Trailing: View>: View {
+///
+/// A row may also carry an ACCESSORY: something that belongs to the label
+/// rather than to the value, drawn immediately after the words.
+///
+/// The battery is why this exists. Its drawn shape had been sitting on the
+/// right, in among the figures, where it read as one more value — and it is not
+/// one. It is a picture of what the row is about, which is what a label is for.
+/// Beside the word, it names the row; beside the numbers, it competes with them.
+public struct NotchRow<Accessory: View, Trailing: View>: View {
     let label: String
     let emphasized: Bool
     let theme: Theme
+    let accessory: Accessory
     let trailing: Trailing
 
     public init(
         _ label: String,
         emphasized: Bool = false,
         theme: Theme,
+        @ViewBuilder accessory: () -> Accessory,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.label = label
         self.emphasized = emphasized
         self.theme = theme
+        self.accessory = accessory()
         self.trailing = trailing()
     }
 
     public var body: some View {
         HStack(spacing: 12) {
+            // The label and anything belonging to it travel together, close,
+            // and the 12-point column gap stays between the label and the
+            // VALUE where it belongs. An accessory a column-gap away from its
+            // own words reads as a third thing on the row.
+            HStack(spacing: 6) {
             Text(label)
                 .foregroundStyle(emphasized ? theme.textColor : theme.subtitleColor)
                 // A row is one line, always.
@@ -73,9 +89,27 @@ public struct NotchRow<Trailing: View>: View {
                 // that is momentarily smaller and a layout that jumps.
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+            accessory
+            }
             Spacer(minLength: 8)
             trailing
         }
         .frame(width: Panel.rowWidth)
+    }
+}
+
+/// The ordinary row, with no accessory. Every existing caller keeps working
+/// unchanged; only a row that wants a picture beside its name says so.
+extension NotchRow where Accessory == EmptyView {
+    public init(
+        _ label: String,
+        emphasized: Bool = false,
+        theme: Theme,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(
+            label, emphasized: emphasized, theme: theme,
+            accessory: { EmptyView() }, trailing: trailing
+        )
     }
 }
