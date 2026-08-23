@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import HashNotchKit
 
 /// How the speed reads. The same two numbers, arranged for different taste and
@@ -34,6 +35,7 @@ public final class NetworkFeature: NotchFeature {
     ]
 
     private let monitor = NetworkMonitor()
+    private var cancellables = Set<AnyCancellable>()
 
     public init() {}
 
@@ -41,11 +43,32 @@ public final class NetworkFeature: NotchFeature {
         monitor.start(
             visibility: context.visibility,
             scale: context.settings.samplingScale,
-            period: context.settings.networkUsagePeriod
+            period: context.settings.networkUsagePeriod,
+            showsApps: context.settings.networkShowsApps
         )
+
+        // Followed live, not only when the panel is next drawn.
+        //
+        // Every other setting here can wait for the next draw, because until
+        // then it changes nothing anybody can see. This one is a permission:
+        // while it says off, a subprocess must not be being run that asks
+        // which of your programs use the network. A switch that takes effect
+        // when you next happen to open the panel is not off, it is off soon —
+        // the same reasoning the cover-art switches are kept in step for.
+        context.settings.$networkShowsApps
+            .removeDuplicates()
+            .sink { [weak self] shows in
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.monitor.setShowsApps(shows) }
+                }
+            }
+            .store(in: &cancellables)
     }
 
-    public func stop() { monitor.stop() }
+    public func stop() {
+        cancellables.removeAll()
+        monitor.stop()
+    }
 
     public func makeView(context: FeatureContext) -> AnyView {
         let style = NetworkStyle(rawValue: context.settings.style(for: id)) ?? .both

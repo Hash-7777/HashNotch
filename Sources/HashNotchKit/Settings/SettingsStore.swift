@@ -107,32 +107,54 @@ public struct AppearanceSettings: Codable, Equatable {
 /// `never` does not mean the count stops working: it means nothing happens on a
 /// clock, and the row is brought up to date when you ask it to.
 public enum TokenScanInterval: String, Codable, CaseIterable, Sendable {
+    case tenSeconds
+    case thirtySeconds
     case oneMinute
+    case twoMinutes
     case fiveMinutes
     case tenMinutes
+    case fifteenMinutes
     case thirtyMinutes
     case oneHour
+    case twoHours
     case never
 
     /// How long between counts, or nil when only a manual refresh counts.
+    ///
+    /// The short end is offered because the count runs on its own clock rather
+    /// than only while the panel is open, so what this picks is genuinely how
+    /// often the figure is brought up to date — and because a count with
+    /// nothing new to read opens no file at all. Somebody watching a long job
+    /// run can have the number keep up with it; somebody who just wants a daily
+    /// figure can leave it on the hour and it costs a directory listing an hour.
     public var seconds: TimeInterval? {
         switch self {
+        case .tenSeconds: return 10
+        case .thirtySeconds: return 30
         case .oneMinute: return 60
+        case .twoMinutes: return 120
         case .fiveMinutes: return 300
         case .tenMinutes: return 600
+        case .fifteenMinutes: return 900
         case .thirtyMinutes: return 1_800
         case .oneHour: return 3_600
+        case .twoHours: return 7_200
         case .never: return nil
         }
     }
 
     public var label: String {
         switch self {
+        case .tenSeconds: return "Every 10 seconds"
+        case .thirtySeconds: return "Every 30 seconds"
         case .oneMinute: return "Every minute"
+        case .twoMinutes: return "Every 2 minutes"
         case .fiveMinutes: return "Every 5 minutes"
         case .tenMinutes: return "Every 10 minutes"
+        case .fifteenMinutes: return "Every 15 minutes"
         case .thirtyMinutes: return "Every 30 minutes"
         case .oneHour: return "Every hour"
+        case .twoHours: return "Every 2 hours"
         case .never: return "Only when I ask"
         }
     }
@@ -197,6 +219,11 @@ private struct SettingsDocument: Codable {
     var alerts: AlertSettings?
     var tokenScanInterval: TokenScanInterval?
     var networkUsagePeriod: NetworkUsagePeriod?
+    /// Whether the panel names the programs that used the most.
+    /// Absent in a document written before this existed, which takes
+    /// the default — this reads no more of your Mac than the totals
+    /// beside it already do, it reads a different thing.
+    var networkShowsApps: Bool?
     /// Hand-made position corrections, keyed by display.
     var adjustments: [String: IslandAdjustment]?
     /// Which music services may be asked for a cover. Absent means all of them.
@@ -221,16 +248,25 @@ public final class SettingsStore: ObservableObject {
 
     /// How often a fresh install counts AI tokens.
     ///
-    /// Half-hourly rather than every five minutes. The count is cheap — only
-    /// what the tools have appended since last time is read — but it is a
-    /// figure that moves over a working session, not second to second, and a
-    /// number that visibly changes while nothing is happening invites attention
-    /// it does not deserve. Anyone who wants it livelier has the choice, down
-    /// to every minute.
+    /// Five minutes, and it used to be thirty.
+    ///
+    /// Thirty was the right answer to a different arrangement. The count was
+    /// gated on the panel being open, so an interval only decided whether one
+    /// look refreshed the figure or reused the last one — the act of looking
+    /// did the refreshing, and half an hour was simply "not twice in one
+    /// glance". Now the count runs on its own clock, and the same number means
+    /// what it says: the figure on the strip may be that far behind.
+    ///
+    /// So the interval has to be one somebody would accept as the age of a
+    /// readout, and five minutes is. It is still not second-to-second, because
+    /// this is a figure that moves over a working session and one that visibly
+    /// ticks while nothing is happening invites attention it has not earned.
+    /// Anyone who wants it livelier has the choice, down to ten seconds, and
+    /// anyone who wants it quieter can go to two hours or switch it off.
     ///
     /// Named once so the value and its fallback cannot drift apart, and so the
     /// checks can pin it.
-    public static let defaultTokenScanInterval: TokenScanInterval = .thirtyMinutes
+    public static let defaultTokenScanInterval: TokenScanInterval = .fiveMinutes
 
     /// What a fresh install counts data used over.
     ///
@@ -245,6 +281,16 @@ public final class SettingsStore: ObservableObject {
     /// `nonisolated` so a feature can name it as a default argument without
     /// hopping to the main actor to read a constant.
     public nonisolated static let defaultNetworkUsagePeriod: NetworkUsagePeriod = .today
+
+    /// Whether the panel names the two programs that used the most.
+    ///
+    /// On, because a figure for how much went through is worth much more when
+    /// it says where it went, and because the reading behind it needs no
+    /// permission and leaves nothing. It is a switch at all — rather than part
+    /// of the network indicator — because it is a different KIND of reading
+    /// from the rest of that indicator: the byte counters know nothing about
+    /// which program sent what, and this asks a question that does.
+    public nonisolated static let defaultNetworkShowsApps: Bool = true
 
     /// Bumped whenever the stored feature configuration changes.
     ///
@@ -287,6 +333,8 @@ public final class SettingsStore: ObservableObject {
     @Published public var tokenScanInterval: TokenScanInterval = SettingsStore.defaultTokenScanInterval
     /// The span the data-used figures cover.
     @Published public var networkUsagePeriod: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod
+    /// Whether the panel names the programs that used the most.
+    @Published public var networkShowsApps: Bool = SettingsStore.defaultNetworkShowsApps
     /// Position corrections per display. A display with no entry is automatic.
     @Published public var adjustments: [String: IslandAdjustment] = [:]
 
@@ -403,6 +451,7 @@ public final class SettingsStore: ObservableObject {
             self.alerts = document.alerts ?? AlertSettings()
             self.tokenScanInterval = document.tokenScanInterval ?? SettingsStore.defaultTokenScanInterval
             self.networkUsagePeriod = document.networkUsagePeriod ?? SettingsStore.defaultNetworkUsagePeriod
+            self.networkShowsApps = document.networkShowsApps ?? SettingsStore.defaultNetworkShowsApps
             self.adjustments = (document.adjustments ?? [:]).mapValues(\.clamped)
             self.artworkServices = document.artworkServices ?? [:]
             self.isFirstRun = false
@@ -530,6 +579,7 @@ public final class SettingsStore: ObservableObject {
         alerts = AlertSettings()
         tokenScanInterval = Self.defaultTokenScanInterval
         networkUsagePeriod = Self.defaultNetworkUsagePeriod
+        networkShowsApps = Self.defaultNetworkShowsApps
         batterySaver = false
         canSwitchLowPowerMode = false
         canPressMediaKeys = false
@@ -581,6 +631,7 @@ public final class SettingsStore: ObservableObject {
             alerts: alerts,
             tokenScanInterval: tokenScanInterval,
             networkUsagePeriod: networkUsagePeriod,
+            networkShowsApps: networkShowsApps,
             adjustments: adjustments,
             artworkServices: artworkServices,
             hasAcceptedReading: hasAcceptedReading

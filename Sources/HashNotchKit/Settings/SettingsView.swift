@@ -302,7 +302,7 @@ public struct SettingsView: View {
 
                 SettingRow(
                     "Count AI tokens",
-                    detail: "Only what your tools have written since the last count is read, so this is cheap at any setting.",
+                    detail: "Counts on this rhythm whether or not the panel is open, so the figure on the notch is this fresh. Only what your tools have written since the last count is read, which is what makes even the short settings cheap.",
                     stacked: true
                 ) {
                     Picker("", selection: $settings.tokenScanInterval) {
@@ -332,6 +332,24 @@ public struct SettingsView: View {
                     }
                     .labelsHidden()
                     .frame(width: 200)
+                }
+
+                SettingDivider()
+
+                // Its own switch, rather than part of the network indicator,
+                // because it is a different KIND of reading. Everything else in
+                // that indicator comes from per-interface byte counters, which
+                // know how much went past and nothing whatever about who sent
+                // it. This asks macOS a question that names your programs. It
+                // needs no permission and nothing leaves the Mac either way,
+                // but "this app knows which of your programs use the network"
+                // is a sentence somebody is entitled to say no to.
+                SettingRow(
+                    "Name the programs that used the most",
+                    detail: "Shows the two biggest under the total, with what each of them used. It asks macOS for its own per-program figures — the same ones Activity Monitor shows. Off means it is never asked.",
+                    stacked: true
+                ) {
+                    Toggle("", isOn: $settings.networkShowsApps).labelsHidden()
                 }
             }
 

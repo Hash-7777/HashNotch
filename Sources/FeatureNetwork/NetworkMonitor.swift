@@ -2,7 +2,10 @@ import Foundation
 import HashNotchKit
 
 /// Reads live upload/download throughput by diffing the kernel's per-interface
-/// byte counters (getifaddrs / if_data) once a second. Public API only.
+/// byte counters once a second. Public API only.
+///
+/// The counters come from `sysctl(NET_RT_IFLIST2)`, not `getifaddrs` — see
+/// `NetworkInterfaces.read`, which says why the obvious call is the wrong one.
 @MainActor
 public final class NetworkMonitor: ObservableObject {
     @Published public private(set) var uploadBytesPerSec: Double = 0
@@ -13,6 +16,12 @@ public final class NetworkMonitor: ObservableObject {
     /// How much has gone through the network over the span the settings ask
     /// for. Counted from the same readings the speed is measured from.
     @Published package private(set) var usage = NetworkUsageTotals()
+    /// The programs that used the most over that same span, biggest first.
+    ///
+    /// Empty when the breakdown is switched off, and empty until a second
+    /// reading has been taken — a counter on its own says nothing, and the
+    /// first one is only a starting point to measure from.
+    @Published package private(set) var topApps: [AppUsageShare] = []
 
     /// Half a minute of samples. Held here rather than in the view so the shape
     /// survives a redraw.
@@ -55,17 +64,36 @@ public final class NetworkMonitor: ObservableObject {
     private var defaults: UserDefaults = .standard
     private var lastPersist: Date = .distantPast
 
+    /// How many programs the panel names. Two: enough to say where a large
+    /// figure came from, few enough that the row under the total stays a
+    /// footnote to it rather than a second list to read.
+    package static let topAppCount = 2
+
+    private var appLedger = AppUsageLedger()
+    private var showsApps = SettingsStore.defaultNetworkShowsApps
+    /// The last time the per-process counters were asked for.
+    ///
+    /// The totals are folded every second while the panel is open, because the
+    /// figure somebody is looking at should climb while they look at it. That
+    /// reading is one call into the kernel. This one is a subprocess, so it
+    /// stays on the minute whatever the panel is doing — a breakdown that
+    /// changes place every second would be unreadable even if it were free.
+    private var lastAppRead: Date = .distantPast
+
     public init() {}
 
     public func start(
         visibility: PanelVisibility,
         scale: Double = 1,
         period: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod,
+        showsApps: Bool = SettingsStore.defaultNetworkShowsApps,
         defaults: UserDefaults = .standard
     ) {
         self.period = period
+        self.showsApps = showsApps
         self.defaults = defaults
         ledger = NetworkUsageStore.load(from: defaults) ?? NetworkUsageLedger()
+        appLedger = NetworkAppUsageStore.load(from: defaults) ?? AppUsageLedger()
 
         let reading = NetworkInterfaces.read()
         let counters = NetworkInterfaces.totalBytes(reading)
@@ -79,6 +107,12 @@ public final class NetworkMonitor: ObservableObject {
         // catch a counter that restarted while the app was not running, which
         // is what a restart of the Mac looks like from here.
         fold(reading: reading, now: Date())
+
+        // The breakdown's own first reading, for the same reason: it carries no
+        // bytes, and it is what every later one is measured against. Taken at
+        // launch rather than waiting a minute so the first minute of a session
+        // is counted like every other one.
+        foldApps(now: Date())
 
         // Throughput is only ever drawn in the panel, so it is measured only
         // while the panel is open.
@@ -113,13 +147,35 @@ public final class NetworkMonitor: ObservableObject {
         publishUsage(now: Date())
     }
 
+    /// Follows the breakdown's own switch while running.
+    ///
+    /// Switching it off stops the asking, not just the drawing: no subprocess
+    /// runs, and what has already been recorded is thrown away rather than kept
+    /// out of sight. Switching it on starts from a fresh baseline for the same
+    /// reason the app does at launch — the counters have been running while
+    /// nobody was reading them, and their current values are history.
+    public func setShowsApps(_ shows: Bool) {
+        guard shows != showsApps else { return }
+        showsApps = shows
+        if shows {
+            appLedger = AppUsageLedger()
+            foldApps(now: Date())
+        } else {
+            appLedger = AppUsageLedger()
+            NetworkAppUsageStore.clear(from: defaults)
+            topApps = []
+        }
+    }
+
     /// Starts the count again, for the span that is counted from a reset.
     ///
     /// The day-by-day record is left alone: today and this month are read from
     /// the same days and have every right to them.
     public func resetUsage() {
         ledger = NetworkUsageMath.afterReset(ledger, now: Date())
+        appLedger = NetworkAppUsageMath.afterReset(appLedger, now: Date())
         NetworkUsageStore.save(ledger, to: defaults)
+        NetworkAppUsageStore.save(appLedger, to: defaults)
         lastPersist = Date()
         publishUsage(now: Date())
     }
@@ -128,6 +184,7 @@ public final class NetworkMonitor: ObservableObject {
     private func sampleUsage(persist: Bool = true) {
         let now = Date()
         fold(reading: NetworkInterfaces.read(now: now), now: now)
+        foldApps(now: now)
         if persist { persistIfDue(now: now) }
     }
 
@@ -136,6 +193,21 @@ public final class NetworkMonitor: ObservableObject {
         ledger = NetworkUsageMath.folded(ledger, reading: reading, now: now)
         publishUsage(now: now)
         Self.usageTrace(before: before, after: usage, reading: reading, now: now)
+    }
+
+    /// Asks which programs the traffic went through, at most once a minute.
+    ///
+    /// Nothing is asked at all while the breakdown is switched off — the
+    /// subprocess is not started, so "off" is a thing the app does not do
+    /// rather than a thing it does not show.
+    private func foldApps(now: Date) {
+        guard showsApps else { return }
+        guard now.timeIntervalSince(lastAppRead) >= Self.usageInterval
+            || lastAppRead == .distantPast else { return }
+        lastAppRead = now
+        guard let reading = AppTrafficReader.read() else { return }
+        appLedger = NetworkAppUsageMath.folded(appLedger, reading: reading, now: now)
+        publishUsage(now: now)
     }
 
     /// Development aid, off unless `HASHNOTCH_DEBUG=usage` asks for it. Every
@@ -163,6 +235,16 @@ public final class NetworkMonitor: ObservableObject {
     private func publishUsage(now: Date) {
         let totals = NetworkUsageMath.totals(ledger, period: period, now: now)
         if totals != usage { usage = totals }
+
+        // The breakdown is summed over the SAME span start the totals use, so
+        // the two figures shown together are always answering one question.
+        let shares = showsApps
+            ? NetworkAppUsageMath.topApps(
+                appLedger,
+                from: NetworkUsageMath.spanStart(period, ledger: ledger, now: now),
+                limit: Self.topAppCount)
+            : []
+        if shares != topApps { topApps = shares }
     }
 
     /// Writes at most once a minute however often the counters are read.
@@ -174,6 +256,7 @@ public final class NetworkMonitor: ObservableObject {
     private func persistIfDue(now: Date) {
         guard now.timeIntervalSince(lastPersist) >= Self.usageInterval else { return }
         NetworkUsageStore.save(ledger, to: defaults)
+        if showsApps { NetworkAppUsageStore.save(appLedger, to: defaults) }
         lastPersist = now
     }
 

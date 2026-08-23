@@ -124,6 +124,7 @@ struct NetworkDetailView: View {
                 .frame(width: Panel.rowWidth, height: 26)
             }
             used
+            byApp
         }
     }
 
@@ -177,6 +178,28 @@ struct NetworkDetailView: View {
     private var used: some View {
         NotchRow("Used \(period.caption)", theme: theme) {
             HStack(spacing: 12) {
+                // Whatever has to be admitted about these figures is admitted
+                // HERE, as a mark beside them, rather than as a line of small
+                // print underneath.
+                //
+                // It used to be that line. It was honest and it was in the
+                // wrong place: it turned a one-line readout into a two-line
+                // one, and it did so exactly when the numbers were long, so
+                // the row changed shape as the day went on. A panel row is
+                // read at a glance and its height should not depend on how
+                // much data somebody has used.
+                //
+                // A mark is still an admission — it is visible, it is beside
+                // the figure it qualifies, and it is not the ordinary state of
+                // the row — and the sentence is one hover away rather than
+                // gone. Nothing is quietly dropped: every case that produced a
+                // line produces a mark.
+                if let note = caption {
+                    Image(systemName: "exclamationmark.circle")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(theme.subtitleColor)
+                        .help(note)
+                }
                 amount("arrow.down", monitor.usage.received, theme.downColor)
                 amount("arrow.up", monitor.usage.sent, theme.upColor)
                 // Only where it means something. A span counted from the
@@ -197,30 +220,61 @@ struct NetworkDetailView: View {
                 }
             }
         }
-        // Said, rather than left to be assumed, whenever the figures cover less
-        // than the span they are named after. Two different admissions, and
-        // they are not the same sentence: the count started late (the first day
-        // of use, or a month that began before the app was installed), or there
-        // is a hole in the middle of it (the app was closed across days, and
-        // what went through in between belongs to no day in particular).
-        .overlay(alignment: .bottomLeading) {
-            if let note = caption {
-                Text(note)
-                    .font(.system(size: 8))
-                    .foregroundStyle(theme.subtitleColor)
-                    .offset(y: 9)
-            }
-        }
-        .padding(.bottom, caption == nil ? 0 : 10)
     }
 
-    /// What to admit under the figures, or nothing when they are whole.
+    /// Which programs the traffic went through: the two that used the most,
+    /// under the total they add up towards.
+    ///
+    /// Under it rather than beside it, and named rather than merely counted,
+    /// because "nine gigabytes today" is a fact you can do nothing with and
+    /// "eight of them were one program" is a fact you can. Two, so the row
+    /// stays a footnote to the total instead of becoming a second list.
+    @ViewBuilder
+    private var byApp: some View {
+        ForEach(monitor.topApps, id: \.name) { app in
+            NotchRow(app.name, theme: theme) {
+                HStack(spacing: 12) {
+                    amount("arrow.down", app.received, theme.downColor)
+                    amount("arrow.up", app.sent, theme.upColor)
+                }
+            }
+            // Quieter than the total above it. These explain that figure, and
+            // a breakdown drawn as loudly as the thing it breaks down competes
+            // with it for the glance.
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .opacity(0.82)
+        }
+    }
+
+    /// What has to be admitted about the figures, or nothing when they are
+    /// whole.
+    ///
+    /// Two different admissions, and they are not the same sentence: the count
+    /// started late, or there is a hole in the middle of it. Both used to be
+    /// three or four words of small print, which was short enough to fit and
+    /// too short to mean anything — "some time not counted" says that
+    /// something is missing without saying what, when, or why, which invites
+    /// the worst reading available. They now say the whole thing, because a
+    /// mark you hover has room for a sentence where a line under the row did
+    /// not.
     private var caption: String? {
         if !monitor.usage.coversWholeSpan, let since = monitor.usage.countedSince {
-            return "counted since \(Self.sinceText(since))"
+            return """
+                This figure starts at \(Self.sinceText(since)), not at the \
+                beginning of \(period.caption). HashNotch counts from the \
+                moment it is running, and it was not running for the whole of \
+                this span — so the real number is higher than the one shown.
+                """
         }
         if monitor.usage.missedTime {
-            return "some time not counted"
+            return """
+                HashNotch was closed across a change of day during \
+                \(period.caption), and what went through while it was closed \
+                is not counted here. Your Mac's counters keep running, but \
+                they do not record WHEN — so those bytes could not be put \
+                against any one day, and were left out rather than guessed at. \
+                The real number is higher than the one shown.
+                """
         }
         return nil
     }
