@@ -1239,6 +1239,23 @@ MainActor.assumeIsolated {
     // Nothing is invented to complete a name macOS truncated.
     check("a name macOS cut short is shown as it came",
           NetworkAppUsageMath.programName(fromKey: "AMPDeviceDiscov.649") == "AMPDeviceDiscov")
+    // Except a helper whose own suffix was cut off, which is the browser's
+    // traffic wearing a name that belongs to nothing.
+    check("a helper cut short still counts as its program",
+          NetworkAppUsageMath.programName(fromKey: "Google Chrome H.77") == "Google Chrome")
+    check("and so does one cut at a different letter",
+          NetworkAppUsageMath.programName(fromKey: "Adobe Reader He.9") == "Adobe Reader")
+    // A name LONGER than the cut was never cut, so it keeps what it has.
+    check("a name past the cut is not treated as cut",
+          NetworkAppUsageMath.programName(fromKey: "Some Long App He.9") == "Some Long App He")
+    // Only at the exact length macOS cuts to, so a real name of that length
+    // keeps every letter.
+    check("a full name of the same length is left alone",
+          NetworkAppUsageMath.programName(fromKey: "Microsoft Excel.5") == "Microsoft Excel")
+    check("and so is another",
+          NetworkAppUsageMath.programName(fromKey: "AMPLibraryAgent.5") == "AMPLibraryAgent")
+    check("a short name ending in something else is untouched",
+          NetworkAppUsageMath.programName(fromKey: "Mail.4") == "Mail")
 
     // The delta rule, which is where this differs from the interface one ON
     // PURPOSE. An interface's counter starts when the Mac boots, so its first
@@ -1361,6 +1378,56 @@ MainActor.assumeIsolated {
               .contains { $0.name == "Idle" } == false)
     check("what a program used is what it used",
           topUsers.first?.received == 8_000 && topUsers.first?.sent == 400)
+
+    // Two spellings of one program. macOS reports `claude` and `Claude`
+    // separately and in a strict sense they are two things — a command and an
+    // application — but two rows wearing the same word reads as the app having
+    // counted something twice, which costs trust even when both figures are
+    // right. Folded at the point of display; the record underneath keeps them
+    // apart.
+    let twoClaudes: [String: AppBytes] = [
+        "claude": AppBytes(received: 100, sent: 900),
+        "Claude": AppBytes(received: 10, sent: 40),
+        "Mail": AppBytes(received: 7, sent: 3),
+    ]
+    let folded = NetworkAppUsageMath.merged(twoClaudes)
+    check("two spellings of one program become one row", folded.count == 2)
+    check("and their figures are added rather than one replacing the other",
+          folded["Claude"] == AppBytes(received: 110, sent: 940))
+    check("a program with only one spelling is untouched",
+          folded["Mail"] == AppBytes(received: 7, sent: 3))
+
+    // A record written before a tidying rule existed still reads correctly,
+    // without anything having to migrate it: the same browser recorded under a
+    // cut-short helper name and under its real one is one row, not two.
+    let mixedRecord: [String: AppBytes] = [
+        "Google Chrome H": AppBytes(received: 500, sent: 20),
+        "Google Chrome": AppBytes(received: 100, sent: 5),
+    ]
+    let healed = NetworkAppUsageMath.merged(mixedRecord)
+    check("an old name and a new one for the same program are one row",
+          healed.count == 1 && healed["Google Chrome"] == AppBytes(received: 600, sent: 25))
+
+    // The surviving spelling is the one that looks like an application, even
+    // when it is the smaller of the two — which is the case that matters, since
+    // the command-line tool is usually the heavier one.
+    check("the capitalised spelling is the one shown", folded["claude"] == nil)
+    check("an application name beats a command name",
+          NetworkAppUsageMath.preferredName("claude", "Claude", totals: twoClaudes) == "Claude")
+    // Between two of the same kind, the bigger wins.
+    let sameKind: [String: AppBytes] = [
+        "node": AppBytes(received: 10, sent: 0),
+        "NODE": AppBytes(received: 99, sent: 0),
+    ]
+    check("between two application-looking names the bigger wins",
+          NetworkAppUsageMath.preferredName("NODE", "Node", totals: ["NODE": AppBytes(received: 99, sent: 0),
+                                                                    "Node": AppBytes(received: 1, sent: 0)]) == "NODE")
+    check("and two lower-case names go the same way",
+          NetworkAppUsageMath.preferredName("node", "nODE", totals: ["node": AppBytes(received: 1, sent: 0),
+                                                                     "nODE": AppBytes(received: 9, sent: 0)]) == "nODE")
+    // An exact tie cannot be allowed to flicker between two draws.
+    check("an exact tie is broken the same way every time",
+          NetworkAppUsageMath.preferredName("bbb", "aaa", totals: sameKind) == "aaa")
 
     // A reset part-way through a day, mirroring the totals: what the day
     // already held is not part of "since you reset it".

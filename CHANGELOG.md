@@ -145,6 +145,20 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **One program, one row.** macOS reports a command and an application of the
+  same name separately — `claude` and `Claude` — and it reports a browser's
+  networking under its helper processes, whose names it then cuts short, so
+  Chrome appeared as "Google Chrome H". Both showed the same program twice,
+  which reads as the app having counted something twice even when both figures
+  are right. They are now added together under the program's own name.
+
+- **A panel row can no longer break in two, whatever is in it.** Holding the
+  label to one line fixed half of this and left the other half in plain sight:
+  the value beside it was unconstrained, so "held at 80% for battery health"
+  wrapped instead and took the row and everything under it down with it. Values
+  are held to their line now too — and that particular sentence said the number
+  twice anyway, since the row it sits on already reads 80%.
+
 - **Nothing of the app's hangs below the physical notch any more.** The live
   strip was made three points taller than the hardware so the coloured line had
   black to sit on — which solved the line and created a worse problem: a black

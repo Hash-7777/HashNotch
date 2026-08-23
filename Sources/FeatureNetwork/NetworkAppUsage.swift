@@ -185,9 +185,34 @@ package enum NetworkAppUsageMath {
         " Helper (Renderer)", " Helper (GPU)", " Helper (Plugin)", " Helper",
     ]
 
+    /// How many characters `nettop` allows a program name before it cuts it.
+    ///
+    /// Measured against this Mac rather than assumed: `com.apple.WebKi`,
+    /// `Google Chrome H` and `AMPLibraryAgent` all come back at exactly this
+    /// length, and the first two are plainly cut short.
+    package static let reportedNameLimit = 15
+
     package static func tidied(_ raw: String) -> String {
         for suffix in helperSuffixes where raw.hasSuffix(suffix) {
             let name = String(raw.dropLast(suffix.count))
+            return name.isEmpty ? raw : name
+        }
+        // A helper whose suffix was itself cut off. `Google Chrome Helper` is
+        // 20 characters and arrives as `Google Chrome H`, so the rule above
+        // never sees a suffix to remove and the browser appears in the list
+        // under a name that is neither the browser's nor anything else's.
+        //
+        // This is not inventing a name. It fires only at the exact length macOS
+        // truncates to, and only when what remains after the last space is the
+        // beginning of the word "Helper" — so `Microsoft Excel`, which is also
+        // fifteen characters and is not cut, keeps every letter of it. What it
+        // recognises is the cut, and what it produces is the real program's own
+        // name rather than a guess at the missing letters.
+        guard raw.count == reportedNameLimit else { return raw }
+        for length in stride(from: " Helper".count, through: 2, by: -1) {
+            let partial = String(" Helper".prefix(length))
+            guard raw.hasSuffix(partial) else { continue }
+            let name = String(raw.dropLast(partial.count))
             return name.isEmpty ? raw : name
         }
         return raw
@@ -330,7 +355,7 @@ package enum NetworkAppUsageMath {
         }
 
         var shares: [AppUsageShare] = []
-        for (program, bytes) in totals where bytes.total > 0 {
+        for (program, bytes) in merged(totals) where bytes.total > 0 {
             shares.append(
                 AppUsageShare(name: program, received: bytes.received, sent: bytes.sent))
         }
@@ -370,6 +395,62 @@ package enum NetworkAppUsageMath {
     package static func downShare(received: UInt64, total: UInt64) -> CGFloat {
         guard total > 0 else { return 0 }
         return min(CGFloat(received) / CGFloat(total), 1)
+    }
+
+    /// Folds together names that differ only in case.
+    ///
+    /// macOS genuinely reports `claude` and `Claude` as two programs, and in a
+    /// strict sense they are: one is a command in a terminal, the other is an
+    /// application. But the list exists to answer "what used my data", and two
+    /// rows wearing the same word is a worse answer than one — it reads as the
+    /// app having counted something twice, which is the reading that costs
+    /// trust even when the figures are right.
+    ///
+    /// Done at the point of DISPLAY rather than when folding, so the record
+    /// underneath keeps both apart. Nothing is lost that could be wanted back,
+    /// and a ledger written before this existed reads correctly without being
+    /// migrated.
+    ///
+    /// The surviving name is the one that looks like an application: macOS
+    /// capitalises them, so a capitalised variant wins over a lower-case one.
+    /// Between two of the same kind, the bigger wins, and an exact tie is
+    /// broken alphabetically so the answer cannot change between two draws of
+    /// the same numbers.
+    package static func merged(_ totals: [String: AppBytes]) -> [String: AppBytes] {
+        var groups: [String: (name: String, bytes: AppBytes)] = [:]
+        for (rawName, bytes) in totals {
+            // Tidied HERE as well as when folding, so a record written before a
+            // tidying rule existed reads correctly without being migrated. A
+            // ledger holding both `Google Chrome H` and `Google Chrome` — one
+            // from before the truncated-helper rule and one from after — is a
+            // ledger that would otherwise show the same browser twice.
+            let name = tidied(rawName)
+            let key = name.lowercased()
+            guard var group = groups[key] else {
+                groups[key] = (name, bytes)
+                continue
+            }
+            group.bytes.received &+= bytes.received
+            group.bytes.sent &+= bytes.sent
+            group.name = preferredName(group.name, name, totals: totals)
+            groups[key] = group
+        }
+        return Dictionary(uniqueKeysWithValues: groups.values.map { ($0.name, $0.bytes) })
+    }
+
+    /// Which spelling of a name to show.
+    package static func preferredName(
+        _ left: String,
+        _ right: String,
+        totals: [String: AppBytes]
+    ) -> String {
+        let leftIsApp = left.first?.isUppercase == true
+        let rightIsApp = right.first?.isUppercase == true
+        if leftIsApp != rightIsApp { return leftIsApp ? left : right }
+        let leftBytes = totals[left]?.total ?? 0
+        let rightBytes = totals[right]?.total ?? 0
+        if leftBytes != rightBytes { return leftBytes > rightBytes ? left : right }
+        return left < right ? left : right
     }
 
     /// Starts the breakdown again, without disturbing the day-by-day record the
