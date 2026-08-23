@@ -12,6 +12,21 @@ import HashNotchKit
 public final class ActivitiesMonitor: ObservableObject {
     @Published public private(set) var activities: [LiveActivity] = []
     @Published public private(set) var now: Date = Date()
+    /// Whether the hook installed in the home folder is the one this build
+    /// ships. `.unknown` until something has been read, so nothing is claimed
+    /// before anything is known.
+    @Published public private(set) var hookState: HookState = .unknown
+
+    private let hookQueue = DispatchQueue(label: "com.hashnotch.hookcheck", qos: .utility)
+    private var hookCheckedAt: Date = .distantPast
+
+    /// How often the installed hook is looked at again.
+    ///
+    /// The answer changes exactly once — when somebody runs the installer — and
+    /// the notice has to go away when they do, or it teaches people that fixing
+    /// the thing it asked for does nothing. A minute is far more often than
+    /// that needs, and it is two file reads.
+    private static let hookCheckInterval: TimeInterval = 60
 
     private var watcher: DirectoryWatcher?
     private var sampler: PollingSampler?
@@ -41,6 +56,7 @@ public final class ActivitiesMonitor: ObservableObject {
         self.presence = presence
         self.settings = settings
         reload()
+        refreshHookState()
 
         // The feed changes when somebody posts, which is rarely and never on a
         // schedule. Watch the folder rather than stat-ing the file forever —
@@ -86,6 +102,26 @@ public final class ActivitiesMonitor: ObservableObject {
 
     private func reload() {
         apply(ActivitiesReader.read())
+        // Riding on the feed rather than on a clock of its own. The feed
+        // changes when a tool posts, and somebody who has just run the
+        // installer is somebody about to use their tools — so the moment the
+        // answer could have changed is a moment this is already awake for. The
+        // throttle stops a burst of posts turning into a burst of file reads.
+        refreshHookState()
+    }
+
+    /// Looks at the installed hook, at most once a minute, off the main thread.
+    private func refreshHookState() {
+        let now = Date()
+        guard now.timeIntervalSince(hookCheckedAt) >= Self.hookCheckInterval else { return }
+        hookCheckedAt = now
+        hookQueue.async { [weak self] in
+            let state = HookInstallation.currentState()
+            Task { @MainActor [weak self] in
+                guard let self, state != self.hookState else { return }
+                self.hookState = state
+            }
+        }
     }
 
     /// Whether this notice is one whose few seconds have not started counting.

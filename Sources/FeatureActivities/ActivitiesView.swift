@@ -153,15 +153,71 @@ struct ActivitiesDetailView: View {
     @ObservedObject var monitor: ActivitiesMonitor
     let theme: Theme
 
+    /// Set once the command has been put on the clipboard, so the row can say
+    /// so. Not persisted anywhere: it is about the last two seconds.
+    @State private var copied = false
+
     var body: some View {
-        if !monitor.activities.isEmpty {
+        if !monitor.activities.isEmpty || monitor.hookState.needsAttention {
             VStack(alignment: .leading, spacing: 8) {
                 NotchSectionHeader("ACTIVITIES", theme: theme)
                 ForEach(monitor.activities) { activity in
                     row(activity)
                 }
+                if case .outOfDate(let installed, let available) = monitor.hookState {
+                    staleHookRow(installed: installed, available: available)
+                }
             }
         }
+    }
+
+    /// The one line that says the hook on disk is older than the app.
+    ///
+    /// It sits under the activities rather than above them: something that just
+    /// happened outranks a piece of housekeeping, and this can wait for as long
+    /// as it takes to read what is above it.
+    ///
+    /// Clicking COPIES the command; it does not run it. Running it would edit
+    /// `~/.claude/settings.json` — another program's configuration, in somebody
+    /// else's home folder, from a single click on a panel that opens when a
+    /// cursor passes the notch. The whole argument this app makes is that it
+    /// does nothing you did not ask for, and quietly rewriting another tool's
+    /// settings because a mouse went by is the exact shape of the thing it says
+    /// it will not do. Copying removes the only real friction — finding the
+    /// path — and leaves the decision where it belongs.
+    private func staleHookRow(installed: Int, available: Int) -> some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(HookInstallation.updateCommand, forType: .string)
+            copied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(theme.subtitleColor)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Notch hook is v\(installed), this app ships v\(available)")
+                        .foregroundStyle(theme.textColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(copied
+                         ? "Copied — paste it in Terminal"
+                         : "Click to copy the command that updates it")
+                        .font(.system(size: 8))
+                        .foregroundStyle(theme.subtitleColor)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+            }
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .frame(width: Panel.rowWidth)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // The command itself, for anybody who would rather read it than trust a
+        // clipboard they cannot see.
+        .help(HookInstallation.updateCommand)
     }
 
     @ViewBuilder

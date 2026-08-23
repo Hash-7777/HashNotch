@@ -93,6 +93,39 @@ jobs:
           fi
           echo "The badge is telling the truth."
 
+      # The hook is copied into people's home folders, so it does not follow an
+      # app update. The app now tells them when the copy they have is older
+      # than the one it ships — and that notice compares VERSION NUMBERS, on
+      # purpose, so that anybody who edited their own copy is never nagged. The
+      # cost of that choice is this step: a stamp nobody bumped means a change
+      # that ships and never arrives, exactly as the tick-for-stars change did.
+      # This is where that mistake gets caught, rather than by pestering the
+      # person who did nothing wrong.
+      - name: A changed hook must change its version
+        run: |
+          before=$(git rev-parse "${{ github.event.before }}" 2>/dev/null || echo "")
+          if [ -z "$before" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            echo "No previous commit to compare against; nothing to check."
+            exit 0
+          fi
+          hook=scripts/claude-code-hook.sh
+          if git diff --quiet "$before" HEAD -- "$hook"; then
+            echo "The hook did not change."
+            exit 0
+          fi
+          old_version=$(git show "$before:$hook" 2>/dev/null | sed -n 's/^HOOK_VERSION=\([0-9][0-9]*\).*/\1/p' | head -1)
+          new_version=$(sed -n 's/^HOOK_VERSION=\([0-9][0-9]*\).*/\1/p' "$hook" | head -1)
+          echo "hook version: ${old_version:-<none>} -> ${new_version:-<none>}"
+          if [ -z "$new_version" ]; then
+            echo "::error::$hook has no HOOK_VERSION= stamp. The app cannot tell people their copy is stale without one."
+            exit 1
+          fi
+          if [ "$old_version" = "$new_version" ]; then
+            echo "::error::$hook changed but HOOK_VERSION is still $new_version. Bump it, or everybody who already installed the hook keeps the old behaviour with nothing to tell them."
+            exit 1
+          fi
+          echo "The stamp moved with the hook."
+
       # Proves the thing that actually gets shipped assembles and that its
       # signature verifies — the failure that would otherwise reach every
       # person who downloads it. Ad-hoc signed here, as on the developer's Mac;

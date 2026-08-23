@@ -126,7 +126,11 @@ public final class ActivitiesFeature: NotchFeature {
     }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
-        guard !monitor.activities.isEmpty else { return nil }
+        // The section also appears for the stale-hook notice alone. Without
+        // this the one place that could carry the warning is the one place that
+        // is hidden whenever there is nothing posted — and a hook too old to
+        // post anything is exactly the case it exists for.
+        guard !monitor.activities.isEmpty || monitor.hookState.needsAttention else { return nil }
         return AnyView(ActivitiesDetailView(monitor: monitor, theme: context.theme))
     }
 }

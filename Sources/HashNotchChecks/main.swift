@@ -1432,6 +1432,54 @@ MainActor.assumeIsolated {
     check("an empty program cannot divide by zero",
           NetworkAppUsageMath.downShare(received: 0, total: 0) == 0)
 
+    // THE HOOK ON DISK versus the hook this build ships. The hook is copied
+    // into the home folder so it can be read before it runs, and the price of
+    // that is that it does not follow the app — which has already cost one
+    // change that shipped and never arrived.
+    let hookV9 = "#!/bin/sh\n# comment mentioning HOOK_VERSION= in prose\nHOOK_VERSION=9\necho hi\n"
+    let hookV7 = "#!/bin/sh\nHOOK_VERSION=7\necho hi\n"
+    let hookNoStamp = "#!/bin/sh\necho hi\n"
+
+    check("the stamp is read from the line that sets it",
+          HookInstallation.version(in: hookV9) == 9)
+    check("and prose that merely mentions it is not the stamp",
+          HookInstallation.version(in: "# grep HOOK_VERSION= the-file\nHOOK_VERSION=3\n") == 3)
+    check("a hook with no stamp has no version",
+          HookInstallation.version(in: hookNoStamp) == nil)
+    check("a stamp that is not a number is not a version",
+          HookInstallation.version(in: "HOOK_VERSION=nine\n") == nil)
+
+    check("an older hook on disk is out of date",
+          HookInstallation.state(installed: hookV7, available: hookV9)
+              == .outOfDate(installed: 7, available: 9))
+    check("the same version is current",
+          HookInstallation.state(installed: hookV9, available: hookV9) == .current)
+    // An older app with a newer hook is somebody mid-upgrade, not somebody to
+    // tell that their hook is behind.
+    check("a newer hook on disk is not called out of date",
+          HookInstallation.state(installed: hookV9, available: hookV7) == .current)
+    check("no hook installed is not a problem",
+          HookInstallation.state(installed: nil, available: hookV9) == .notInstalled)
+    // Running unbundled: nothing to compare against, so nothing is claimed.
+    check("with nothing to compare against, nothing is said",
+          HookInstallation.state(installed: hookV9, available: nil) == .unknown)
+    check("an unreadable stamp says nothing rather than guessing",
+          HookInstallation.state(installed: hookNoStamp, available: hookV9) == .unknown)
+
+    // Only one of these states interrupts anybody.
+    check("only being out of date is worth a notice",
+          HookState.outOfDate(installed: 1, available: 2).needsAttention
+              && !HookState.current.needsAttention
+              && !HookState.notInstalled.needsAttention
+              && !HookState.unknown.needsAttention)
+
+    // The comparison is the VERSION and deliberately not the bytes. The docs
+    // invite people to open the hook and read it, and a byte comparison would
+    // nag everybody who changed a comment in their own copy, for ever.
+    let edited = "#!/bin/sh\nHOOK_VERSION=9\necho hi\n# my own note\n"
+    check("somebody who edited their own hook is never nagged",
+          HookInstallation.state(installed: edited, available: hookV9) == .current)
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))

@@ -93,6 +93,14 @@ only this feed file, and the installer backs up your Claude settings first.
 > follow app updates on its own. Re-running is safe at any time and tells you
 > what it did — installed, already current, or updated from one version to the
 > next.
+>
+> You do not have to remember. When the copy in your home folder is older than
+> the one the app ships, the panel says so and offers to copy the command for
+> you — it never runs it, because that edits `~/.claude/settings.json` and this
+> app does not change another tool's settings because a cursor went past the
+> notch. The notice compares version numbers rather than file contents, so
+> editing your own copy of the hook does not produce a warning that will not go
+> away.
 
 > **Want a tool's logo instead of the symbol?** Drop a square PNG at
 > `~/.hashnotch/logos/claude.png`. No logos ship with the app — those marks

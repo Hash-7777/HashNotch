@@ -21,6 +21,18 @@ All notable changes to HashNotch are recorded here.
   switching it off stops it being asked rather than hiding the answer, and
   deletes what it had recorded.
 
+- **The notch tells you when its hook has fallen behind.** The Claude Code hook
+  is copied into your home folder so you can read it before it runs, and the
+  price of that is that it does not follow an app update: change what the notch
+  says when a tool finishes, and every copy already installed keeps doing the old
+  thing with nothing anywhere to say why. That has already happened once. The
+  panel now shows a line when the copy you have is older than the one the app
+  ships, and clicking it copies the command that fixes it — it does not run it,
+  because that edits another tool's settings file and no click on a panel that
+  opens when a cursor passes the notch should do that. It compares version
+  numbers rather than file contents, so editing your own copy never produces a
+  warning you cannot clear.
+
 - **Allow or deny from the notch.** An agent that needs permission stops and
   asks in its own window, which means finding that window. It can ask here
   instead: hover the island and the panel shows what it wants to do, with Allow

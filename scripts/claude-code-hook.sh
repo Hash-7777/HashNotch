@@ -17,7 +17,13 @@ set -euo pipefail
 # is what lets the installer say "updated v1 to v2" rather than replacing the
 # file in silence, which is how a fixed alert can go on looking broken for
 # months. Read with: grep HOOK_VERSION= ~/.hashnotch/claude-code-hook.sh
-HOOK_VERSION=9
+#
+# v10 is the tick that replaced the stars when a reply finishes. That change
+# went out at v9 — the script changed and this number did not — so every copy
+# installed before it claimed to be the same version while drawing something
+# else, which is the precise failure this stamp exists to prevent. CI now
+# refuses a push that changes this file without changing this number.
+HOOK_VERSION=10
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
