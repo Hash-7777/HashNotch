@@ -66,12 +66,13 @@ public final class NetworkMonitor: ObservableObject {
 
     /// How many programs the panel is offered.
     ///
-    /// Six, since the list became one that opens and shuts. While it is shut it
-    /// costs a line and names the biggest; somebody who opens it is asking
-    /// rather than glancing, and the answer to "where did it all go" is rarely
-    /// two programs. Well inside the dozen a day is kept, so the list never
-    /// runs out before the record does.
-    package static let topAppCount = 6
+    /// Three. Six filled the panel with names nobody recognises — the machine's
+    /// own background services are always in the list and are never the answer
+    /// to "where did my data go", so the rows that matter were being pushed
+    /// down by rows that do not. Three is the shape of a real answer: the one
+    /// that dominated, and the two worth comparing it with. Well inside the
+    /// dozen a day keeps, so the list never runs out before the record does.
+    package static let topAppCount = 3
 
     private var appLedger = AppUsageLedger()
     private var showsApps = SettingsStore.defaultNetworkShowsApps

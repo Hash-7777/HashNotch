@@ -310,6 +310,26 @@ struct NetworkDetailView: View {
                             .monospacedDigit()
                     }
                 }
+                // Said every time, because it is true every time.
+                //
+                // The total above is built from the kernel's own interface
+                // counters, which keep running whether or not this app does —
+                // so quitting and reopening loses nothing and the day's figure
+                // is the day's figure. These are not. macOS keeps no
+                // per-program history at all: the counters live INSIDE each
+                // running process and go when it goes, so the only per-program
+                // traffic anybody can attribute is traffic that went past while
+                // something was watching.
+                //
+                // That makes this list structurally smaller than the total it
+                // sits under, and the difference is a limit to be stated rather
+                // than a bug to be fixed. Two words carry it, and the sentence
+                // behind them is one hover away.
+                if settings.networkAppsExpanded {
+                    Text("while running")
+                        .font(.system(size: 8))
+                        .foregroundStyle(theme.subtitleColor)
+                }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(theme.subtitleColor)
@@ -321,8 +341,15 @@ struct NetworkDetailView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(settings.networkAppsExpanded ? "Hide the breakdown" : "Show which programs used the most")
+        .help(settings.networkAppsExpanded ? Self.whileRunningNote : Self.showNote)
     }
+
+    /// Why this list is smaller than the total above it, put where the
+    /// question gets asked — which is while looking at the list.
+    private static let whileRunningNote = "Counted only while HashNotch is running. Your Mac keeps no history of which program used what — those counters live inside each running program and go when it does — so traffic that went past while this app was closed is in the total above but cannot be put against any program. The total does not have this limit: it is read from your Mac's own network counters, which keep running whether this app does or not."
+
+    private static let showNote = "Show which programs used the most"
+
 
     /// One program: what it is called, what it used, and how that compares.
     private func appRow(_ app: AppUsageShare) -> some View {
