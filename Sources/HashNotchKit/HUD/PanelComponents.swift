@@ -93,6 +93,20 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
             }
             Spacer(minLength: 8)
             trailing
+                // The same rule as the label, and for the same reason.
+                //
+                // Holding the label to one line fixed half the problem and left
+                // the other half in plain sight: the VALUE is caller-supplied
+                // and was unconstrained, so a long one wrapped instead — "held
+                // at 80% for battery health" became two lines and took the row
+                // and everything under it down with it.
+                //
+                // This binds each piece of TEXT to one line, not the container,
+                // so a row that deliberately stacks two figures still stacks
+                // them. Only wrapping is prevented, which was never intended
+                // anywhere.
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(width: Panel.rowWidth)
     }

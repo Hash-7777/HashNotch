@@ -304,12 +304,15 @@ struct BatteryDetailView: View {
         case .charged:
             return nil
         case .onHold:
-            // Naming the level turns "why has it stopped at 80%?" into a
-            // feature the user already half-knows about — and naming the number
-            // is what makes it obviously deliberate rather than broken.
-            if let ceiling = monitor.chargeCeiling {
-                return "held at \(ceiling)% for battery health"
-            }
+            // "held at 80% for battery health" said the number twice: the row
+            // it sits on already reads 80% two inches to the right, because
+            // when charging is held the level IS the ceiling. Those four extra
+            // words were the difference between a row and two rows.
+            //
+            // What the sentence is actually for survives without them. The
+            // question it answers is "why has it stopped?", and "held for
+            // battery health" answers it — the level is on the same row for
+            // anybody who wants to know which number it stopped at.
             return "held for battery health"
         case .discharging:
             guard let minutes = monitor.minutesRemaining, minutes > 0 else { return nil }
