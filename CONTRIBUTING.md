@@ -41,8 +41,14 @@ plausible assumption nobody checked:
 
 - The storage readout was wrong because it asked macOS "how much could be freed"
   instead of "how much is free", and both sound like the same question.
-- Artwork was believed impossible for most apps because one MediaRemote call
-  withholds it — a different call returns it.
+- Artwork for a music app was believed reachable from an identifier macOS
+  publishes beside the cover it withholds. It is not: the identifier goes stale
+  across a track change, so what shipped was often the previous song's cover,
+  shown with total confidence. The evidence was there before it shipped — the
+  same identifier had already appeared for two different songs — and was read as
+  "album-scoped" rather than as "unreliable". **When a derived value repeats
+  across two things that are not the same, treat the repetition as
+  disconfirmation until proved otherwise.**
 - A "verified" claim rested on a build command that silently recompiled nothing.
 
 If a change rests on how something behaves, show the measurement in the commit

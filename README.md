@@ -15,7 +15,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-671%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="671 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-715%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="715 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -47,15 +47,15 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Microphone** — the moment any app opens your microphone, a live dot and a running timer appear beside the notch, with that app's own icon: FaceTime, Zoom, Teams, a browser call, a voice memo. It asks macOS one yes-or-no question — *does this app have an input stream open* — and **never listens, records or transcribes**. It holds no microphone permission of its own, and could not use one.
 
-**Internet** — live upload and download, with the last half-minute graphed underneath, and how much has gone through: today, this month, or since you last reset it. Your choice of which, under Settings → General.
+**Internet** — live upload and download, with the last half-minute graphed underneath, and how much has gone through: today, this month, or since you last reset it. Underneath that, the two programs that used the most, and exactly what each of them used — so a large figure says where it went instead of just being large. Your choice of span under Settings → General, and the breakdown has its own switch there.
 
-**Battery** — level, time left, time to full, adapter wattage, Low Power Mode. Capped at 80% for its health? It counts down to *that*, not to a full charge it will never reach.
+**Battery** — a real battery filled to the level it is actually at, the way the one in your menu bar is, with time left, time to full, adapter wattage and Low Power Mode. Capped at 80% for its health? It counts down to *that*, not to a full charge it will never reach.
 
 **Processor and memory** — how hard your Mac is working, in the same figures Activity Monitor shows.
 
 **Temperatures** — the real Apple Silicon on-die sensors, not an estimate.
 
-**AI tokens** — what you have spent today, across Claude Code, HashCortX and HashCerebrum.
+**AI tokens** — what you have spent today, across Claude Code, HashCortX and HashCerebrum. Counted on a clock of your choosing, from every ten seconds to once every two hours, whether or not the panel is open.
 
 **Storage** — how full the disk is, using the figure `df` and Disk Utility agree on.
 
@@ -79,7 +79,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 671 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 715 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
@@ -87,7 +87,7 @@ $ swift run HashNotchChecks
   ok   the optimistic "could be made free" figure is not used as free space
   ok   a cover that arrives after a skip is dropped
   ok   an app outside the standard folders is refused
-  ok   the checks leave no preference domains behind
+  ok   the checks create no preference domains at all
   ...
 All checks passed.
 ```
@@ -188,7 +188,7 @@ Apple, Spotify, YouTube and every other product named here belong to their owner
 
 ### Removing it
 
-Four steps, and this is every trace: switch **Open at Login** off and quit; drag the app to the Trash; delete `~/.hashnotch`; run `defaults delete com.hashnotch.app`. No launch agents, no caches, no receipts.
+Four steps, and this is every trace: switch **Open at Login** off and quit; drag the app to the Trash; delete `~/.hashnotch`; run `defaults delete com.hashnotch.app`. No launch agents, no caches, no receipts. If you ever ran it under its former name, add `~/.hashdisland` and `defaults delete com.hashdisland.app` — this app still reads both, so they are part of the list.
 
 Every value it reads, both private Apple interfaces it uses, and the full detail: **[SECURITY.md](SECURITY.md)**. Every claim there is checkable by reading the source and pinned by the checks.
 

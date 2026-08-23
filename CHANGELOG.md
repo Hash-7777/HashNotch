@@ -6,6 +6,18 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
+- **Which programs used your data, not just how much.** Under the data-used
+  figure the panel now names the two programs that used the most and says
+  exactly what each of them sent and received. Nine gigabytes today is a number
+  you can do nothing with; eight of them being one program is one you can. It
+  comes from `nettop -P`, Apple's own tool and the one Activity Monitor's
+  Network tab is built on: no permission, no address, no site, and nothing
+  leaves your Mac. It has its own switch under **Settings → General** because it
+  is a different kind of reading from the rest of that indicator — the byte
+  counters know nothing about which program sent what, and this knows — and
+  switching it off stops it being asked rather than hiding the answer, and
+  deletes what it had recorded.
+
 - **Allow or deny from the notch.** An agent that needs permission stops and
   asks in its own window, which means finding that window. It can ask here
   instead: hover the island and the panel shows what it wants to do, with Allow
@@ -69,6 +81,30 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **The battery is drawn to the level it is actually at.** Both on the notch and
+  in the panel, it is now a real battery that fills and empties, the way the one
+  in your menu bar does — with the bolt while it charges, a pause while it is
+  held at a ceiling for its health, yellow in Low Power Mode, and red when it is
+  nearly out. Before, the strip drew the same full-battery symbol for anything
+  running down, so the shape beside "4%" was a full battery, and the panel drew
+  no battery at all.
+
+- **The AI token count now counts on its own.** It was only ever counted while
+  the panel was open, which quietly made "every 5 minutes" mean "every 5 minutes
+  that you happen to be looking at it" — so the figure on the notch sat unchanged
+  for hours and then jumped the moment you opened the panel. It now counts on the
+  rhythm you choose whether or not anything is on screen, and there are more
+  rhythms to choose from: every 10 or 30 seconds, every 1, 2, 5, 10, 15 or 30
+  minutes, every hour or two, or only when you ask. A count with nothing new to
+  read opens no file at all, which is what makes even the short settings cheap.
+  A fresh install now starts at 5 minutes rather than 30, because 30 was chosen
+  when the number was refreshed by the act of looking at it.
+
+- **A tick, not stars, when an AI tool finishes.** Stars are the house mark of
+  every AI product at once, so they named the category rather than the event —
+  and at the size the notch draws them, two stars of different sizes have no
+  balance point, so the badge never looked centred. One stroke does.
+
 - **A request says how long it has been waiting, and presses harder the longer
   it does.** "Claude needs you" used to show the time LEFT before it gave up and
   left the screen — a countdown on a question, which measures when the app stops
@@ -89,6 +125,25 @@ All notable changes to HashNotch are recorded here.
   can now be moved by its heading, the way a title bar works.
 
 ### Fixed
+
+- **Everything on the live strip sat a point and a half too low.** The strip
+  hangs slightly below the notch so the coloured outline has black to sit on,
+  but its contents were being centred in the whole shape rather than in the
+  notch's own band — so every badge and title sat below the centre line of the
+  hardware right beside it, which is exactly the line the eye compares against.
+  A sliver of bare screen was appearing above the strip for the same reason.
+
+- **A panel row no longer becomes two rows when the number gets long.** The rows
+  are a fixed width, so a long value squeezed the label beside it and the label
+  wrapped: "Used today" became two lines, and every row underneath stepped down.
+  The panel's shape no longer depends on how much data you have used.
+
+- **The note under the data-used figure says what it means.** "some time not
+  counted" was four words that said something was missing without saying what,
+  when, or why. What it is now beside the figure is a mark you can hover, and it
+  says the whole thing: that HashNotch was closed across a change of day, that
+  your Mac's counters keep running but do not record *when*, and therefore that
+  the real number is higher than the one shown.
 
 - **The data-used figures cannot silently lose 4 GB at a time.** The counters
   the app was reading are 32 bits wide, so they roll over every 4.29 GB — an

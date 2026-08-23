@@ -1211,6 +1211,197 @@ MainActor.assumeIsolated {
         }
     )
 
+    // WHICH PROGRAMS THE TRAFFIC WENT THROUGH. A different reading from every
+    // other one in this feature: the interface counters know how much went past
+    // and nothing about who sent it, and this one names programs. Its rules
+    // mirror the totals' deliberately, except where a process is genuinely not
+    // an interface — which is the interesting case and is checked hardest.
+    check("a process key becomes its program",
+          NetworkAppUsageMath.programName(fromKey: "Safari.402") == "Safari")
+    check("a program whose name has dots keeps them",
+          NetworkAppUsageMath.programName(fromKey: "com.apple.WebKit.884") == "com.apple.WebKit")
+    check("a key with no pid is not a process line",
+          NetworkAppUsageMath.programName(fromKey: "bytes_in") == nil)
+    check("nor is one whose tail is not a number",
+          NetworkAppUsageMath.programName(fromKey: "Safari.abc") == nil)
+    check("nor is a bare pid with no program",
+          NetworkAppUsageMath.programName(fromKey: ".402") == nil)
+    // A browser does its networking in child processes. Leaving the suffix on
+    // would list one program twice, with its data split between the two rows
+    // and neither of them true.
+    check("a helper counts as the program it belongs to",
+          NetworkAppUsageMath.programName(fromKey: "Claude Helper.1507") == "Claude")
+    check("and so does a renderer",
+          NetworkAppUsageMath.programName(fromKey: "Chrome Helper (Renderer).91") == "Chrome")
+    check("a name that is only a suffix is left alone",
+          NetworkAppUsageMath.programName(fromKey: " Helper.5") == " Helper")
+    // Nothing is invented to complete a name macOS truncated.
+    check("a name macOS cut short is shown as it came",
+          NetworkAppUsageMath.programName(fromKey: "AMPDeviceDiscov.649") == "AMPDeviceDiscov")
+
+    // The delta rule, which is where this differs from the interface one ON
+    // PURPOSE. An interface's counter starts when the Mac boots, so its first
+    // value is history. A process's counter starts when the process does, so
+    // the first value of a process met since the last look is not.
+    check("nothing at all is counted from the very first sample",
+          NetworkAppUsageMath.delta(previous: nil, current: 9_000_000, hasStarted: false) == 0)
+    check("a process met since the last look contributes all it holds",
+          NetworkAppUsageMath.delta(previous: nil, current: 9_000_000, hasStarted: true) == 9_000_000)
+    check("a process that grew contributes the difference",
+          NetworkAppUsageMath.delta(previous: 400, current: 900, hasStarted: true) == 500)
+    check("a reused process id contributes what it now holds",
+          NetworkAppUsageMath.delta(previous: 900, current: 30, hasStarted: true) == 30)
+
+    func appReading(_ pairs: [(String, UInt64, UInt64)], at: Date) -> [String: ProcessBytes] {
+        var result: [String: ProcessBytes] = [:]
+        for (key, received, sent) in pairs {
+            result[key] = ProcessBytes(received: received, sent: sent, seenAt: at)
+        }
+        return result
+    }
+
+    let appsFirst = NetworkAppUsageMath.folded(
+        AppUsageLedger(),
+        reading: appReading([("Safari.1", 5_000_000, 900_000), ("Mail.2", 100, 100)], at: usageNow),
+        now: usageNow,
+        calendar: usageCalendar
+    )
+    check("the first sample of all records nothing",
+          appsFirst.days.first?.apps.isEmpty ?? true)
+    check("but it is remembered as the baseline", appsFirst.started)
+
+    let appsSecond = NetworkAppUsageMath.folded(
+        appsFirst,
+        reading: appReading(
+            [("Safari.1", 5_300_000, 950_000), ("Mail.2", 100, 100)],
+            at: usageNow.addingTimeInterval(60)),
+        now: usageNow.addingTimeInterval(60),
+        calendar: usageCalendar
+    )
+    check("the second sample counts what arrived between them",
+          appsSecond.days.first?.apps["Safari"] == AppBytes(received: 300_000, sent: 50_000))
+    check("a process that sent nothing is not written down at all",
+          appsSecond.days.first?.apps["Mail"] == nil)
+
+    // Two processes of one program add up as one program.
+    let appsMerged = NetworkAppUsageMath.folded(
+        appsSecond,
+        reading: appReading(
+            [("Safari.1", 5_400_000, 950_000), ("Safari Helper.9", 70_000, 0)],
+            at: usageNow.addingTimeInterval(120)),
+        now: usageNow.addingTimeInterval(120),
+        calendar: usageCalendar
+    )
+    check("a program and its helper are one row",
+          appsMerged.days.first?.apps["Safari"]?.received == 470_000)
+
+    // The same refusal the totals make: the app was away across a change of
+    // day, so what went through cannot be put against any one of them.
+    let nextWeek = usageNow.addingTimeInterval(3 * 24 * 3600)
+    let appsAfterGap = NetworkAppUsageMath.folded(
+        appsMerged,
+        reading: appReading([("Safari.1", 9_000_000_000, 950_000)], at: nextWeek),
+        now: nextWeek,
+        calendar: usageCalendar
+    )
+    check("a weekend the app was closed for is refused, not invented",
+          appsAfterGap.days.last?.apps["Safari"] == nil)
+
+    // One day's record cannot grow without end.
+    var crowded: [String: AppBytes] = [:]
+    for index in 0..<40 {
+        crowded["app\(index)"] = AppBytes(received: UInt64(index) * 1000, sent: 0)
+    }
+    let kept = NetworkAppUsageMath.trimmed(crowded)
+    check("a day keeps only the biggest few programs",
+          kept.count == NetworkAppUsageMath.appsPerDay)
+    check("and keeps the biggest ones", kept["app39"] != nil && kept["app0"] == nil)
+
+    // Nor can the between-readings record.
+    var manyProcesses: [String: ProcessBytes] = [:]
+    for index in 0..<(NetworkAppUsageMath.processLimit + 60) {
+        manyProcesses["p\(index).\(index)"] =
+            ProcessBytes(received: 10, sent: 10, seenAt: usageNow)
+    }
+    let crowdedLedger = NetworkAppUsageMath.folded(
+        AppUsageLedger(), reading: manyProcesses, now: usageNow, calendar: usageCalendar)
+    check("no more processes are remembered than the ceiling allows",
+          crowdedLedger.lastSeen.count == NetworkAppUsageMath.processLimit)
+
+    // A process id is handed back and given to something else, so one is not
+    // remembered for long.
+    // Measured from when those processes were last SEEN (usageNow + 120), not
+    // from usageNow — the first draft of this check got that wrong and the
+    // check caught it.
+    let staleProcess = NetworkAppUsageMath.folded(
+        appsMerged,
+        reading: [:],
+        now: usageNow.addingTimeInterval(120 + NetworkAppUsageMath.forgetProcessAfter + 60),
+        calendar: usageCalendar
+    )
+    check("a process gone long enough is forgotten rather than kept forever",
+          staleProcess.lastSeen.isEmpty)
+
+    // What the panel actually asks for.
+    let ranking = AppUsageLedger(days: [
+        AppDayUsage(day: usageCalendar.startOfDay(for: usageNow), apps: [
+            "Safari": AppBytes(received: 900, sent: 100),
+            "Mail": AppBytes(received: 8_000, sent: 400),
+            "Music": AppBytes(received: 50, sent: 0),
+            "Idle": AppBytes(received: 0, sent: 0),
+        ]),
+    ])
+    let topUsers = NetworkAppUsageMath.topApps(
+        ranking, from: usageNow, limit: 2, calendar: usageCalendar)
+    check("the panel is given the biggest first", topUsers.first?.name == "Mail")
+    check("and only as many as it asked for", topUsers.count == 2)
+    check("a program that used nothing is not offered at all",
+          NetworkAppUsageMath.topApps(ranking, from: usageNow, limit: 10, calendar: usageCalendar)
+              .contains { $0.name == "Idle" } == false)
+    check("what a program used is what it used",
+          topUsers.first?.received == 8_000 && topUsers.first?.sent == 400)
+
+    // A reset part-way through a day, mirroring the totals: what the day
+    // already held is not part of "since you reset it".
+    let resetRanking = NetworkAppUsageMath.afterReset(
+        ranking, now: usageNow, calendar: usageCalendar)
+    check("a reset remembers what the day already held",
+          resetRanking.reset?.dayApps["Mail"] == AppBytes(received: 8_000, sent: 400))
+    let afterResetTop = NetworkAppUsageMath.topApps(
+        resetRanking, from: usageNow, limit: 2, calendar: usageCalendar)
+    check("and what came before it is not counted again",
+          afterResetTop.contains { $0.name == "Mail" } == false)
+
+    // The parse. Real output, so the shape is pinned rather than assumed.
+    let nettopOutput = """
+    ,bytes_in,bytes_out,
+    apsd.378,698316,709766,
+    Claude Helper.1507,199549,2079015,
+    claude.4555,89869,13754712,
+    rubbish,1,
+    broken.12,notanumber,5,
+    """
+    let parsedProcesses = AppTrafficReader.parse(nettopOutput, at: usageNow)
+    check("the header line is not a process", parsedProcesses.count == 3)
+    check("a real line is read exactly",
+          parsedProcesses["claude.4555"]
+              == ProcessBytes(received: 89_869, sent: 13_754_712, seenAt: usageNow))
+    check("a line with missing fields is skipped", parsedProcesses["rubbish"] == nil)
+    check("so is one whose counters are not numbers", parsedProcesses["broken.12"] == nil)
+
+    // The record survives a relaunch, and clearing it is what switching the
+    // breakdown off does.
+    NetworkAppUsageStore.save(appsMerged, to: usageDefaults)
+    check("the breakdown survives a relaunch",
+          NetworkAppUsageStore.load(from: usageDefaults) == appsMerged)
+    NetworkAppUsageStore.clear(from: usageDefaults)
+    check("and switching it off leaves nothing behind",
+          NetworkAppUsageStore.load(from: usageDefaults) == nil)
+
+    // The panel names two. More than that stops being a footnote to the total
+    // and becomes a second list to read.
+    check("the panel names two programs", NetworkMonitor.topAppCount == 2)
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))
@@ -2111,6 +2302,25 @@ MainActor.assumeIsolated {
             .filter { $0 != .never }
             .allSatisfy { ($0.seconds ?? 0) > 0 }
     )
+    // The picker is drawn in `allCases` order, so that order IS the list
+    // somebody reads. Ascending, with "only when I ask" last, because it is
+    // the one that is not a period at all.
+    check(
+        "the intervals are offered shortest first",
+        zip(
+            TokenScanInterval.allCases.filter { $0 != .never },
+            TokenScanInterval.allCases.filter { $0 != .never }.dropFirst()
+        ).allSatisfy { ($0.seconds ?? 0) < ($1.seconds ?? 0) }
+    )
+    check("and only when I ask comes last", TokenScanInterval.allCases.last == .never)
+    check("every interval says what it is", TokenScanInterval.allCases.allSatisfy {
+        !$0.label.isEmpty
+    })
+    // The short end exists because the count is no longer gated on the panel
+    // being open, so what is picked here is genuinely how often the figure is
+    // brought up to date.
+    check("the shortest choice is ten seconds",
+          TokenScanInterval.allCases.first?.seconds == 10)
 
     // Low-battery announcements fire exactly when a threshold is crossed
     // downward, never on charge or within a band.
@@ -2356,9 +2566,16 @@ MainActor.assumeIsolated {
             && MemoryFeature().displayOptions.first?.id == "numberAndGraph"
             && CPUFeature().displayOptions.first?.id == "numberAndGraph"
     )
+    // Five minutes, not thirty.
+    //
+    // Thirty was chosen while the count only ran with the panel open, where it
+    // meant "at most once per look" and the number was refreshed by the act of
+    // looking. Now that it runs on its own clock, thirty would mean the figure
+    // on the strip can be half an hour behind — and the premise the old default
+    // rested on is gone with the gating.
     check(
-        "the token count starts on a half-hourly rhythm",
-        SettingsStore.defaultTokenScanInterval == .thirtyMinutes
+        "the token count starts on a five-minute rhythm",
+        SettingsStore.defaultTokenScanInterval == .fiveMinutes
     )
 
     // Plugging in a USB-C charger is not one clean transition: while the
@@ -3839,6 +4056,7 @@ MainActor.assumeIsolated {
     settings.canSwitchLowPowerMode = true
     settings.canPressMediaKeys = true
     settings.tokenScanInterval = .never
+    settings.networkShowsApps = false
     var nudged = IslandAdjustment()
     nudged.horizontal = 9
     settings.setAdjustment(nudged, for: "display-1")
@@ -3871,7 +4089,40 @@ MainActor.assumeIsolated {
         "resetting everything restores how often tokens are counted",
         settings.tokenScanInterval == SettingsStore.defaultTokenScanInterval
     )
+    check(
+        "resetting everything restores naming the programs that used the most",
+        settings.networkShowsApps == SettingsStore.defaultNetworkShowsApps
+    )
     check("resetting everything forgets every position correction", settings.adjustments.isEmpty)
+
+    // A choice about what the app is allowed to read has to survive a quit, and
+    // a settings file written before the choice existed has to take the default
+    // rather than decoding as false — an update that silently switches
+    // something OFF is as much a surprise as one that switches it on.
+    let appsDefaults = InMemoryDefaults()
+    let beforeQuit = checkStore(defaults: appsDefaults)
+    beforeQuit.networkShowsApps = false
+    beforeQuit.flush()
+    let afterQuit = checkStore(defaults: appsDefaults)
+    check("saying no to naming programs survives a quit", afterQuit.networkShowsApps == false)
+    afterQuit.networkShowsApps = true
+    afterQuit.flush()
+    check("and so does saying yes", checkStore(defaults: appsDefaults).networkShowsApps)
+
+    // A settings file written before this existed. It must take the default
+    // rather than decoding as false: an update that silently switches
+    // something OFF is as much of a surprise as one that switches it on, and
+    // this field's absence means "no opinion", not "no".
+    let olderDefaults = InMemoryDefaults()
+    olderDefaults.set(
+        Data(#"{"features":{},"launchAtLogin":false,"hasAcceptedReading":true}"#.utf8),
+        forKey: "hashnotch.settings.v3"
+    )
+    check(
+        "a settings file from before this existed takes the default",
+        SettingsStore(defaults: olderDefaults, legacyDefaults: InMemoryDefaults())
+            .networkShowsApps == SettingsStore.defaultNetworkShowsApps
+    )
 
     // The two that would be silent failures.
     check(
