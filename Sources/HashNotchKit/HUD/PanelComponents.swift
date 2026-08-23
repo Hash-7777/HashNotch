@@ -93,6 +93,16 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
             }
             Spacer(minLength: 8)
             trailing
+                // The value gets the room it needs before the label does.
+                //
+                // Both are held to one line, so when the two together do not
+                // fit, something has to give — and without saying which,
+                // SwiftUI squeezed them evenly and cut the FIGURE short. A
+                // month's download came out as "14.18…", which is the one thing
+                // in the row that cannot survive being abbreviated: a label can
+                // be inferred from the row it is on, and a number cannot be
+                // inferred from anything.
+                .layoutPriority(1)
                 // The same rule as the label, and for the same reason.
                 //
                 // Holding the label to one line fixed half the problem and left

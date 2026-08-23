@@ -48,13 +48,16 @@ public enum Formatters {
     }
 
     /// Compact count for large token totals, e.g. 812, 12.3K, 4.5M, 1.28B.
+    ///
+    /// Three significant figures like every other reading here, so the token
+    /// total and the data figures under it are the same kind of number.
     public static func compactCount(_ count: Int64) -> String {
         let value = Double(max(0, count))
         switch count {
         case ..<1_000: return "\(max(0, count))"
         case ..<1_000_000: return trimmed(value / 1_000) + "K"
         case ..<1_000_000_000: return trimmed(value / 1_000_000) + "M"
-        default: return trimmed(value / 1_000_000_000, decimals: 2) + "B"
+        default: return trimmed(value / 1_000_000_000) + "B"
         }
     }
 
@@ -70,15 +73,43 @@ public enum Formatters {
         case ..<1_000: return "\(max(0, count)) B"
         case ..<1_000_000: return trimmed(value / 1_000) + " KB"
         case ..<1_000_000_000: return trimmed(value / 1_000_000) + " MB"
-        case ..<1_000_000_000_000: return trimmed(value / 1_000_000_000, decimals: 2) + " GB"
-        default: return trimmed(value / 1_000_000_000_000, decimals: 2) + " TB"
+        case ..<1_000_000_000_000: return trimmed(value / 1_000_000_000) + " GB"
+        default: return trimmed(value / 1_000_000_000_000) + " TB"
         }
     }
 
-    private static func trimmed(_ value: Double, decimals: Int = 1) -> String {
-        let rounded = (value * pow(10, Double(decimals))).rounded() / pow(10, Double(decimals))
-        return rounded == rounded.rounded()
-            ? String(format: "%.0f", rounded)
-            : String(format: "%.\(decimals)f", rounded)
+    /// Three significant figures, whatever the size.
+    ///
+    /// Every unit used to bring its own number of decimals, which made both
+    /// ends of the scale wrong at once. A gigabyte figure carried two decimals
+    /// however big it got — "914.27 GB" — which is precision the reading does
+    /// not have and nobody has a use for, and it is also NINE characters, which
+    /// is what pushed a month's total past the room its row has and got it cut
+    /// short to "14.18…". Meanwhile a megabyte figure carried one decimal
+    /// however small, so "364.8 MB" and "365 MB" sat side by side in the same
+    /// row looking like two different kinds of number.
+    ///
+    /// Three figures is what a readout of this kind is worth and it bounds the
+    /// width: the longest this can produce is seven characters ("9.99 GB"),
+    /// where before it was nine.
+    private static func trimmed(_ value: Double) -> String {
+        let decimals: Int
+        switch abs(value) {
+        case ..<10: decimals = 2
+        case ..<100: decimals = 1
+        default: decimals = 0
+        }
+        let scale = pow(10, Double(decimals))
+        let rounded = (value * scale).rounded() / scale
+        // Trailing zeros are dropped, not just the all-zero case. Asking for
+        // two decimals and printing them turns 5.5 into "5.50", which is a
+        // digit of nothing and one more character than the row can spare —
+        // three SIGNIFICANT figures, not three printed ones.
+        var text = String(format: "%.\(decimals)f", rounded)
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
     }
 }

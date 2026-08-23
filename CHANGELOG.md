@@ -152,6 +152,17 @@ All notable changes to HashNotch are recorded here.
   which reads as the app having counted something twice even when both figures
   are right. They are now added together under the program's own name.
 
+- **A big figure is shown in full instead of being cut short.** A month's
+  download came out as "14.18…" — the row ran out of room and abbreviated the
+  one thing on it that cannot be inferred from anything else. Two fixes, and
+  the first is worth more than the second: every reading now carries three
+  significant figures rather than a fixed number of decimals per unit, so a
+  gigabyte figure no longer claims precision it does not have and no longer
+  costs nine characters to say. "365 MB" and "14.2 GB" rather than "364.8 MB"
+  and "14.18 GB" — the same kind of number wherever it appears. And when a row
+  is still short of room, the value keeps its space and the label yields, since
+  a label can be inferred from the row it sits on and a number cannot.
+
 - **A panel row can no longer break in two, whatever is in it.** Holding the
   label to one line fixed half of this and left the other half in plain sight:
   the value beside it was unconstrained, so "held at 80% for battery health"

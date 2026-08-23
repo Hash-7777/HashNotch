@@ -3393,7 +3393,22 @@ MainActor.assumeIsolated {
     check("bytes stay bytes", Formatters.bytes(512) == "512 B")
     check("thousands are kilobytes", Formatters.bytes(49_000) == "49 KB")
     check("millions are megabytes", Formatters.bytes(5_500_000) == "5.5 MB")
-    check("billions are gigabytes", Formatters.bytes(91_530_000_000) == "91.53 GB")
+    // Three significant figures at every size, which is what a readout of this
+    // kind is worth and what bounds its width. Two decimals on a 91 GB figure
+    // was precision the reading does not have, and it was also nine characters
+    // — enough to push a month's total past the room its row has.
+    check("billions are gigabytes", Formatters.bytes(91_530_000_000) == "91.5 GB")
+    check("a small gigabyte figure keeps two decimals",
+          Formatters.bytes(9_990_000_000) == "9.99 GB")
+    check("a large one keeps none", Formatters.bytes(914_270_000_000) == "914 GB")
+    check("the widest it can be is seven characters",
+          Formatters.bytes(9_990_000_000).count == 7)
+    check("and a month's total is no longer cut short",
+          Formatters.bytes(14_180_000_000) == "14.2 GB")
+    // The same rule at every unit, so two figures in one row read as the same
+    // kind of number instead of one carrying a decimal the other does not.
+    check("megabytes follow the same rule", Formatters.bytes(364_800_000) == "365 MB")
+    check("and so do kilobytes", Formatters.bytes(364_800) == "365 KB")
     check("trillions are terabytes", Formatters.bytes(2_000_000_000_000) == "2 TB")
     check("a negative size is not shown as negative", Formatters.bytes(-5) == "0 B")
 
