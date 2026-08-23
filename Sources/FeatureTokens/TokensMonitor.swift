@@ -22,7 +22,7 @@ public final class TokensMonitor: ObservableObject {
     /// Whether a count is running right now.
     @Published public private(set) var isCounting = false
 
-    private var sampler: VisibleSampler?
+    private var sampler: PollingSampler?
     private let queue = DispatchQueue(label: "com.hashnotch.tokens", qos: .utility)
     private let scanner = TokenUsageScanner()
     private let defaults: UserDefaults
@@ -38,8 +38,9 @@ public final class TokensMonitor: ObservableObject {
         }
     }
 
+    /// Takes no `PanelVisibility`, unlike most readers here, and deliberately:
+    /// this one is not allowed to depend on whether anybody is looking.
     public func start(
-        visibility: PanelVisibility,
         scale: Double = 1,
         interval: TokenScanInterval = .fiveMinutes
     ) {
@@ -50,7 +51,23 @@ public final class TokensMonitor: ObservableObject {
             // not what it says.
             return
         }
-        sampler = VisibleSampler(interval: seconds * scale, visibility: visibility) { [weak self] in
+        // A PLAIN sampler, not a panel-gated one, and this is the whole point
+        // of the setting above it.
+        //
+        // It used to be gated on the panel being open, which quietly made
+        // "every minute" mean "every minute that you happen to be looking at
+        // it". The strip shows a running total for TODAY: a figure that only
+        // counted the moments somebody was watching is not that total, it is a
+        // record of when the panel was open, and it would sit unchanged for
+        // hours and then jump the instant it was looked at — which reads as a
+        // number invented on demand rather than one being kept.
+        //
+        // The reading is cheap enough to keep on a clock: each file's read
+        // position is remembered, so a count with nothing new to read opens
+        // nothing at all and costs a directory listing. That is what makes an
+        // honest interval affordable, and it is the same reasoning the data-used
+        // total is kept on its own clock for.
+        sampler = PollingSampler(interval: seconds * scale) { [weak self] in
             self?.refresh()
         }
         sampler?.start()

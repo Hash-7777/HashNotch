@@ -25,7 +25,6 @@ public final class TokensFeature: NotchFeature {
 
     public func start(context: FeatureContext) {
         monitor.start(
-            visibility: context.visibility,
             scale: context.settings.samplingScale,
             interval: context.settings.tokenScanInterval
         )
