@@ -10,10 +10,16 @@ struct BatteryView: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            // The same drawn battery the panel shows, for the same reason: a
+            // symbol here said `battery.100` for anything running down, so the
+            // shape beside "4%" was a full battery.
             if style != .percent {
-                Image(systemName: symbolName)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(symbolColor)
+                BatteryGlyph(
+                    percentage: monitor.percentage,
+                    state: monitor.state,
+                    isLowPowerMode: monitor.isLowPowerMode,
+                    theme: theme
+                )
             }
             if let text = valueText {
                 Text(text)
@@ -45,33 +51,6 @@ struct BatteryView: View {
         }
     }
 
-    private var symbolName: String {
-        switch monitor.state {
-        case .charging: return "bolt.fill"
-        case .charged: return "battery.100percent.bolt"
-        case .onHold: return "battery.100percent.bolt"
-        case .discharging: return "battery.100"
-        }
-    }
-
-    /// Low Power Mode paints the battery yellow, exactly as it does on iPhone,
-    /// because the single most useful thing that indicator can say is "the
-    /// reason this feels different is a setting, not a fault".
-    private var symbolColor: Color {
-        if monitor.isLowPowerMode { return .yellow }
-        switch monitor.state {
-        case .charging, .charged, .onHold: return theme.downColor
-        case .discharging: return fillColor
-        }
-    }
-
-    private var fillColor: Color {
-        switch monitor.percentage {
-        case ..<20: return theme.upColor
-        case ..<50: return .orange
-        default: return theme.downColor
-        }
-    }
 }
 
 /// Compact-live: a brief iPhone-style announcement flanking the notch when
@@ -175,10 +154,19 @@ struct BatteryDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             NotchRow("Battery", theme: theme) {
                 HStack(spacing: 6) {
-                    if style != .percent, let symbol = stateSymbol {
-                        Image(systemName: symbol)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(stateColor)
+                    // The real thing, filled to the level it is actually at,
+                    // rather than a symbol standing in for one. It carries the
+                    // state too — the bolt while charging, the pause while
+                    // held — so the separate state symbol that used to sit
+                    // here has nothing left to say that this does not say
+                    // better, and in a shape people already know how to read.
+                    if style != .percent {
+                        BatteryGlyph(
+                            percentage: monitor.percentage,
+                            state: monitor.state,
+                            isLowPowerMode: monitor.isLowPowerMode,
+                            theme: theme
+                        )
                     }
                     if let detail = detailText {
                         Text(detail)
@@ -273,23 +261,6 @@ struct BatteryDetailView: View {
     /// fills, left while it drains, and nothing at all when it is simply full.
     private var timeFigure: Int? {
         monitor.state == .charging ? monitor.minutesToFull : monitor.minutesRemaining
-    }
-
-    private var stateSymbol: String? {
-        switch monitor.state {
-        case .charging: return "bolt.fill"
-        case .charged: return "checkmark"
-        case .onHold: return "pause.fill"
-        case .discharging: return nil
-        }
-    }
-
-    private var stateColor: Color {
-        switch monitor.state {
-        case .charging, .charged: return theme.downColor
-        case .onHold: return theme.subtitleColor
-        case .discharging: return theme.textColor
-        }
     }
 
     private var detailText: String? {
