@@ -224,6 +224,8 @@ private struct SettingsDocument: Codable {
     /// the default — this reads no more of your Mac than the totals
     /// beside it already do, it reads a different thing.
     var networkShowsApps: Bool?
+    /// Whether that list is open or shut.
+    var networkAppsExpanded: Bool?
     /// Hand-made position corrections, keyed by display.
     var adjustments: [String: IslandAdjustment]?
     /// Which music services may be asked for a cover. Absent means all of them.
@@ -292,6 +294,16 @@ public final class SettingsStore: ObservableObject {
     /// which program sent what, and this asks a question that does.
     public nonisolated static let defaultNetworkShowsApps: Bool = true
 
+    /// Whether the by-app list starts open.
+    ///
+    /// Open, because the list is the answer and a breakdown nobody has opened
+    /// has told nobody anything. It is remembered rather than reset each time
+    /// the panel opens: which page you are looking at is not a preference, but
+    /// whether you want this list open every time you look is exactly one, and
+    /// a disclosure that springs shut on every glance is a disclosure being
+    /// re-decided by the app rather than by you.
+    public nonisolated static let defaultNetworkAppsExpanded: Bool = true
+
     /// Bumped whenever the stored feature configuration changes.
     ///
     /// Exists so anything derived from `features` — the island's draw order,
@@ -335,6 +347,8 @@ public final class SettingsStore: ObservableObject {
     @Published public var networkUsagePeriod: NetworkUsagePeriod = SettingsStore.defaultNetworkUsagePeriod
     /// Whether the panel names the programs that used the most.
     @Published public var networkShowsApps: Bool = SettingsStore.defaultNetworkShowsApps
+    /// Whether that list is open or shut.
+    @Published public var networkAppsExpanded: Bool = SettingsStore.defaultNetworkAppsExpanded
     /// Position corrections per display. A display with no entry is automatic.
     @Published public var adjustments: [String: IslandAdjustment] = [:]
 
@@ -452,6 +466,7 @@ public final class SettingsStore: ObservableObject {
             self.tokenScanInterval = document.tokenScanInterval ?? SettingsStore.defaultTokenScanInterval
             self.networkUsagePeriod = document.networkUsagePeriod ?? SettingsStore.defaultNetworkUsagePeriod
             self.networkShowsApps = document.networkShowsApps ?? SettingsStore.defaultNetworkShowsApps
+            self.networkAppsExpanded = document.networkAppsExpanded ?? SettingsStore.defaultNetworkAppsExpanded
             self.adjustments = (document.adjustments ?? [:]).mapValues(\.clamped)
             self.artworkServices = document.artworkServices ?? [:]
             self.isFirstRun = false
@@ -580,6 +595,7 @@ public final class SettingsStore: ObservableObject {
         tokenScanInterval = Self.defaultTokenScanInterval
         networkUsagePeriod = Self.defaultNetworkUsagePeriod
         networkShowsApps = Self.defaultNetworkShowsApps
+        networkAppsExpanded = Self.defaultNetworkAppsExpanded
         batterySaver = false
         canSwitchLowPowerMode = false
         canPressMediaKeys = false
@@ -632,6 +648,7 @@ public final class SettingsStore: ObservableObject {
             tokenScanInterval: tokenScanInterval,
             networkUsagePeriod: networkUsagePeriod,
             networkShowsApps: networkShowsApps,
+            networkAppsExpanded: networkAppsExpanded,
             adjustments: adjustments,
             artworkServices: artworkServices,
             hasAcceptedReading: hasAcceptedReading

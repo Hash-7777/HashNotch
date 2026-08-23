@@ -82,6 +82,7 @@ public final class NetworkFeature: NotchFeature {
         monitor.setPeriod(context.settings.networkUsagePeriod)
         return AnyView(NetworkDetailView(
             monitor: monitor,
+            settings: context.settings,
             theme: context.theme,
             style: NetworkStyle(rawValue: context.settings.style(for: id)) ?? .both,
             period: context.settings.networkUsagePeriod

@@ -64,10 +64,14 @@ public final class NetworkMonitor: ObservableObject {
     private var defaults: UserDefaults = .standard
     private var lastPersist: Date = .distantPast
 
-    /// How many programs the panel names. Two: enough to say where a large
-    /// figure came from, few enough that the row under the total stays a
-    /// footnote to it rather than a second list to read.
-    package static let topAppCount = 2
+    /// How many programs the panel is offered.
+    ///
+    /// Six, since the list became one that opens and shuts. While it is shut it
+    /// costs a line and names the biggest; somebody who opens it is asking
+    /// rather than glancing, and the answer to "where did it all go" is rarely
+    /// two programs. Well inside the dozen a day is kept, so the list never
+    /// runs out before the record does.
+    package static let topAppCount = 6
 
     private var appLedger = AppUsageLedger()
     private var showsApps = SettingsStore.defaultNetworkShowsApps

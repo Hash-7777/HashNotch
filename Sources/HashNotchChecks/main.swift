@@ -1398,9 +1398,39 @@ MainActor.assumeIsolated {
     check("and switching it off leaves nothing behind",
           NetworkAppUsageStore.load(from: usageDefaults) == nil)
 
-    // The panel names two. More than that stops being a footnote to the total
-    // and becomes a second list to read.
-    check("the panel names two programs", NetworkMonitor.topAppCount == 2)
+    // The list opens and shuts, so it can afford more than the two it showed
+    // when it was a flat run of rows — and still fewer than a day keeps, so it
+    // never runs out before the record does.
+    check("the list is offered six programs", NetworkMonitor.topAppCount == 6)
+    check("and a day keeps more than the list can show",
+          NetworkAppUsageMath.appsPerDay > NetworkMonitor.topAppCount)
+
+    // The bar under each program. Measured against the biggest in the list
+    // rather than against the grand total, floored so a small one is still
+    // visibly a bar, and never past the end of the row.
+    check("the biggest program fills the row",
+          NetworkAppUsageMath.barWidth(total: 100, biggest: 100, full: 260, floor: 4) == 260)
+    check("half of the biggest is half the row",
+          NetworkAppUsageMath.barWidth(total: 50, biggest: 100, full: 260, floor: 4) == 130)
+    check("a tiny one is still drawn as a bar",
+          NetworkAppUsageMath.barWidth(total: 1, biggest: 10_000_000, full: 260, floor: 4) == 4)
+    check("a program that used nothing is drawn as nothing",
+          NetworkAppUsageMath.barWidth(total: 0, biggest: 100, full: 260, floor: 4) == 0)
+    check("nothing can run past the end of the row",
+          NetworkAppUsageMath.barWidth(total: 500, biggest: 100, full: 260, floor: 4) == 260)
+    check("and the floor never does either",
+          NetworkAppUsageMath.barWidth(total: 1, biggest: 10_000, full: 2, floor: 4) == 2)
+    check("no biggest yet means no bar",
+          NetworkAppUsageMath.barWidth(total: 10, biggest: 0, full: 260, floor: 4) == 0)
+
+    check("a bar that is all download is all one colour",
+          NetworkAppUsageMath.downShare(received: 90, total: 90) == 1)
+    check("a bar that is all upload is all the other",
+          NetworkAppUsageMath.downShare(received: 0, total: 90) == 0)
+    check("and one that is half each is split down the middle",
+          NetworkAppUsageMath.downShare(received: 45, total: 90) == 0.5)
+    check("an empty program cannot divide by zero",
+          NetworkAppUsageMath.downShare(received: 0, total: 0) == 0)
 
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
@@ -4057,6 +4087,7 @@ MainActor.assumeIsolated {
     settings.canPressMediaKeys = true
     settings.tokenScanInterval = .never
     settings.networkShowsApps = false
+    settings.networkAppsExpanded = false
     var nudged = IslandAdjustment()
     nudged.horizontal = 9
     settings.setAdjustment(nudged, for: "display-1")
@@ -4093,6 +4124,10 @@ MainActor.assumeIsolated {
         "resetting everything restores naming the programs that used the most",
         settings.networkShowsApps == SettingsStore.defaultNetworkShowsApps
     )
+    check(
+        "resetting everything reopens the by-app list",
+        settings.networkAppsExpanded == SettingsStore.defaultNetworkAppsExpanded
+    )
     check("resetting everything forgets every position correction", settings.adjustments.isEmpty)
 
     // A choice about what the app is allowed to read has to survive a quit, and
@@ -4109,6 +4144,14 @@ MainActor.assumeIsolated {
     afterQuit.flush()
     check("and so does saying yes", checkStore(defaults: appsDefaults).networkShowsApps)
 
+    // Shutting the list is remembered too. A disclosure that springs open again
+    // on every glance is one the app is re-deciding rather than the person.
+    let shutList = checkStore(defaults: appsDefaults)
+    shutList.networkAppsExpanded = false
+    shutList.flush()
+    check("a shut by-app list stays shut",
+          checkStore(defaults: appsDefaults).networkAppsExpanded == false)
+
     // A settings file written before this existed. It must take the default
     // rather than decoding as false: an update that silently switches
     // something OFF is as much of a surprise as one that switches it on, and
@@ -4118,10 +4161,14 @@ MainActor.assumeIsolated {
         Data(#"{"features":{},"launchAtLogin":false,"hasAcceptedReading":true}"#.utf8),
         forKey: "hashnotch.settings.v3"
     )
+    let olderStore = SettingsStore(defaults: olderDefaults, legacyDefaults: InMemoryDefaults())
     check(
         "a settings file from before this existed takes the default",
-        SettingsStore(defaults: olderDefaults, legacyDefaults: InMemoryDefaults())
-            .networkShowsApps == SettingsStore.defaultNetworkShowsApps
+        olderStore.networkShowsApps == SettingsStore.defaultNetworkShowsApps
+    )
+    check(
+        "and finds the by-app list open rather than shut",
+        olderStore.networkAppsExpanded == SettingsStore.defaultNetworkAppsExpanded
     )
 
     // The two that would be silent failures.

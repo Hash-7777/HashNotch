@@ -105,6 +105,7 @@ struct NetworkView: View {
 /// Expanded detail: internet speed as a clean row that matches the panel.
 struct NetworkDetailView: View {
     @ObservedObject var monitor: NetworkMonitor
+    @ObservedObject var settings: SettingsStore
     let theme: Theme
     let style: NetworkStyle
     let period: NetworkUsagePeriod
@@ -222,28 +223,146 @@ struct NetworkDetailView: View {
         }
     }
 
-    /// Which programs the traffic went through: the two that used the most,
-    /// under the total they add up towards.
+    /// Which programs the traffic went through: a list that opens and shuts,
+    /// under the total it explains.
     ///
-    /// Under it rather than beside it, and named rather than merely counted,
-    /// because "nine gigabytes today" is a fact you can do nothing with and
-    /// "eight of them were one program" is a fact you can. Two, so the row
-    /// stays a footnote to the total instead of becoming a second list.
+    /// It was a flat run of ordinary panel rows, which was the problem. Drawn
+    /// like the "Used today" row above them, they read as three more readings
+    /// of equal standing rather than as a breakdown OF that one — and there is
+    /// no arrangement of the same row that fixes that, because the sameness is
+    /// the message. A breakdown has to look subordinate to the thing it breaks
+    /// down.
+    ///
+    /// So it is a disclosure now: one quiet heading that names the biggest
+    /// while shut, and a list of its own kind of row while open. Shut, it costs
+    /// a line and still answers "who used the most". Open, it can afford to say
+    /// more than two, because somebody who opened it is asking rather than
+    /// glancing.
     @ViewBuilder
     private var byApp: some View {
-        ForEach(monitor.topApps, id: \.name) { app in
-            NotchRow(app.name, theme: theme) {
-                HStack(spacing: 12) {
-                    amount("arrow.down", app.received, theme.downColor)
-                    amount("arrow.up", app.sent, theme.upColor)
+        if !monitor.topApps.isEmpty {
+            appsHeading
+            if settings.networkAppsExpanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(visibleApps, id: \.name) { app in
+                        appRow(app)
+                    }
                 }
+                // It grows and shrinks from the top, so the rows appear to come
+                // out from under the heading rather than fade in where they are.
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            // Quieter than the total above it. These explain that figure, and
-            // a breakdown drawn as loudly as the thing it breaks down competes
-            // with it for the glance.
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .opacity(0.82)
         }
+    }
+
+    /// How many the list shows once it is open.
+    ///
+    /// Everything the monitor offers. The cap lives there rather than here, so
+    /// there is one answer to "how many are kept" instead of two that can drift.
+    private var visibleApps: [AppUsageShare] { monitor.topApps }
+
+    /// The heading, which is also the control.
+    ///
+    /// A whole row is the target rather than the chevron alone: a 9-point glyph
+    /// is a hard thing to hit, and there is nothing else on this row to hit by
+    /// mistake.
+    private var appsHeading: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.22)) {
+                settings.networkAppsExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("By app")
+                    .foregroundStyle(theme.subtitleColor)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                // Shut, the heading still answers the question the list exists
+                // for. A disclosure that says only "By app" makes somebody open
+                // it to find out whether it was worth opening.
+                if !settings.networkAppsExpanded, let first = monitor.topApps.first {
+                    Text(first.name)
+                        .foregroundStyle(theme.textColor)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    if monitor.topApps.count > 1 {
+                        Text("+\(monitor.topApps.count - 1)")
+                            .foregroundStyle(theme.subtitleColor)
+                            .monospacedDigit()
+                    }
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(theme.subtitleColor)
+                    .rotationEffect(.degrees(settings.networkAppsExpanded ? 0 : -90))
+            }
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .frame(width: Panel.rowWidth)
+            // The whole strip is the button, including the gap in the middle.
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(settings.networkAppsExpanded ? "Hide the breakdown" : "Show which programs used the most")
+    }
+
+    /// One program: what it is called, what it used, and how that compares.
+    private func appRow(_ app: AppUsageShare) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                Text(app.name)
+                    .foregroundStyle(theme.textColor)
+                    .lineLimit(1)
+                    // From the middle, because a program name that has been cut
+                    // is usually still recognisable at both ends and rarely at
+                    // one.
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
+                amount("arrow.down", app.received, theme.downColor)
+                amount("arrow.up", app.sent, theme.upColor)
+            }
+            shareBar(app)
+        }
+        .font(.system(size: 10, weight: .medium, design: .rounded))
+        .frame(width: Panel.rowWidth)
+    }
+
+    /// The shortest a bar is drawn while it stands for anything at all. Still
+    /// unmistakably the smallest thing in the list, and still visibly a bar.
+    private static let minimumBarWidth: CGFloat = 4
+
+    /// A hairline bar saying how this program compares with the rest.
+    ///
+    /// Two things at once, which is why it earns its two and a half points.
+    /// Its LENGTH is this program against the biggest one in the list — against
+    /// the biggest rather than against the grand total, because a share of the
+    /// total is a sliver for everything below first place, and a row of slivers
+    /// compares nothing. The ratios between programs are the same either way.
+    ///
+    /// Its SPLIT is the same down and up as the figures above it, in the same
+    /// two colours, so the bar is a picture of the numbers on its own row
+    /// rather than a second unrelated fact.
+    private func shareBar(_ app: AppUsageShare) -> some View {
+        let width = NetworkAppUsageMath.barWidth(
+            total: app.total,
+            biggest: monitor.topApps.first?.total ?? 0,
+            full: Panel.rowWidth,
+            floor: Self.minimumBarWidth
+        )
+        let downShare = NetworkAppUsageMath.downShare(
+            received: app.received, total: app.total)
+        return ZStack(alignment: .leading) {
+            Capsule().fill(theme.textColor.opacity(0.08))
+                .frame(width: Panel.rowWidth, height: 2.5)
+            HStack(spacing: 0) {
+                Rectangle().fill(theme.downColor.opacity(0.85))
+                    .frame(width: width * downShare)
+                Rectangle().fill(theme.upColor.opacity(0.85))
+                    .frame(width: width * (1 - downShare))
+            }
+            .frame(height: 2.5)
+            .clipShape(Capsule())
+        }
+        .frame(width: Panel.rowWidth, height: 2.5)
     }
 
     /// What has to be admitted about the figures, or nothing when they are

@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import HashNotchKit
 
 /// Which programs the traffic went through, kept the same way the totals are.
@@ -339,6 +340,36 @@ package enum NetworkAppUsageMath {
             left.total == right.total ? left.name < right.name : left.total > right.total
         }
         return Array(shares.prefix(limit))
+    }
+
+    /// How long one program's bar is drawn.
+    ///
+    /// Pure and here rather than in the view, so the two rules that are easy to
+    /// get wrong can be pinned rather than eyeballed.
+    ///
+    /// Measured against the BIGGEST program in the list, not against the grand
+    /// total. A share of the total is a sliver for everything below first
+    /// place, and a column of slivers compares nothing; against the leader the
+    /// ratios between programs are identical and the list has a shape. And it
+    /// is floored, for the reason the battery's charge is: a bar under a pixel
+    /// wide is indistinguishable from one that failed to draw. A program that
+    /// used nothing at all still gets nothing, since that is not a rounding
+    /// problem but an absence.
+    package static func barWidth(
+        total: UInt64,
+        biggest: UInt64,
+        full: CGFloat,
+        floor: CGFloat
+    ) -> CGFloat {
+        guard total > 0, biggest > 0, full > 0 else { return 0 }
+        let share = min(CGFloat(total) / CGFloat(biggest), 1)
+        return min(max(full * share, floor), full)
+    }
+
+    /// How much of that bar is what came down.
+    package static func downShare(received: UInt64, total: UInt64) -> CGFloat {
+        guard total > 0 else { return 0 }
+        return min(CGFloat(received) / CGFloat(total), 1)
     }
 
     /// Starts the breakdown again, without disturbing the day-by-day record the

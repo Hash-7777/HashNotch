@@ -7,8 +7,11 @@ All notable changes to HashNotch are recorded here.
 ### Added
 
 - **Which programs used your data, not just how much.** Under the data-used
-  figure the panel now names the two programs that used the most and says
-  exactly what each of them sent and received. Nine gigabytes today is a number
+  figure the panel now carries a list you can open and shut: which programs used
+  the most, exactly what each of them sent and received, and a bar under each
+  one comparing it with the biggest — split into the same two colours as the
+  figures beside it, so the picture and the numbers are the same fact. Shut, it
+  costs a single line and still names the biggest. Nine gigabytes today is a number
   you can do nothing with; eight of them being one program is one you can. It
   comes from `nettop -P`, Apple's own tool and the one Activity Monitor's
   Network tab is built on: no permission, no address, no site, and nothing
