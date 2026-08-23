@@ -614,12 +614,55 @@ public final class NotchWindowController {
     /// Grow immediately (the animation needs room), settle to the exact fit
     /// once the spring is done. All frames share the notch's center and the
     /// screen's top edge, so growing and shrinking never moves the island.
+    ///
+    /// While the panel is open it grows to the WHOLE column rather than to the
+    /// height just measured, and that is the difference between one window set
+    /// and a chase.
+    ///
+    /// Content that grows while the panel is already open — a disclosure
+    /// opening, an indicator being switched on, an activity arriving — animates
+    /// its height over several frames, and this is called on each new
+    /// measurement. Sizing to the measurement means the window is always one
+    /// frame behind the content it contains, so the panel is clipped by a
+    /// sliver for the length of the animation and its bottom edge judders. That
+    /// is the same fault the panel's own opening had, and `growForExpanded`
+    /// already fixes it the same way: ask for everything up front, let the
+    /// animation happen inside a window that is already big enough, and let the
+    /// settle pass take the extra back. Too much window costs nothing — it is
+    /// transparent and click-through, so what is below the panel is desktop
+    /// either way — while too little clips it. The two mistakes are not
+    /// symmetrical.
     private func refitWindow() {
-        let target = targetWindowFrame()
-        let union = window.frame.union(target)
-        if union != window.frame {
-            window.setFrame(union, display: true)
-            debugLog("grow")
+        // Ask first whether anything needs to grow at all.
+        //
+        // The generous size is for content that has OUTGROWN its window, and
+        // only then. Reaching for the whole column on every measurement means
+        // reaching for it during the panel's own opening spring, where
+        // `growForExpanded` has already sized the window correctly — and a
+        // window resize makes `NSHostingView` lay the whole panel out again, so
+        // that is a full layout pass landing on the second frame of the
+        // animation. Measured: it added a grow to 864 and a settle back to 733
+        // to every open after the first, which is precisely the hitch
+        // `openPanel` exists to avoid. The exact fit is the test; the generous
+        // size is the response.
+        let exact = targetWindowFrame()
+        if window.frame.union(exact) != window.frame {
+            let generous = state.isExpanded
+                ? Self.frame(
+                    for: notchRect,
+                    state: state,
+                    expanded: true,
+                    live: context.presence.hasLive,
+                    islandHeight: .greatestFiniteMagnitude,
+                    topEdge: islandTop,
+                    in: screenFrame
+                )
+                : exact
+            let union = window.frame.union(generous)
+            if union != window.frame {
+                window.setFrame(union, display: true)
+                debugLog("grow")
+            }
         }
         settleWork?.cancel()
         let work = DispatchWorkItem { [weak self] in

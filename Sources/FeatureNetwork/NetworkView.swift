@@ -127,6 +127,16 @@ struct NetworkDetailView: View {
             used
             byApp
         }
+        // Scoped to the one value, rather than wrapped around the change that
+        // produces it.
+        //
+        // The toggle used to sit inside `withAnimation`, which animates every
+        // consequence of that transaction — and the value lives on the settings
+        // store, which the whole panel and every feature in it observes. One
+        // disclosure opening therefore invited unrelated views to animate their
+        // own layout at the same time. Naming the value here keeps the motion
+        // where it belongs.
+        .animation(.snappy(duration: 0.22), value: settings.networkAppsExpanded)
     }
 
     private var row: some View {
@@ -248,9 +258,20 @@ struct NetworkDetailView: View {
                         appRow(app)
                     }
                 }
-                // It grows and shrinks from the top, so the rows appear to come
-                // out from under the heading rather than fade in where they are.
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                // A fade, and nothing else.
+                //
+                // This was a fade combined with a slide from the top edge, on
+                // the reasoning that the rows should appear to come out from
+                // under the heading. A move transition offsets the block by its
+                // own height while the stack around it is simultaneously
+                // changing height for the same reason — two motions describing
+                // one event, in a container that is itself being resized. What
+                // it looks like is rows arriving from the wrong place and
+                // overshooting.
+                //
+                // The height change IS the motion. The fade only stops the rows
+                // being drawn at full strength before there is room for them.
+                .transition(.opacity)
             }
         }
     }
@@ -268,9 +289,7 @@ struct NetworkDetailView: View {
     /// mistake.
     private var appsHeading: some View {
         Button {
-            withAnimation(.snappy(duration: 0.22)) {
-                settings.networkAppsExpanded.toggle()
-            }
+            settings.networkAppsExpanded.toggle()
         } label: {
             HStack(spacing: 6) {
                 Text("By app")
