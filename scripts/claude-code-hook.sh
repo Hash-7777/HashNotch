@@ -208,17 +208,27 @@ function run(argv) {
     subtitle = String(payload.message || '').slice(0, 120) || null;
     waitSeconds = 1800;
   } else {
-    // The word "finished" is already in the title and the notch wears green
-    // while it shows, so both "done" and "nothing to do" are said before the
-    // symbol says anything. That leaves it free to say WHAT finished, which is
-    // the part neither of the others can carry.
+    // A tick: one open stroke, sweeping up to the right.
     //
-    // Angle brackets were tried and say "code" rather than "the assistant".
-    // A tick repeats the colour. Rendered against the real strip, the filled
-    // variants — a tick in a bubble, in a seal, in a speech mark — are a solid
-    // glyph inside a solid disc, which reads as heavy at 21 points and pushes
-    // the title onto a second line it does not have room for.
-    icon = 'sparkles';
+    // Stars were here, on the reasoning that "finished" is already in the
+    // title and the notch is already green, which leaves the symbol free to
+    // say WHAT finished rather than repeat that it is done. That trade was the
+    // wrong way round. Stars are the house mark of every AI product at once,
+    // so they name the category and not the event — and at 21 points a
+    // multi-pointed glyph is scattered light rather than a shape. Rendered
+    // against the real badge with a line through its centre, the mass of
+    // `sparkles` sits visibly off to one side: two stars of different sizes
+    // have no balance point to centre on, so no amount of centring the frame
+    // can make it look centred.
+    //
+    // A single stroke has one. Repeating the colour costs nothing here: the
+    // green is a hairline around the notch and this is a shape inside it, and
+    // the two agreeing is what makes them read as one event rather than two.
+    // The filled variants stay rejected for the reason they always were — a
+    // tick in a bubble, in a seal, in a speech mark is a solid glyph inside a
+    // solid disc, which reads as heavy at this size and pushes the title onto
+    // a second line it does not have room for.
+    icon = 'checkmark';
     title = 'Claude finished';
     // No subtitle. This carried the working folder's name, which on a glance
     // surface is noise: it is usually the folder you are already looking at,

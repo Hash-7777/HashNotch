@@ -34,7 +34,7 @@ anything about the tool posting to it.
 | `subtitle` | A second line in the panel, dimmed beside the title on the strip. |
 | `progress` | `0`–`1`. Draws a bar. |
 | `endsAt` | ISO 8601. Drives a live countdown, and the row disappears on its own when it passes. |
-| `dismissAfter` | Seconds. For something that **already happened** — no timer is drawn and the notice leaves by itself. |
+| `dismissAfter` | Seconds, from 1 to 30 — anything longer is brought back to 30. For something that **already happened**: no timer is drawn and the notice leaves by itself. |
 | `image` | Path to a logo shown instead of the symbol. |
 | `app` | Path to an installed `.app` — the row becomes clickable and brings it forward. |
 | `asks` | A token, when this is a QUESTION rather than a report. The panel offers **Allow** and **Deny**, and files the answer under this token for whoever asked. Letters, digits, `._-`, up to 64 characters. |
@@ -80,10 +80,10 @@ bundle:
 "/Applications/HashNotch.app/Contents/Resources/scripts/install-claude-hooks.sh"
 ```
 
-From then on the island lights up when Claude **finishes a reply** — a
-checkmark, about three seconds, then gone — or is **waiting for your
-permission**, which stays until you deal with it and says what it is asking
-for. Click that one in the panel and it brings the waiting window to the front.
+From then on the island lights up when Claude **finishes a reply** — a tick,
+about three seconds, then gone — or is **waiting for your permission**, which
+stays until you deal with it and says what it is asking for. Click that one in
+the panel and it brings the waiting window to the front.
 
 It uses Claude Code's own hook system. The hook is a small script that writes
 only this feed file, and the installer backs up your Claude settings first.
@@ -153,9 +153,9 @@ notch() { "/Applications/HashNotch.app/Contents/Resources/scripts/post-activity.
 Then any tool, hooks or no hooks:
 
 ```sh
-codex exec "refactor the parser" ; notch --notice 3 "Codex finished" "" sparkles
-aider --message "add tests"      ; notch --notice 3 "Aider finished" "" sparkles
-gemini -p "review this diff"     ; notch --notice 3 "Gemini finished" "" sparkles
+codex exec "refactor the parser" ; notch --notice 3 "Codex finished" "" checkmark
+aider --message "add tests"      ; notch --notice 3 "Aider finished" "" checkmark
+gemini -p "review this diff"     ; notch --notice 3 "Gemini finished" "" checkmark
 ```
 
 `;` rather than `&&` on purpose: a tool that fails is exactly the one you want
@@ -182,7 +182,7 @@ what the app refuses, is documented in "The feed" above; the app treats it as
 untrusted whoever writes it.
 
 > Symbols are [SF Symbols](https://developer.apple.com/sf-symbols/) names, so
-> anything in Apple's set works: `sparkles`, `hammer`, `checkmark`, `brain`,
+> anything in Apple's set works: `checkmark`, `hammer`, `bolt.fill`, `brain`,
 > `terminal`, `exclamationmark.triangle`.
 
 ---
