@@ -60,26 +60,29 @@ public final class NotchState: ObservableObject {
         liveHeight = height + Self.liveLip
     }
 
-    /// How far the live strip hangs below the hardware notch.
+    /// How much room is left below the notch for the coloured line — and it is
+    /// room for the LINE, not black.
     ///
     /// The strip used to be exactly the notch's height, which was right until
     /// the island started wearing a colour. The notch's underside is then also
-    /// the pill's bottom edge, so a line drawn along that edge is behind the
-    /// hardware for the whole width of the notch — it survives only on the two
-    /// shoulders and reads as a line broken in half. Drawing it a few points
-    /// lower fixed the middle and broke the shoulders instead: there the line
-    /// left the black and floated over the desktop, with a gap between the pill
-    /// and its own outline.
+    /// the pill's bottom edge, and a line centred on that edge is half behind
+    /// the hardware: it survives on the two shoulders and thins to nothing
+    /// across the middle, which reads as a line broken in half.
     ///
-    /// Neither can be fixed while the pill ends exactly where the hardware
-    /// does, because a visible line along that edge needs screen below it and
-    /// there is none. So the strip hangs three points lower than the notch, and
-    /// the line sits on the black the whole way round. This is what an iPhone
-    /// does too — its island is bigger than the camera it hides.
+    /// The first answer was to make the black itself three points taller, so
+    /// the line had black to sit on. That worked and it was the wrong trade: a
+    /// pill that ends lower than the hardware is a black lip hanging over the
+    /// wallpaper, visible against anything that is not black, and the notch
+    /// stops looking like the notch.
     ///
-    /// The IDLE shape is untouched: `collapsedHeight` is still exactly the
-    /// notch, so a notch with nothing to say has no lip below it.
-    public static let liveLip: CGFloat = 3
+    /// So the BLACK is exactly the notch again, and this is the clearance the
+    /// window keeps underneath it — transparent, drawn into by nothing except
+    /// the line and its glow. The line is drawn just OUTSIDE the pill's bottom
+    /// edge rather than centred on it, which puts all of it on screen, in the
+    /// couple of points directly below the hardware where there is display to
+    /// light up. Two points is the line, its glow, and the blur that softens
+    /// it; anything more would be room nothing draws in.
+    public static let liveLip: CGFloat = 2
 
     /// The usable width on each side of the physical notch inside the open
     /// panel, where the app's own controls live.

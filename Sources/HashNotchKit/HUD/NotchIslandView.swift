@@ -378,12 +378,14 @@ struct NotchIslandView: View {
     /// of following it. Keeping the view and animating the tint to and from
     /// clear makes every handover a cross-fade, including the handover to
     /// nothing at all.
-    private func outline(radius: CGFloat) -> some View {
+    private func outline(radius: CGFloat, outset: CGFloat = 0) -> some View {
         let tint = outlineTint
+        // A negative inset expands the traced path, and the radius grows with
+        // it so the corners stay concentric with the pill's own.
+        let shape = IslandOutlineShape(radius: radius + outset, inset: -outset)
         return ZStack {
-            IslandOutlineShape(radius: radius)
-                .stroke(tint ?? .clear, style: outlineStroke(displayScale))
-            IslandOutlineShape(radius: radius)
+            shape.stroke(tint ?? .clear, style: outlineStroke(displayScale))
+            shape
                 .stroke((tint ?? .clear).opacity(0.28), style: outlineGlow(displayScale))
                 .blur(radius: 1.0)
         }
@@ -473,6 +475,16 @@ struct NotchIslandView: View {
         StrokeStyle(lineWidth: 2.4 / max(scale, 1), lineCap: .round)
     }
 
+    /// How far outside the pill's edge the line is traced.
+    ///
+    /// Half the line's own width, so the stroke sits flush against the black
+    /// with all of it beyond the edge and none of it behind the hardware. Asked
+    /// of the display for the same reason the width is: half of half a point on
+    /// Retina, half of a point where there is no Retina to halve.
+    private func outlineOutset(_ scale: CGFloat) -> CGFloat {
+        1 / max(scale, 1) / 2
+    }
+
     private var liveIsland: some View {
         // The black pill HUGS its content (no trailing dead space after the
         // name), but sits left-anchored inside a fixed-width positioning box.
@@ -480,19 +492,6 @@ struct NotchIslandView: View {
         // never shifts as the title changes; only the visible pill shrinks to
         // fit.
         liveContent
-            // The pill is the notch PLUS the lip, and the content sits in the
-            // notch's own band at the top of it — the lip below is black for
-            // the outline to sit on and nothing is ever drawn in it.
-            //
-            // Without this the pill was only as tall as the notch and the
-            // positioning frame below centred it inside a box a lip taller,
-            // which split the difference: half a lip of bare screen appeared
-            // above the pill, and every badge and title on the strip sat half
-            // a lip BELOW the notch's own centre line. That line is the one
-            // the eye compares against — the hardware is right there — so an
-            // offset of a point and a half reads as a badge that is not
-            // centred, which is exactly what it is.
-            .frame(height: state.liveHeight, alignment: .top)
             .background(
                 // No shadow. The strip is pretending to BE the notch — the same
                 // piece of black glass, just wider — and a shadow underneath
@@ -515,8 +514,26 @@ struct NotchIslandView: View {
             // length. Tracing the box instead of the pill drew the colour
             // around a rectangle far wider than the black, ending in mid-air
             // past the end of the words with nothing underneath it.
-            .overlay(outline(radius: 14))
-            .frame(width: state.liveWidth, height: state.liveHeight, alignment: .leading)
+            // The line goes on the same view the black is drawn behind, and
+            // it is drawn just OUTSIDE that black rather than centred on it.
+            //
+            // The pill now ends exactly where the hardware does, so a centred
+            // stroke would put half its width behind the notch — the half that
+            // never lights up. Pushing the whole line clear of the edge puts
+            // all of it in the couple of points of screen directly below the
+            // hardware, which is the only place under a notch there is anything
+            // to light. On the shoulders it lands a quarter of a point outside
+            // the black, which is nothing you can see and still reads as the
+            // pill's own edge.
+            .overlay(outline(radius: 14, outset: outlineOutset(displayScale)))
+            // Room BELOW the pill for that line, and only for it. The black
+            // stops at the notch; this is transparent, and the window keeps it
+            // so the line and its glow are not clipped away by the window's own
+            // bottom edge. See `NotchState.liveLip`.
+            .frame(
+                width: state.liveWidth, height: state.liveHeight,
+                alignment: .topLeading
+            )
     }
 
     /// The drop-down panel. It first appears as a solid-black box (matching the

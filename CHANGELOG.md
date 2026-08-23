@@ -8,10 +8,14 @@ All notable changes to HashNotch are recorded here.
 
 - **Which programs used your data, not just how much.** Under the data-used
   figure the panel now carries a list you can open and shut: which programs used
-  the most, exactly what each of them sent and received, and a bar under each
-  one comparing it with the biggest — split into the same two colours as the
+  the most — three of them — exactly what each sent and received, and a bar under
+  each one comparing it with the biggest — split into the same two colours as the
   figures beside it, so the picture and the numbers are the same fact. Shut, it
-  costs a single line and still names the biggest. Nine gigabytes today is a number
+  costs a single line and still names the biggest. It says "while running", and
+  means it: your Mac keeps no history of which program used what, because those
+  counters live inside the running programs and go when they do. Anything that
+  went past while the app was closed is in the total above but belongs to no
+  program that can still be asked. The total does not have that limit. Nine gigabytes today is a number
   you can do nothing with; eight of them being one program is one you can. It
   comes from `nettop -P`, Apple's own tool and the one Activity Monitor's
   Network tab is built on: no permission, no address, no site, and nothing
@@ -140,6 +144,16 @@ All notable changes to HashNotch are recorded here.
   can now be moved by its heading, the way a title bar works.
 
 ### Fixed
+
+- **Nothing of the app's hangs below the physical notch any more.** The live
+  strip was made three points taller than the hardware so the coloured line had
+  black to sit on — which solved the line and created a worse problem: a black
+  lip resting on your wallpaper, visible against anything that is not black, so
+  the notch stopped looking like the notch. The black is now exactly the
+  hardware in every state, and the line is traced just OUTSIDE the pill's bottom
+  edge instead of centred on it, which puts all of it in the couple of points of
+  screen directly below the notch — the only place under a notch there is
+  anything to light up.
 
 - **The by-app list no longer judders as it opens.** Two faults, one in each
   half. The window the panel lives in was following the list's height one
