@@ -171,10 +171,18 @@ package enum TimerLength {
     /// How far the wheel travels for one minute.
     ///
     /// Small enough that a whole minute is a deliberate movement rather than a
-    /// twitch, and large enough for the numbers to have room: at twenty-six the
-    /// wheel was fine at ten minutes and collided with itself at a hundred and
-    /// twenty, where every number on it is three digits wide.
-    package static let pointsPerMinute: CGFloat = 34
+    /// twitch, and large enough for the numbers to have room.
+    ///
+    /// It has been both too small and too large. At twenty-six the wheel was
+    /// fine at ten minutes and collided with itself at a hundred and twenty,
+    /// where every number on it is three digits wide; at thirty-four, with the
+    /// middle number drawn half again the size of its neighbours, the numbers
+    /// were so far apart that the wheel read as a row of separate labels rather
+    /// than as one strip. Thirty, with every number now at one size, sits
+    /// between the two: three digits clear each other and clear the band that
+    /// marks the middle, and the numbers are still close enough to read as one
+    /// strip rather than a row of labels.
+    package static let pointsPerMinute: CGFloat = 30
 
     /// How much of a flick's own momentum the wheel keeps.
     ///
@@ -198,6 +206,25 @@ package enum TimerLength {
         // divided is not impossible on a trackpad and a crash here would be an
         // absurd way to lose an app.
         let moved = Double(base) - Double(steps)
+        guard moved.isFinite else { return clamped(base) }
+        return clamped(Int(moved.clamped(to: -1e9...1e9)))
+    }
+
+    /// The minute somebody pressed, rather than the one they dragged to.
+    ///
+    /// A wheel you can only drag is a wheel that makes you drag: the number you
+    /// want is on screen, three places along, and the only way to it was to
+    /// push the whole strip past two others. Pressing it is the obvious thing to
+    /// try, and it did nothing.
+    ///
+    /// `x` is measured from the wheel's leading edge; the middle of the wheel is
+    /// the number currently set, so how far the press is from the middle is how
+    /// many minutes away it landed. To the right is more, the same way round as
+    /// the strip is drawn.
+    package static func tapped(from base: Int, atX x: CGFloat, width: CGFloat) -> Int {
+        guard pointsPerMinute > 0, width > 0, x.isFinite else { return clamped(base) }
+        let steps = ((x - width / 2) / pointsPerMinute).rounded()
+        let moved = Double(base) + Double(steps)
         guard moved.isFinite else { return clamped(base) }
         return clamped(Int(moved.clamped(to: -1e9...1e9)))
     }

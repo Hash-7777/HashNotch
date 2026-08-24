@@ -219,10 +219,10 @@ struct TimerWheel: View {
     /// Wide enough for a few minutes either side of the middle at the family's
     /// spacing, and narrow enough to leave the Start button its room.
     private static let width: CGFloat = 168
-    private static let height: CGFloat = 30
+    private static let height: CGFloat = 26
     /// How many numbers are drawn each side. More than can be seen, so a number
     /// is never seen arriving from nowhere.
-    private static let reach = 3
+    private static let reach = 4
 
     /// What the wheel currently reads, which during a drag is not yet what has
     /// been committed.
@@ -230,15 +230,7 @@ struct TimerWheel: View {
 
     var body: some View {
         ZStack {
-            // The mark the numbers pass under. Two faint uprights rather than a
-            // filled box: the number between them is the reading, and a box
-            // around it would be a second thing to look at.
-            // Wide enough to clear the biggest number the wheel can show,
-            // which is three digits at fifteen points.
-            HStack(spacing: TimerLength.pointsPerMinute * 1.32) {
-                marker
-                marker
-            }
+            band
             numbers
         }
         .frame(width: Self.width, height: Self.height)
@@ -258,13 +250,25 @@ struct TimerWheel: View {
             @unknown default: break
             }
         }
-        .help("Drag to set the length")
+        .help("Drag the wheel, or press the number you want")
     }
 
-    private var marker: some View {
-        Capsule()
-            .fill(theme.accent.opacity(0.5))
-            .frame(width: 1.5, height: 14)
+    /// The band the chosen number sits in.
+    ///
+    /// It was two thin uprights either side, and they were the wrong shape for
+    /// the job: at three digits the numbers grew until they touched them, so the
+    /// thing marking the middle became a thing crowding it. A band sits BEHIND
+    /// the number instead of beside it, so it cannot be crowded however wide the
+    /// number is — which is how the wheels on a phone mark their middle, for the
+    /// same reason.
+    private var band: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(Color.white.opacity(0.09))
+            // Two points wider than the step between numbers, and no more: any
+            // wider and the band's own edges start biting into the numbers
+            // either side of the one it is marking, which at three digits are
+            // already close.
+            .frame(width: TimerLength.pointsPerMinute + 2, height: Self.height - 6)
     }
 
     private var numbers: some View {
@@ -293,23 +297,26 @@ struct TimerWheel: View {
     /// One number on the wheel. Written out with its parts named rather than as
     /// one expression — the compiler gave up type-checking the nested version,
     /// which is its way of saying the same thing a reader would.
+    ///
+    /// **Every number is the same size.** The middle one used to be drawn half
+    /// again as large, and the wheel it made was not the one on a phone: the
+    /// numbers had to be pushed far apart to leave room for it, and a strip of
+    /// widely spaced numbers of differing sizes reads as a row of separate
+    /// labels rather than as one turning thing. What marks the middle is where
+    /// it is — in the band — and how bright it is, and those are enough. Only
+    /// the fading is left to say which way the wheel runs.
     @ViewBuilder
     private func number(_ value: Int, centre: Int, residual: CGFloat) -> some View {
         let isCentre: Bool = value == centre
         let distance: CGFloat = CGFloat(value - centre)
-        let size: CGFloat = isCentre ? 15 : 11
-        let weight: Font.Weight = isCentre ? .bold : .medium
-        // Away from the middle they fade and shrink, which is what makes a flat
-        // row of numbers read as a wheel turning rather than as a list sliding.
-        let fade: Double = isCentre ? 1 : max(0, 0.55 - Double(abs(distance)) * 0.12)
-        let shrink: CGFloat = isCentre ? 1 : max(0.72, 1 - abs(distance) * 0.09)
+        let weight: Font.Weight = isCentre ? .semibold : .medium
+        let fade: Double = isCentre ? 1 : max(0.16, 0.5 - Double(abs(distance)) * 0.11)
         let slide: CGFloat = distance * TimerLength.pointsPerMinute + residual
         Text(String(value))
-            .font(.system(size: size, weight: weight, design: .rounded))
+            .font(.system(size: 12, weight: weight, design: .rounded))
             .foregroundStyle(isCentre ? theme.textColor : theme.subtitleColor)
             .monospacedDigit()
             .opacity(fade)
-            .scaleEffect(shrink)
             .offset(x: slide)
     }
 
@@ -325,16 +332,33 @@ struct TimerWheel: View {
             startPoint: .leading, endPoint: .trailing)
     }
 
+    /// How far a finger may move and still have been a press rather than a drag.
+    private static let pressSlop: CGFloat = 3
+
     private var drag: some Gesture {
-        DragGesture(minimumDistance: 1)
+        // From nothing, so the same gesture sees a press. Two gestures on one
+        // view would have to argue about which of them a short movement
+        // belonged to, and the answer is knowable at the end: a press is a drag
+        // that went nowhere.
+        DragGesture(minimumDistance: 0)
             .onChanged { value in
+                guard abs(value.translation.width) > Self.pressSlop else { return }
                 dragging = true
                 travelled = value.translation.width
             }
             .onEnded { value in
-                // Where the finger was still going when it let go, not where it
-                // stopped. Without this, every long timer is a series of short
-                // drags.
+                // A press: go to the number under it.
+                guard abs(value.translation.width) > Self.pressSlop else {
+                    dragging = false
+                    travelled = 0
+                    let pressed = TimerLength.tapped(
+                        from: minutes, atX: value.location.x, width: Self.width)
+                    withAnimation(.snappy(duration: 0.24)) { minutes = pressed }
+                    return
+                }
+                // Otherwise, where the finger was still going when it let go,
+                // not where it stopped. Without this, every long timer is a
+                // series of short drags.
                 let thrown = value.predictedEndTranslation.width * TimerLength.flickThrow
                 let carried = abs(thrown) > abs(value.translation.width)
                     ? thrown : value.translation.width

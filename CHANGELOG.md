@@ -110,6 +110,14 @@ All notable changes to HashNotch are recorded here.
   loses its lower half and reads as a wash again, while a short one — the
   processor at a fifth — is left alone.
 
+- **Press a number on the timer's wheel to go to it.** Dragging was the only way
+  there, so a number sitting three places along, in plain sight, had to be
+  pushed for. The wheel also reads like the one on a phone now: every number at
+  one size, closer together, and the chosen one sitting in a band rather than
+  between two uprights. The uprights were the wrong shape for the job — at three
+  digits the numbers grew until they touched them, so the thing marking the
+  middle became a thing crowding it.
+
 - **The timer's length is set with a wheel now, not a plus and a minus.** Drag
   it either way and the minutes turn under a fixed mark, the way the one on a
   phone does; a slow drag picks a minute exactly and a flick carries on past

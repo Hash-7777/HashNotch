@@ -4748,6 +4748,37 @@ check(
 )
 // A flick has to carry further than the finger did, or a long timer is a series
 // of short drags — but not so far that a light one crosses hours.
+// Pressing a number goes to it. The middle of the wheel is whatever is set, so
+// a press is measured from there.
+check(
+    "pressing the middle changes nothing",
+    TimerLength.tapped(from: 25, atX: 84, width: 168) == 25
+)
+check(
+    "pressing the number to the right goes up one",
+    TimerLength.tapped(from: 25, atX: 84 + TimerLength.pointsPerMinute, width: 168) == 26
+)
+check(
+    "pressing two to the left goes down two",
+    TimerLength.tapped(from: 25, atX: 84 - TimerLength.pointsPerMinute * 2, width: 168) == 23
+)
+check(
+    "a press just off a number still lands on it",
+    TimerLength.tapped(
+        from: 25, atX: 84 + TimerLength.pointsPerMinute * 0.9, width: 168) == 26
+)
+check(
+    "pressing beyond either end stops at the end",
+    TimerLength.tapped(from: 2, atX: 0, width: 168) == TimerLength.shortest
+        && TimerLength.tapped(from: 599, atX: 168, width: 168) == TimerLength.longest
+)
+check(
+    "a press at an impossible place is survived",
+    TimerLength.tapped(from: 25, atX: .nan, width: 168) == 25
+        && TimerLength.tapped(from: 25, atX: .greatestFiniteMagnitude, width: 168) == TimerLength.longest
+        && TimerLength.tapped(from: 25, atX: 84, width: 0) == 25
+)
+
 check(
     "a flick carries, and not too far",
     TimerLength.flickThrow > 0 && TimerLength.flickThrow < 1
