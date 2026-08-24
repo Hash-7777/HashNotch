@@ -1500,6 +1500,41 @@ MainActor.assumeIsolated {
     check("an empty program cannot divide by zero",
           NetworkAppUsageMath.downShare(received: 0, total: 0) == 0)
 
+    // A GENUINELY FRESH INSTALL must arrive unconsented.
+    //
+    // Every other consent check in this file builds a store through
+    // `checkStore`, which SETS the answer explicitly — so they all prove what
+    // happens after the question is answered, and none of them proves what a
+    // brand-new install starts as. That is the one case the whole gate exists
+    // for, and it was the one case nothing was watching.
+    let untouched = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())
+    check("a fresh install has not been asked yet", untouched.isFirstRun)
+    check("and has NOT consented to anything", untouched.hasAcceptedReading == false)
+
+    // THE CONSENT WINDOW must name everything the app reads that is not simply
+    // a counter about the hardware.
+    //
+    // This is a forcing function, not a description. The test for being on that
+    // list is NOT "does macOS gate it" — naming the programs that used the
+    // network needs no permission and takes nothing off the Mac, and it belongs
+    // there because which programs somebody runs is a fact about them. A
+    // consent window that lists only what macOS happens to gate is a consent
+    // window written by macOS.
+    //
+    // It has been forgotten once already: that reading shipped, on by default,
+    // while this window still said the network figures were "nothing about
+    // you". Adding a reading now means changing this list, and changing this
+    // list means changing this check.
+    let consentIDs = Set(ConsentReadings.all.map(\.id))
+    check(
+        "the consent window names every reading that is not just a hardware counter",
+        consentIDs == ["media", "call", "downloads", "tokens", "networkApps", "activities"]
+    )
+    check("and none of them is listed twice",
+          ConsentReadings.all.count == consentIDs.count)
+    check("each one says what it reads and what it will never do",
+          ConsentReadings.all.allSatisfy { !$0.reads.isEmpty && !$0.never.isEmpty })
+
     // THE HOOK ON DISK versus the hook this build ships. The hook is copied
     // into the home folder so it can be read before it runs, and the price of
     // that is that it does not follow the app — which has already cost one

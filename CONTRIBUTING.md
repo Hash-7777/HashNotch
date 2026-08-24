@@ -54,6 +54,26 @@ plausible assumption nobody checked:
 If a change rests on how something behaves, show the measurement in the commit
 message. "Should work" is the phrase that costs the most time later.
 
+## If it reads something about the person, say so before it runs
+
+The opening window lists what the app reads. The test for being on that list is
+**not** "does macOS ask permission for it" — a consent window that lists only
+what macOS happens to gate is a consent window written by macOS.
+
+The test is whether the reading is about the **machine** or about **you**.
+Battery, memory, temperatures and connection speed are counters about the
+hardware. Which programs you run, what you are listening to, what is in your
+Downloads folder and how much you have spent on AI are not.
+
+Anything in the second group must be named in three places before it ships:
+`ConsentReadings.all` (the opening window), the Privacy page in Settings, and
+the table in `SECURITY.md`. A check pins the first list, so adding a reading
+means changing a check, which is what makes the omission impossible to miss.
+
+This has been got wrong once: naming the programs that used the network needs no
+permission from macOS, shipped on by default, and was left off that window for a
+day while it still said the network figures were "nothing about you".
+
 ## Adding an indicator
 
 Every capability is a self-contained module. The core never imports a feature

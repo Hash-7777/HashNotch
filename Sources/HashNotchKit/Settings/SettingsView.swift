@@ -862,6 +862,15 @@ public struct SettingsView: View {
                     "Off means off",
                     "An indicator switched off is never started — it reads nothing and asks for nothing. Switching one off stops the work, not just the display."
                 )
+                SettingDivider()
+                // The one reading here that is about YOU rather than about the
+                // machine, so it is named on this page rather than left to be
+                // discovered. It needs no permission from macOS, which is
+                // exactly why it would otherwise never be mentioned anywhere.
+                PrivacyLine(
+                    "The one thing it learns about you",
+                    "Everything else here reads counters about the hardware. Naming the programs that used the most data reads which programs you run, which is a fact about you rather than about the Mac — so it has its own switch on the General page, and off means the tool that answers it is never run. It is Apple's own nettop, the one Activity Monitor uses: it asks for byte totals per program and gets no address, site or port back, so this app cannot see where any of it went. What it records — program names and byte counts — never leaves the Mac, and switching it off deletes it."
+                )
             }
 
             // Every permission macOS can put in front of you, in the order you

@@ -19,48 +19,19 @@ struct FirstRunView: View {
     let onAccept: () -> Void
     let onDecline: () -> Void
 
-    /// The four that touch a file, run a subprocess, or can raise a macOS
-    /// permission prompt. The rest — connection, battery, processor, memory,
+    /// The ones that touch a file, run a subprocess, can raise a macOS
+    /// permission prompt, or learn something about YOU rather than about the
+    /// machine. The rest — connection speed, battery, processor, memory,
     /// storage, temperatures — read counters the kernel keeps about the
-    /// machine, and listing them all here would bury the four that matter.
-    private struct Reader: Identifiable {
-        let id: String
-        let icon: String
-        let title: String
-        let reads: String
-        let never: String
-    }
+    /// hardware, and listing them all here would bury the ones that matter.
+    ///
+    /// The test for being on this list is not "does it need permission". Naming
+    /// the programs that used the network needs none and takes nothing off the
+    /// Mac, and it still belongs here, because which programs somebody runs is
+    /// a fact about them. A consent window that only lists what macOS happens
+    /// to gate is a consent window written by macOS.
+    private var readers: [ConsentReadings.Reader] { ConsentReadings.all }
 
-    private let readers: [Reader] = [
-        Reader(
-            id: "media",
-            icon: "play.circle",
-            title: "What's playing",
-            reads: "Asks macOS for the title, artist and position of whatever is playing, in any app.",
-            never: "It cannot hear anything — these are the same track details your keyboard's play button works with."
-        ),
-        Reader(
-            id: "call",
-            icon: "mic",
-            title: "Microphone in use",
-            reads: "Asks macOS one yes-or-no question per app: does this app have the microphone open?",
-            never: "Never listens, records or transcribes. The app holds no microphone permission and could not use one."
-        ),
-        Reader(
-            id: "downloads",
-            icon: "arrow.down.circle",
-            title: "Downloads",
-            reads: "Lists the file names in your Downloads folder, so it can tell you when one finishes.",
-            never: "Never opens, moves or looks inside a file. macOS will ask your permission the first time."
-        ),
-        Reader(
-            id: "tokens",
-            icon: "number",
-            title: "AI tokens",
-            reads: "Adds up the token counts your AI tools write into their own log files.",
-            never: "Only the numbers are kept. None of the text of your conversations is read into the app."
-        ),
-    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -120,7 +91,7 @@ struct FirstRunView: View {
         .overlay(WindowDragArea())
     }
 
-    private func row(_ reader: Reader) -> some View {
+    private func row(_ reader: ConsentReadings.Reader) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: reader.icon)
                 .font(.system(size: 14, weight: .medium))
@@ -152,7 +123,7 @@ struct FirstRunView: View {
             Text("The rest")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.45))
-            Text("AirPods charge runs the same Bluetooth report the System Information app shows you, and reads the battery percentages out of it. Connection speed, battery, processor, memory, storage and temperatures read counters the system keeps about the machine — nothing about you.")
+            Text("AirPods charge runs the same Bluetooth report the System Information app shows you, and reads the battery percentages out of it. Connection speed, battery, processor, memory, storage and temperatures read counters the system keeps about the machine itself — how much went past, not what it was or whose it was.")
                 .font(.system(size: 12.5))
                 .foregroundStyle(.white.opacity(0.68))
                 .fixedSize(horizontal: false, vertical: true)
@@ -208,4 +179,75 @@ struct FirstRunView: View {
         .padding(.horizontal, 26)
         .padding(.vertical, 18)
     }
+}
+
+/// What the opening window promises the app reads.
+///
+/// Lifted out of the view so the checks can hold it to what the app actually
+/// does. A consent window nothing is watching is a consent window that goes
+/// stale the first time somebody adds a reading — which is exactly what
+/// happened when naming the programs that used the network shipped without
+/// appearing here.
+package enum ConsentReadings {
+    package struct Reader: Identifiable {
+        package let id: String
+        let icon: String
+        let title: String
+        package let reads: String
+        package let never: String
+    }
+
+    /// Package-visible so the checks can hold this list to what the app
+    /// actually does, rather than leaving it to be remembered.
+    ///
+    /// It has already been forgotten once: naming the programs that used the
+    /// network was added, shipped, and left off this window for a day, while
+    /// the paragraph below still said the network reading was "nothing about
+    /// you". Nothing in the build could notice, because nothing was watching
+    /// the list. Something is now.
+    package static let all: [Reader] = [
+        Reader(
+            id: "media",
+            icon: "play.circle",
+            title: "What's playing",
+            reads: "Asks macOS for the title, artist and position of whatever is playing, in any app.",
+            never: "It cannot hear anything — these are the same track details your keyboard's play button works with."
+        ),
+        Reader(
+            id: "call",
+            icon: "mic",
+            title: "Microphone in use",
+            reads: "Asks macOS one yes-or-no question per app: does this app have the microphone open?",
+            never: "Never listens, records or transcribes. The app holds no microphone permission and could not use one."
+        ),
+        Reader(
+            id: "downloads",
+            icon: "arrow.down.circle",
+            title: "Downloads",
+            reads: "Lists the file names in your Downloads folder, so it can tell you when one finishes.",
+            never: "Never opens, moves or looks inside a file. macOS will ask your permission the first time."
+        ),
+        Reader(
+            id: "tokens",
+            icon: "number",
+            title: "AI tokens",
+            reads: "Adds up the token counts your AI tools write into their own log files.",
+            never: "Only the numbers are kept. None of the text of your conversations is read into the app."
+        ),
+        Reader(
+            id: "networkApps",
+            icon: "chart.bar",
+            title: "Which programs used the network",
+            reads: "Runs Apple's own nettop, the tool Activity Monitor's Network tab is built on, to ask how many bytes each of your programs has sent and received.",
+            never: "No address, no site and no port is asked for or returned — this app cannot see where any of it went. It is a switch of its own under Settings, and turning it off stops the asking rather than hiding the answer."
+        ),
+        Reader(
+            id: "activities",
+            icon: "bell.badge",
+            title: "Live activities",
+            reads: "Reads one file, ~/.hashnotch/activities.json, which your own scripts and tools write when they want to put something on the notch.",
+            never: "Never written to by this app, and nothing is read unless you or a tool you installed put it there."
+        ),
+    ]
+
 }

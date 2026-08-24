@@ -206,5 +206,7 @@ It reads only the local usage files those tools already write
 (`~/.claude/projects/**/*.jsonl`, `~/.hashcortx/usage.jsonl`, and
 HashCerebrum's usage log) — read-only, adding up numbers and nothing more. Only
 what has been appended since the last count is read, so it stays cheap however
-often you ask. How often is yours to set in Settings, from every minute down to
-only when you ask.
+often you ask. How often is yours to set in Settings — from every ten seconds to
+once every two hours, or only when you ask — and it counts on that rhythm
+whether or not the panel is open, so the figure on the notch is as fresh as the
+setting says.

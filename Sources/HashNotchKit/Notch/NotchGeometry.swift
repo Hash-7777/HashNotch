@@ -7,10 +7,16 @@ import AppKit
 /// `auxiliaryTop*Area` rects are the usable menu-bar strips either side of it —
 /// the gap between them is the notch itself, and the island wears it exactly.
 ///
-/// On a screen **without** a notch there is nothing to blend into, and the top
-/// of the screen is the menu bar. Painting a black shape up there would cover
-/// it, which reads as a fault rather than a feature. So the island hangs below
-/// the menu bar instead, as a small pill of its own: deliberate, not broken.
+/// On a screen **without** a notch there is nothing to blend into, so the island
+/// is anchored to the top edge exactly as the hardware notch is and made exactly
+/// as tall as the menu bar. It fills the middle of that band — the one part
+/// macOS never uses, with app menus hard left and status items hard right — and
+/// reads as a notch that was always there.
+///
+/// It used to hang BELOW the menu bar, which is what this comment used to say.
+/// That left a strip of desktop above it, attached to nothing, and no
+/// adjustment could close the gap because growing the island only ever grew it
+/// downwards. See `notchless`, which carries the full reasoning.
 public struct NotchGeometry {
     public let screenFrame: CGRect
     public let notchRect: CGRect
@@ -31,9 +37,19 @@ public struct NotchGeometry {
         self.islandTop = islandTop ?? screenFrame.maxY
     }
 
-    /// The stand-in island's size on a screen with no notch. Narrow enough to
-    /// read as a deliberate pill rather than a bar across the top.
+    /// How wide the drawn island is when there is no notch to copy. Narrow
+    /// enough to read as a deliberate pill rather than a bar across the top.
     public static let notchlessWidth: CGFloat = 132
+
+    /// A height used ONLY when there is no screen to measure at all — launching
+    /// during a login race, or headless — where `menuBarHeight` has nothing to
+    /// ask. A real notchless display never uses this: `notchless` sizes the
+    /// island from that screen's own menu bar, within
+    /// `notchlessMinHeight ... notchlessMaxHeight`.
+    ///
+    /// It said "the stand-in island's size on a screen with no notch", which
+    /// named the wrong case and made this look like the rule when it is the
+    /// fallback for having no screen.
     public static let notchlessHeight: CGFloat = 26
 
     public static func current(for screen: NSScreen) -> NotchGeometry {

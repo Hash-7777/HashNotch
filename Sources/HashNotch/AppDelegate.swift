@@ -215,6 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // easy to find — but by then every feature was already running, which
         // made the settings window a place to undo something rather than a
         // place to decide it.
+        Self.consentTrace("gate: hasAcceptedReading=\(settings.hasAcceptedReading) isFirstRun=\(settings.isFirstRun)")
         if !settings.hasAcceptedReading {
             let firstRun = FirstRunWindowController(settings: settings)
             // Called only once that window is off screen, which is what keeps
@@ -228,6 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             self.firstRunWindow = firstRun
             firstRun.show()
+            Self.consentTrace("first-run window shown, visible=\(firstRun.isVisible)")
         } else if let page = Self.requestedSettingsPage() {
             // Open straight onto a settings page when the command line asks.
             //
@@ -292,8 +294,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return page.isEmpty ? nil : page
     }
 
+    /// Development aid, off unless `HASHNOTCH_DEBUG=consent` asks for it.
+    ///
+    /// The consent gate is the app's largest single promise and the hardest
+    /// thing to observe: it happens once, on a machine that has never run the
+    /// app, and leaves no trace afterwards except settings that look the same
+    /// either way. This says out loud what it decided and when.
+    static func consentTrace(_ line: String) {
+        guard (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "")
+            .split(separator: ",")
+            .map({ $0.trimmingCharacters(in: .whitespaces) })
+            .contains("consent") else { return }
+        let stamp = String(format: "%.3f", ProcessInfo.processInfo.systemUptime)
+        FileHandle.standardError.write(Data("[consent] \(stamp) \(line)\n".utf8))
+    }
+
     /// Record that the reading was agreed to, and start what is switched on.
     private func acceptReading() {
+        Self.consentTrace("acceptReading() called")
         guard let registry, let context else { return }
         context.settings.hasAcceptedReading = true
         registry.syncRunning(context: context)

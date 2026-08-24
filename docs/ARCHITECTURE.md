@@ -64,6 +64,15 @@ public protocol NotchFeature: AnyObject {
     func makeCompactLeadingView(context: FeatureContext) -> AnyView?
     func makeCompactTrailingView(context: FeatureContext) -> AnyView?
 
+    /// Where this feature comes in the queue for the live strip.
+    var livePriority: Int { get }
+    /// The colour the island's edge wears while this feature owns the strip,
+    /// and how hard that line should press. nil / 0 for no colour at all.
+    var outlineTint: Color? { get }
+    var outlineUrgency: Double { get }
+    /// Handle a sideways swipe across the open panel; false to pass it on.
+    func handleSwipe(_ direction: SwipeDirection) -> Bool
+
     func start(context: FeatureContext)   // begin sampling
     func stop()                           // release resources
 }
