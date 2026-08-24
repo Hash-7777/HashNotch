@@ -108,18 +108,20 @@ struct NetworkUsedView: View {
     private var bar: some View {
         let widths = NetworkUsedMath.segmentWidths(
             received: received, sent: sent,
-            full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment)
+            full: NetworkUsedMath.drawableWidth(Panel.rowWidth),
+            floor: NetworkUsedMath.minimumSegment)
         return ZStack(alignment: .leading) {
             Capsule().fill(theme.textColor.opacity(0.08))
                 .frame(width: Panel.rowWidth, height: NetworkUsedMath.barHeight)
-            HStack(spacing: 0) {
-                Rectangle().fill(theme.downColor.opacity(0.8))
+            // Two shapes with dark between them, rather than one shape cut in
+            // two. Each half is rounded at both ends and owns its own edges.
+            HStack(spacing: NetworkUsedMath.segmentGap) {
+                Capsule().fill(theme.downColor.opacity(NetworkUsedMath.barOpacity))
                     .frame(width: widths.down)
-                Rectangle().fill(theme.upColor.opacity(0.8))
+                Capsule().fill(theme.upColor.opacity(NetworkUsedMath.barOpacity))
                     .frame(width: widths.up)
             }
             .frame(height: NetworkUsedMath.barHeight)
-            .clipShape(Capsule())
         }
         .frame(width: Panel.rowWidth, height: NetworkUsedMath.barHeight)
         .help("\(Formatters.bytes(Int64(clamping: received))) came down, \(Formatters.bytes(Int64(clamping: sent))) went up")
@@ -167,11 +169,46 @@ package enum NetworkUsedMath {
     /// there to be glanced at, and the numbers under it are the answer.
     package static let minimumSegment: CGFloat = 2
 
-    /// How heavy the per-program bars underneath are drawn. Kept here, beside
-    /// the bar they are a breakdown of, so the two cannot be changed apart —
-    /// the whole point of the pair is that one is visibly the parent of the
-    /// other.
-    package static let breakdownBarHeight: CGFloat = 2.5
+    /// How strongly the total's own bar is drawn.
+    ///
+    /// Softened from full strength, along with the gap below, because the two
+    /// halves are a green and a red and those are the worst two colours in the
+    /// panel to put edge to edge. At full saturation the shared boundary
+    /// shimmers, and the red half reads as though it were drawn taller than the
+    /// green one — it is not, both are 3.5 points to the pixel, measured — which
+    /// is what an eye does with two saturated complements meeting on black.
+    package static let barOpacity: Double = 0.72
+
+    /// The dark gap between the two halves.
+    ///
+    /// The real fix for the above: with a gap, the two never share an edge,
+    /// there is nothing to shimmer, and each half is its own rounded shape that
+    /// cannot borrow apparent height from its neighbour. It also survives being
+    /// unable to tell red from green — the commonest colour blindness there is,
+    /// and exactly this pair — because two separated lengths are still two
+    /// lengths, and the figures beneath carry their own arrows.
+    /// Two points. The rounded ends of the two halves taper into it, so the
+    /// dark it actually reads as is wider than the number — measured at eight
+    /// points of apparent gap for three of real one, which is three per cent of
+    /// the bar and enough to start flattering whichever half is smaller.
+    package static let segmentGap: CGFloat = 2
+
+    /// How tall one program's row is drawn.
+    ///
+    /// Each row IS its bar now — the figures sit on top of a length that says
+    /// how this program compares with the biggest — rather than being a row of
+    /// text with a separate hairline underneath it. Three programs used to mean
+    /// three more bars stacked under the one they were a breakdown of, and four
+    /// bars in a block eighty points tall is a chart nobody asked for.
+    package static let breakdownRowHeight: CGFloat = 16
+
+    /// And how faintly that length is filled.
+    ///
+    /// Quiet enough to read a name across, and quiet enough that the list stays
+    /// visibly subordinate to the figure above it. The relationship is the
+    /// point: this is a breakdown, and a breakdown drawn as loudly as the total
+    /// reads as a second set of readings.
+    package static let breakdownFillOpacity: Double = 0.2
 
     /// How wide each half of the bar is drawn.
     ///
@@ -179,6 +216,11 @@ package enum NetworkUsedMath {
     /// through, so the bar cannot end with a gap in it or overrun its track.
     /// When a share is too small to see, the floor is taken OUT of the other
     /// segment rather than added on top.
+    /// The room the two halves have between them, once the gap is taken out.
+    package static func drawableWidth(_ full: CGFloat) -> CGFloat {
+        max(full - segmentGap, 0)
+    }
+
     package static func segmentWidths(
         received: UInt64,
         sent: UInt64,
@@ -191,5 +233,75 @@ package enum NetworkUsedMath {
         if received > 0, down < floor { down = min(floor, full) }
         if sent > 0, full - down < floor { down = max(full - floor, 0) }
         return (down, full - down)
+    }
+}
+
+
+/// One program, drawn as the length it used.
+///
+/// **Why the row is the bar.** The list used to be a name and two figures with
+/// a hairline bar underneath each — which put four bars in the block once the
+/// total's own is counted, stacked one under another, none of them the same
+/// kind of thing as its neighbour. Giving each row a filled length instead
+/// makes the comparison the shape of the row itself: the longest row is the
+/// program that used the most, readable without reading a single figure, and
+/// there is one bar in the block again.
+///
+/// The length is this program against the BIGGEST in the list rather than
+/// against the total. A share of the total is a sliver for everything below
+/// first place, and a list of slivers compares nothing; the ratios between
+/// programs are identical either way.
+///
+/// **One colour, not two.** The fill was split into the same down and up
+/// colours as the bar above it, and it had to stop: at this height the split
+/// runs directly underneath the figure on the right, so a number sat half on
+/// green and half on red — hard to read, and reading as though it belonged to
+/// the red half. The block above already answers which way the traffic went.
+/// The question this list answers is "which program", which is a question about
+/// size, and size is one length in one colour. The exact split for a single
+/// program is one hover away.
+///
+/// The colour is the accent, so it follows whatever the panel has been set to
+/// and is plainly a different dimension from the two directions.
+struct NetworkAppRow: View {
+    let app: AppUsageShare
+    /// The largest in the list, which every row is drawn against.
+    let biggest: UInt64
+    let theme: Theme
+
+    var body: some View {
+        let width = NetworkAppUsageMath.barWidth(
+            total: app.total, biggest: biggest,
+            full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment * 2)
+        return ZStack(alignment: .leading) {
+            // A track under everything, so a short row still starts from
+            // somewhere rather than floating in the dark.
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(theme.textColor.opacity(0.05))
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(theme.accent.opacity(NetworkUsedMath.breakdownFillOpacity))
+                .frame(width: width)
+            HStack(spacing: 8) {
+                Text(app.name)
+                    .foregroundStyle(theme.textColor)
+                    .lineLimit(1)
+                    // From the middle, because a program name that has been cut
+                    // is usually still recognisable at both ends and rarely at
+                    // one.
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
+                Text(Formatters.bytes(Int64(clamping: app.total)))
+                    .foregroundStyle(theme.subtitleColor)
+                    .monospacedDigit()
+                    .rollingDigits()
+                    .layoutPriority(1)
+                    .lineLimit(1)
+            }
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .padding(.horizontal, 7)
+        }
+        .frame(width: Panel.rowWidth, height: NetworkUsedMath.breakdownRowHeight)
+        .help("\(Formatters.bytes(Int64(clamping: app.received))) came down, \(Formatters.bytes(Int64(clamping: app.sent))) went up")
+        .animation(.snappy, value: app.total)
     }
 }

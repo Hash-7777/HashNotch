@@ -4734,9 +4734,37 @@ check(
 // The picture and the list under it have to stay parent and child. Equal
 // weights would make the breakdown look like a second reading of the same
 // standing, which is the thing the block was redrawn to stop.
+// The gap between the two halves is taken out of the track, not added to it.
+// A bar that overran its own track would be drawing more than went through.
 check(
-    "the total's bar is heavier than the per-program bars it explains",
-    NetworkUsedMath.barHeight > NetworkUsedMath.breakdownBarHeight
+    "the gap between the two halves comes out of the bar, not out of the panel",
+    abs(NetworkUsedMath.drawableWidth(Panel.rowWidth) + NetworkUsedMath.segmentGap - Panel.rowWidth) < 0.001
+)
+check(
+    "and a bar with no room for a gap does not go negative",
+    NetworkUsedMath.drawableWidth(1) >= 0 && NetworkUsedMath.drawableWidth(0) == 0
+)
+
+check(
+    "the breakdown is drawn more quietly than the total it explains",
+    NetworkUsedMath.breakdownFillOpacity < NetworkUsedMath.barOpacity
+)
+// Each program's row is a length that can be compared with the one above it,
+// so a row for something that used almost nothing must still start where every
+// other row starts and still be visible.
+check(
+    "every program that used anything gets a visible length",
+    [UInt64(1), 1_000, 500_000_000].allSatisfy { total in
+        NetworkAppUsageMath.barWidth(
+            total: total, biggest: 10_000_000_000,
+            full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment * 2) >= 4
+    }
+)
+check(
+    "and the biggest fills the row exactly",
+    NetworkAppUsageMath.barWidth(
+        total: 10_000_000_000, biggest: 10_000_000_000,
+        full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment * 2) == Panel.rowWidth
 )
 
 // MARK: - The panel's drawn marks

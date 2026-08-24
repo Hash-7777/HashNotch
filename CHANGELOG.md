@@ -8,10 +8,11 @@ All notable changes to HashNotch are recorded here.
 
 - **Which programs used your data, not just how much.** Under the data-used
   figure the panel now carries a list you can open and shut: which programs used
-  the most — three of them — exactly what each sent and received, and a bar under
-  each one comparing it with the biggest — split into the same two colours as the
-  figures beside it, so the picture and the numbers are the same fact. Shut, it
-  costs a single line and still names the biggest. It says "while running", and
+  the most — three of them — how much each used, and each row drawn as the
+  length it used, against the biggest, so the largest is obvious without reading
+  a figure at all. The exact split between what a program sent and what it
+  received is one hover away. Shut, it costs a single line and still names the
+  biggest. It says "while running", and
   means it: your Mac keeps no history of which program used what, because those
   counters live inside the running programs and go when they do. Anything that
   went past while the app was closed is in the total above but belongs to no
@@ -100,6 +101,14 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **The by-app list is now a picture as well as a list.** It was a name, two
+  figures and a hairline bar under each row — which put four bars in one block
+  once the total's own is counted, stacked one under another. Each row is now
+  the length it used, so the comparison is the shape of the list itself, in one
+  quiet colour rather than two: which way a program's traffic went is what the
+  bar above already answers, and a two-colour fill at this size ran its own
+  boundary straight underneath the figure on the right.
+
 - **How much you have used no longer looks like how fast you are going.** The
   total sat directly under the speed row and was drawn exactly like it — same
   label, same pair of arrows and figures, same colours, same size — so two
@@ -116,7 +125,7 @@ All notable changes to HashNotch are recorded here.
 - **Every heading in the panel now has its own mark.** A small drawn picture in
   front of each one — a chip for the processor, a memory chip, a stack of
   platters for the disk, a globe for the internet, a thermometer, a stopwatch, a
-  spark for the AI count — so a row can be found by its shape before it is read.
+  robot for the AI count — so a row can be found by its shape before it is read.
   The panel is a dense list of unrelated readings and the eye needed somewhere to
   land. They are drawn rather than borrowed from the system's symbol set, for one
   reason worth knowing: a system symbol that a given version of macOS does not
@@ -170,6 +179,27 @@ All notable changes to HashNotch are recorded here.
   can now be moved by its heading, the way a title bar works.
 
 ### Fixed
+
+- **The word "Battery" no longer disappears while the battery is charging.**
+  While macOS has no time-to-full estimate yet, that row's trailing text is a
+  whole sentence, and the trailing side had the higher claim on the room — so
+  the label was squeezed past its limit and truncated to "Bat…", and then to a
+  single letter, with the drawn battery shoved into the space where the word had
+  been. A row's name is now fixed and cannot be squeezed at all, in every row in
+  the panel: the shortfall comes out of the sentence beside it, which can lose
+  its tail and still mean something, while the figure it sits next to is
+  protected too. The no-estimate wording is also shorter now — "estimating…",
+  which is the case where the rest of that row is at its longest.
+
+- **The two halves of the used-today bar no longer fight each other.** A green
+  and a red meeting on a hard edge is the worst pair of colours in the panel to
+  put edge to edge: the boundary shimmers, and the red half reads as though it
+  had been drawn taller than the green one. It never was — both are 3.5 points,
+  measured to the pixel — so the fix is colour rather than layout. The halves
+  are two separated lengths now, each rounded at both ends with dark between
+  them, and a little softer. It also survives not being able to tell red from
+  green, which is the commonest colour blindness there is and exactly this pair:
+  two separated lengths are still two lengths.
 
 - **Locking your Mac no longer cancels your timer.** This is the serious one.
   Every indicator is stopped when the island leaves the screen — that is the

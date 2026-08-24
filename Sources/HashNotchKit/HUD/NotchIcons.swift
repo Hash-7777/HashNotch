@@ -274,32 +274,34 @@ public enum NotchIconGeometry {
         return parts
     }
 
-    /// A spark. The one mark in the set that stands for something that is not a
-    /// piece of hardware, and it is drawn as a solid for that reason: the rest
-    /// of the family is outlines of things, and this is not a thing.
+    /// A robot's head. The one mark in the set that stands for something that
+    /// is not a part of this Mac, and the only one whose job is to say "a
+    /// machine did this" rather than to name a component.
+    ///
+    /// Two eyes and an aerial, and nothing else. A mouth, a grille and side
+    /// ears all went in and all came back out: at nine points they close up
+    /// against the eyes and the head becomes a filled square with a bump on
+    /// top. What survives being small is a wide-set pair of solid eyes inside
+    /// an outline.
     private static var tokens: [NotchIconPart] {
         var parts: [NotchIconPart] = []
-        parts.append(NotchIconPart(path: spark(centre: CGPoint(x: 44, y: 48), reach: 36), style: .fill))
-        parts.append(NotchIconPart(path: spark(centre: CGPoint(x: 78, y: 22), reach: 16), style: .fill))
+        parts.append(NotchIconPart(
+            path: Path(roundedRect: CGRect(x: 20, y: 32, width: 60, height: 50),
+                       cornerRadius: 15, style: .continuous),
+            style: .stroke(strokeWeight)))
+        var eyes = Path()
+        for x in [38.0, 62.0] {
+            eyes.addEllipse(in: CGRect(x: x - 7, y: 50, width: 14, height: 14))
+        }
+        parts.append(NotchIconPart(path: eyes, style: .fill))
+        var aerial = Path()
+        aerial.move(to: CGPoint(x: 50, y: 32))
+        aerial.addLine(to: CGPoint(x: 50, y: 20))
+        parts.append(NotchIconPart(path: aerial, style: .stroke(detailWeight)))
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 42, y: 6, width: 16, height: 16)),
+            style: .fill))
         return parts
-    }
-
-    /// A four-pointed star with its sides drawn in, so the points look drawn
-    /// rather than cut.
-    private static func spark(centre: CGPoint, reach: CGFloat) -> Path {
-        let waist = reach * 0.30
-        var path = Path()
-        path.move(to: CGPoint(x: centre.x, y: centre.y - reach))
-        path.addQuadCurve(to: CGPoint(x: centre.x + reach, y: centre.y),
-                          control: CGPoint(x: centre.x + waist, y: centre.y - waist))
-        path.addQuadCurve(to: CGPoint(x: centre.x, y: centre.y + reach),
-                          control: CGPoint(x: centre.x + waist, y: centre.y + waist))
-        path.addQuadCurve(to: CGPoint(x: centre.x - reach, y: centre.y),
-                          control: CGPoint(x: centre.x - waist, y: centre.y + waist))
-        path.addQuadCurve(to: CGPoint(x: centre.x, y: centre.y - reach),
-                          control: CGPoint(x: centre.x - waist, y: centre.y - waist))
-        path.closeSubpath()
-        return path
     }
 
     /// A stopwatch rather than a clock face: a clock says what time it is, and

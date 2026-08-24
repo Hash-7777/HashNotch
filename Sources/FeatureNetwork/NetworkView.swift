@@ -221,9 +221,12 @@ struct NetworkDetailView: View {
         if !monitor.topApps.isEmpty {
             appsHeading
             if settings.networkAppsExpanded {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 3) {
                     ForEach(visibleApps, id: \.name) { app in
-                        appRow(app)
+                        NetworkAppRow(
+                            app: app,
+                            biggest: monitor.topApps.first?.total ?? 0,
+                            theme: theme)
                     }
                 }
                 // A fade, and nothing else.
@@ -255,6 +258,12 @@ struct NetworkDetailView: View {
     /// A whole row is the target rather than the chevron alone: a 9-point glyph
     /// is a hard thing to hit, and there is nothing else on this row to hit by
     /// mistake.
+    ///
+    /// Deliberately quieter than the block it belongs to: smaller than the
+    /// figure above it, in the label colour, and with no mark of its own. It is
+    /// a way into a breakdown of the total, not a reading beside it, and the
+    /// commonest way to get a nested list wrong is to draw its heading with the
+    /// same weight as the thing it is nested under.
     private var appsHeading: some View {
         Button {
             settings.networkAppsExpanded.toggle()
@@ -303,7 +312,7 @@ struct NetworkDetailView: View {
                     .foregroundStyle(theme.subtitleColor)
                     .rotationEffect(.degrees(settings.networkAppsExpanded ? 0 : -90))
             }
-            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .font(.system(size: 9.5, weight: .medium, design: .rounded))
             .frame(width: Panel.rowWidth)
             // The whole strip is the button, including the gap in the middle.
             .contentShape(Rectangle())
@@ -318,67 +327,6 @@ struct NetworkDetailView: View {
 
     private static let showNote = "Show which programs used the most"
 
-
-    /// One program: what it is called, what it used, and how that compares.
-    private func appRow(_ app: AppUsageShare) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 8) {
-                Text(app.name)
-                    .foregroundStyle(theme.textColor)
-                    .lineLimit(1)
-                    // From the middle, because a program name that has been cut
-                    // is usually still recognisable at both ends and rarely at
-                    // one.
-                    .truncationMode(.middle)
-                Spacer(minLength: 8)
-                amount("arrow.down", app.received, theme.downColor)
-                amount("arrow.up", app.sent, theme.upColor)
-            }
-            shareBar(app)
-        }
-        .font(.system(size: 10, weight: .medium, design: .rounded))
-        .frame(width: Panel.rowWidth)
-    }
-
-    /// The shortest a bar is drawn while it stands for anything at all. Still
-    /// unmistakably the smallest thing in the list, and still visibly a bar.
-    private static let minimumBarWidth: CGFloat = 4
-
-    /// A hairline bar saying how this program compares with the rest.
-    ///
-    /// Two things at once, which is why it earns its two and a half points.
-    /// Its LENGTH is this program against the biggest one in the list — against
-    /// the biggest rather than against the grand total, because a share of the
-    /// total is a sliver for everything below first place, and a row of slivers
-    /// compares nothing. The ratios between programs are the same either way.
-    ///
-    /// Its SPLIT is the same down and up as the figures above it, in the same
-    /// two colours, so the bar is a picture of the numbers on its own row
-    /// rather than a second unrelated fact.
-    private func shareBar(_ app: AppUsageShare) -> some View {
-        let width = NetworkAppUsageMath.barWidth(
-            total: app.total,
-            biggest: monitor.topApps.first?.total ?? 0,
-            full: Panel.rowWidth,
-            floor: Self.minimumBarWidth
-        )
-        let downShare = NetworkAppUsageMath.downShare(
-            received: app.received, total: app.total)
-        let height = NetworkUsedMath.breakdownBarHeight
-        return ZStack(alignment: .leading) {
-            Capsule().fill(theme.textColor.opacity(0.08))
-                .frame(width: Panel.rowWidth, height: height)
-            HStack(spacing: 0) {
-                Rectangle().fill(theme.downColor.opacity(0.85))
-                    .frame(width: width * downShare)
-                Rectangle().fill(theme.upColor.opacity(0.85))
-                    .frame(width: width * (1 - downShare))
-            }
-            .frame(height: height)
-            .clipShape(Capsule())
-        }
-        .frame(width: Panel.rowWidth, height: height)
-    }
 
     /// What has to be admitted about the figures, or nothing when they are
     /// whole.

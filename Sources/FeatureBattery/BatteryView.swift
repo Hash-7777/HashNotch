@@ -179,6 +179,13 @@ struct BatteryDetailView: View {
                         Text(detail)
                             .font(.system(size: 9))
                             .foregroundStyle(theme.subtitleColor)
+                            // The one thing on this row that may be shortened.
+                            // It is a sentence, and a sentence that loses its
+                            // tail still says something; the figure beside it
+                            // and the word at the far end do not have that
+                            // property.
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     // "Icon only" still needs something to read here — a row
                     // labelled Battery with nothing after it is not a readout.
@@ -187,11 +194,15 @@ struct BatteryDetailView: View {
                         Text(Formatters.hoursMinutes(minutes))
                             .foregroundStyle(monitor.isLowPowerMode ? .yellow : theme.textColor)
                             .monospacedDigit()
+                            .layoutPriority(1)
                     } else {
                         Text("\(monitor.percentage)%")
                             .foregroundStyle(monitor.isLowPowerMode ? .yellow : theme.textColor)
                             .monospacedDigit()
                             .rollingDigits()
+                            // Never the part that gives way. A level cannot be
+                            // inferred from anything else on the row.
+                            .layoutPriority(1)
                     }
                 }
             }
@@ -294,7 +305,12 @@ struct BatteryDetailView: View {
                 // estimate" in exactly this situation. Saying so is better
                 // than a blank space, which reads as the app having failed to
                 // notice it is charging at all.
-                parts.append("estimating time to full")
+                // Short, because this is the case where the rest of the row is
+                // at its longest — the wattage is known and the estimate is
+                // not — and a phrase that has to be truncated to fit says less
+                // than a short one that fits whole. macOS's own menu says
+                // "Calculating…" here for the same reason.
+                parts.append("estimating…")
             }
             if let watts = monitor.adapterWatts, watts > 0 {
                 let speed = monitor.chargeSpeed.map { $0 == .standard ? "" : " \($0.label.lowercased())" } ?? ""

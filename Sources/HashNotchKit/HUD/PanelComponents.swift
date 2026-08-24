@@ -125,6 +125,25 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
                 .minimumScaleFactor(0.8)
             accessory
             }
+            // And a row's NAME is not the thing that gives way.
+            //
+            // Giving up a fifth of its size was meant as a last resort, and it
+            // was reached in the ordinary course of charging: while macOS has
+            // no estimate yet, the battery row's trailing text is a whole
+            // sentence — "estimating time to full · 96W fast" — and the
+            // trailing content has the higher priority, so the label was
+            // squeezed past four fifths and then truncated. "Battery" became
+            // "Bat…", and then a single letter, with the drawn battery shoved
+            // into the space where the word had been. A row whose name has been
+            // reduced to one letter is not a row anybody can read.
+            //
+            // Fixing its size means the shortfall has to come out of the
+            // trailing content, which is where it belongs: that side is a
+            // sentence and a figure, and a sentence can lose its tail without
+            // losing its meaning. Whichever part of it must NOT be shortened —
+            // the figure — says so on its own side, the way the battery row's
+            // percentage now does.
+            .fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 8)
             trailing
                 // The value gets the room it needs before the label does.
