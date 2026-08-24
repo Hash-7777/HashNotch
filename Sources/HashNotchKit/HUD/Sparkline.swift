@@ -94,12 +94,31 @@ public struct Sparkline: View {
         } else {
             let path = shape(in: size)
             ZStack {
-                // The fill under the line does the work at this size; the
-                // line alone is too thin to read at a glance.
+                // The wash under the line, which says how much of the box the
+                // reading is using without the eye having to measure the line
+                // against the rules.
+                //
+                // It has to fade OUT rather than merely fade down, and the
+                // reason is the memory graph. A fill is as tall as the reading
+                // is high, so a readout that sits at three quarters and barely
+                // moves — which is exactly what memory does on a Mac with 8 GB
+                // — filled three quarters of its box with a solid slab of
+                // colour. It was the heaviest thing in the panel and it was
+                // saying one thing, "high", that the figure beside it already
+                // said in words.
+                //
+                // Reaching nothing at 85% of the way down means a tall fill
+                // loses its bottom half entirely and reads as a wash under the
+                // line, while a short one — a processor at a fifth — is barely
+                // touched, because it never gets far enough down the gradient
+                // to fade. The same change, and it lands where the problem is.
                 path.filled(in: size)
                     .fill(
                         LinearGradient(
-                            colors: [tint.opacity(0.38), tint.opacity(0.04)],
+                            stops: [
+                                .init(color: tint.opacity(0.22), location: 0),
+                                .init(color: tint.opacity(0), location: 0.85),
+                            ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
