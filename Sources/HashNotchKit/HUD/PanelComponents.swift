@@ -64,6 +64,9 @@ public struct NotchSectionHeader: View {
 public struct NotchRow<Accessory: View, Trailing: View>: View {
     let label: String
     let icon: NotchIcon?
+    /// A mark drawn larger than the row's text, for a row that is the whole of
+    /// its section and has no heading above it to carry one.
+    let drawnIconSize: CGFloat?
     let emphasized: Bool
     let theme: Theme
     let accessory: Accessory
@@ -72,6 +75,7 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
     public init(
         _ label: String,
         icon: NotchIcon? = nil,
+        iconSize: CGFloat? = nil,
         emphasized: Bool = false,
         theme: Theme,
         @ViewBuilder accessory: () -> Accessory,
@@ -79,6 +83,7 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
     ) {
         self.label = label
         self.icon = icon
+        self.drawnIconSize = iconSize
         self.emphasized = emphasized
         self.theme = theme
         self.accessory = accessory()
@@ -103,7 +108,7 @@ public struct NotchRow<Accessory: View, Trailing: View>: View {
             // empty rather than carrying two pictures of itself.
             if let icon {
                 NotchIconView(
-                    icon, size: Self.iconSize,
+                    icon, size: drawnIconSize ?? Self.iconSize,
                     color: emphasized ? theme.textColor : theme.subtitleColor)
             }
             Text(label)
@@ -181,12 +186,13 @@ extension NotchRow where Accessory == EmptyView {
     public init(
         _ label: String,
         icon: NotchIcon? = nil,
+        iconSize: CGFloat? = nil,
         emphasized: Bool = false,
         theme: Theme,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.init(
-            label, icon: icon, emphasized: emphasized, theme: theme,
+            label, icon: icon, iconSize: iconSize, emphasized: emphasized, theme: theme,
             accessory: { EmptyView() }, trailing: trailing
         )
     }

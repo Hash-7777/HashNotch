@@ -35,57 +35,79 @@ struct TokensDetailView: View {
     let theme: Theme
     let style: TokensStyle
 
+    /// One line, and everything that used to be four.
+    ///
+    /// It was a heading, a total, a row per tool and a line saying when the
+    /// count was taken — five lines of panel for one number, in a panel whose
+    /// height is the scarcest thing it has. It is now a single row: the mark,
+    /// the name, how old the figure is, the figure, and the button that counts
+    /// again.
+    ///
+    /// Nothing that was TRUE has been dropped, only spread out less. How old
+    /// the count is stays on the row, in words, because a figure that might be
+    /// an hour old with nothing saying so is a figure that quietly misleads —
+    /// it is the one thing here that could not go to a tooltip. The per-tool
+    /// breakdown did go to one: it is an answer to "where did that come from",
+    /// which is a question somebody asks deliberately, and it was costing three
+    /// lines to answer before it was asked.
+    ///
+    /// The mark is drawn larger than the row's own text because it is now the
+    /// only thing naming this section — there is no heading above it any more,
+    /// so the picture has to do the work the heading used to.
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            NotchSectionHeader("AI TOKENS", icon: .tokens, theme: theme)
-            row("Total AI tokens", monitor.today.total, emphasized: true)
-            // "Number only" is a request for the number. The per-tool breakdown
-            // is the part someone choosing that style is asking not to see.
-            if style == .labeled {
-                row("Claude Code", monitor.today.claude)
-                if monitor.today.hashCortx > 0 { row("HashCortx", monitor.today.hashCortx) }
-                if monitor.today.hashCerebrum > 0 { row("HashCerebrum", monitor.today.hashCerebrum) }
-            }
-            if style == .labeled, monitor.today.cached > 0 {
-                NotchRow("Cached", theme: theme) {
-                    Text("+\(Formatters.compactCount(monitor.today.cached))")
-                        .foregroundStyle(theme.subtitleColor)
-                        .monospacedDigit()
+        NotchRow("AI tokens", icon: .tokens, iconSize: 13, theme: theme) {
+            HStack(spacing: 6) {
+                Text(freshnessText)
+                    .font(.system(size: 8.5))
+                    .foregroundStyle(theme.subtitleColor)
+                    .lineLimit(1)
+                Text(Formatters.compactCount(monitor.today.total))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(theme.textColor)
+                    .monospacedDigit()
+                    .rollingDigits()
+                    .layoutPriority(1)
+                Button(action: { monitor.refreshNow() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(monitor.isCounting ? theme.accent : theme.subtitleColor)
+                        .rotationEffect(.degrees(monitor.isCounting ? 360 : 0))
+                        .animation(
+                            monitor.isCounting
+                                ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                                : .default,
+                            value: monitor.isCounting
+                        )
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .disabled(monitor.isCounting)
+                .help("Count again now")
             }
-            freshness
         }
+        .help(breakdown)
+        .animation(.snappy, value: monitor.today.total)
     }
 
-    /// When the count was taken, and a way to take it again.
+    /// Where the figure came from, for somebody who asks.
     ///
-    /// The number is not live — it is counted on a schedule the reader chooses,
-    /// and can be set to no schedule at all. A figure that might be an hour old
-    /// with nothing saying so is a figure that quietly misleads, so it says.
-    private var freshness: some View {
-        HStack(spacing: 6) {
-            Text(freshnessText)
-                .font(.system(size: 9))
-                .foregroundStyle(theme.subtitleColor)
-            Spacer(minLength: 8)
-            Button(action: { monitor.refreshNow() }) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(monitor.isCounting ? theme.accent : theme.subtitleColor)
-                    .rotationEffect(.degrees(monitor.isCounting ? 360 : 0))
-                    .animation(
-                        monitor.isCounting
-                            ? .linear(duration: 0.9).repeatForever(autoreverses: false)
-                            : .default,
-                        value: monitor.isCounting
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(monitor.isCounting)
-            .help("Count again now")
+    /// Only the sources that actually contributed. A tool nobody uses listed at
+    /// zero is a row that says "this app expected something of you".
+    private var breakdown: String {
+        var lines: [String] = []
+        if monitor.today.claude > 0 {
+            lines.append("Claude Code: \(Formatters.compactCount(monitor.today.claude))")
         }
-        .frame(width: Panel.rowWidth)
+        if monitor.today.hashCortx > 0 {
+            lines.append("HashCortx: \(Formatters.compactCount(monitor.today.hashCortx))")
+        }
+        if monitor.today.hashCerebrum > 0 {
+            lines.append("HashCerebrum: \(Formatters.compactCount(monitor.today.hashCerebrum))")
+        }
+        if monitor.today.cached > 0 {
+            lines.append("Cached: +\(Formatters.compactCount(monitor.today.cached))")
+        }
+        return lines.isEmpty ? "Nothing counted yet today" : lines.joined(separator: "\n")
     }
 
     private var freshnessText: String {

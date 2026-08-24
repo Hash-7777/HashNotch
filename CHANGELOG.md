@@ -101,6 +101,26 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **The AI token count is one line.** It was a heading, a total, a row for each
+  tool and a line saying when the count was taken — five lines of panel for one
+  number, in a panel whose height is the scarcest thing it has. It is now a
+  single row: the mark, the name, how old the figure is, the figure, and the
+  button that counts again. Nothing true was dropped, only spread out less. How
+  old the count is stays on the row in words, because a figure that might be an
+  hour old with nothing saying so is a figure that quietly misleads; the
+  per-tool breakdown moved to the row's tooltip, since it answers a question
+  somebody asks deliberately and was costing three lines before it was asked.
+  The robot is drawn larger than the row's text, because with the heading gone
+  it is the only thing naming the section.
+
+- **The media card gives back some of the panel's height.** Its gaps are
+  narrower and its artwork is a little smaller — the card sits above eleven
+  other indicators, so every point it does not need is a point one of them gets.
+  Every point came out of a gap or out of the artwork and none out of a target:
+  the three transport buttons keep their full-size circles and the progress bar
+  keeps a row tall enough to catch hold of, because a control nobody can hit is
+  not a saving.
+
 - **The by-app list is now a picture as well as a list.** It was a name, two
   figures and a hairline bar under each row — which put four bars in one block
   once the total's own is counted, stacked one under another. Each row is now

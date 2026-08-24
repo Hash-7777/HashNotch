@@ -94,15 +94,20 @@ struct MediaDetailView: View {
 
     var body: some View {
         if let media = monitor.nowPlaying {
-            // Tight on purpose. The media card sits at the top of a panel that
-            // has to fit eleven other indicators below it before the screen runs
-            // out, so every point it does not need is a point another readout
-            // gets. The controls stay comfortably clickable — the shrink comes
-            // out of the gaps, not the targets.
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 12) {
+            // Tight on purpose, and tightened again since. The media card sits
+            // at the top of a panel that has to fit eleven other indicators
+            // below it before the screen runs out, so every point it does not
+            // need is a point another readout gets — and this card was the one
+            // spending the most on air.
+            //
+            // Every point taken back here comes out of a GAP or out of the
+            // artwork, never out of a target: the three transport buttons keep
+            // their 28-point circles and the progress bar keeps a row tall
+            // enough to catch, because a control nobody can hit is not a saving.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
                     artwork(media)
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 1) {
                         // Unlike the strip, this title keeps scrolling while
                         // paused. The panel only exists while you are hovering
                         // it, so the animation is bounded by your attention —
@@ -243,6 +248,11 @@ struct MediaDetailView: View {
         }
     }
 
+    /// How tall the draggable row is. Still comfortably catchable — a hairline
+    /// is not something anyone can reliably hit, which is why the row is taller
+    /// than the bar drawn inside it — and three points shorter than it was.
+    private static let progressRowHeight: CGFloat = 13
+
     /// The progress bar, ticking once a second only while the track is moving.
     ///
     /// A paused track's position does not change, so a clock driving it redraws
@@ -257,12 +267,12 @@ struct MediaDetailView: View {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 progressBody(progress, now: context.date)
             }
-            .frame(height: 16)
+            .frame(height: Self.progressRowHeight)
         } else {
             // `current(now:)` ignores the clock while paused, so any date gives
             // the stopped position; its own is the honest one to pass.
             progressBody(progress, now: progress.at)
-                .frame(height: 16)
+                .frame(height: Self.progressRowHeight)
         }
     }
 
@@ -274,7 +284,7 @@ struct MediaDetailView: View {
         let seekable = monitor.canSeek && progress.duration > 0
         // "In use" — being dragged, or about to be.
         let active = seekable && (scrubbing != nil || hoveringBar)
-        return VStack(spacing: 4) {
+        return VStack(spacing: 2) {
             GeometryReader { geo in
                 // The bar is drawn at its own slim height, centred inside a
                 // taller invisible row. The first version made the whole row
@@ -344,7 +354,10 @@ struct MediaDetailView: View {
 
     @ViewBuilder
     private func artwork(_ media: NowPlaying) -> some View {
-        let size: CGFloat = 46
+        // Four points off, which comes straight off the height of the whole
+        // card: this is the tallest thing in its row, so the row is as tall as
+        // it is.
+        let size: CGFloat = 42
         Group {
             if let data = media.artwork, let image = NSImage(data: data) {
                 Image(nsImage: image)
