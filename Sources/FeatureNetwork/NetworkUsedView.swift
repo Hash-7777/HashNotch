@@ -33,14 +33,30 @@ struct NetworkUsedView: View {
     let theme: Theme
 
     var body: some View {
-        HStack(spacing: 8) {
+        // Six rather than eight between the pieces, and four as the least a
+        // spacer may be. This row carries up to six things — a mark, a name, a
+        // warning, two figures and a button — and at eight points apiece the
+        // gaps alone were costing it a figure.
+        HStack(spacing: 6) {
             HStack(spacing: 6) {
                 NotchIconView(.dataUsed, size: 11, color: theme.subtitleColor)
                 Text("Used \(periodCaption)")
                     .foregroundStyle(theme.subtitleColor)
                     .lineLimit(1)
-                // A row's name is not the part that gives way.
-                .fixedSize(horizontal: true, vertical: false)
+                    // The name may give up a sixth of its size, and no more.
+                    //
+                    // Every other row in the panel holds its name at full size
+                    // and takes any shortfall out of the trailing side, because
+                    // there the trailing side is a sentence that can lose its
+                    // tail. Here it is two figures, and a figure cannot lose
+                    // anything at all. So this one row shares the squeeze:
+                    // "Used this month" beside 914 GB and 149 GB, with a
+                    // warning mark and a reset button, is genuinely more than
+                    // 260 points of row, and something has to give. A name a
+                    // sixth smaller is still a name. A number missing its last
+                    // digits is not a number.
+                    .minimumScaleFactor(0.84)
+                .layoutPriority(0)
             }
             // Whatever has to be admitted about the figures is admitted beside
             // them, as a mark rather than as a line of small print underneath —
@@ -57,9 +73,9 @@ struct NetworkUsedView: View {
             // separate answers — how much came down, how much went up — and
             // reading them as a pair is what made this row look like the speed
             // row above it.
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
             amount("arrow.down", received, theme.downColor)
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
             amount("arrow.up", sent, theme.upColor)
             // A span counted from the beginning of a day or a month starts
             // itself; this one has to be started by hand, and the button belongs
@@ -79,6 +95,20 @@ struct NetworkUsedView: View {
         .frame(width: Panel.rowWidth)
     }
 
+    /// One direction: the arrow, and the figure.
+    ///
+    /// **The figures are served before the gaps are.** Without that, they are
+    /// not: a spacer is endlessly flexible and so is a line of text, so SwiftUI
+    /// squeezed both together and took the shortfall out of the number. The row
+    /// showed "30.5…" for thirty and a half megabytes, and with a longer span
+    /// and a reset button on it, "9…" for nine hundred and fourteen gigabytes.
+    /// A truncated figure is the one thing this panel must never show — a label
+    /// can be inferred from the row it is on, and a number cannot be inferred
+    /// from anything.
+    ///
+    /// The priority is on the whole pair rather than on the text inside it,
+    /// which is where it was and why it did nothing: a priority settles a
+    /// contest inside its own stack, and the contest here is in the row.
     private func amount(_ symbol: String, _ bytes: UInt64, _ color: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: symbol)
@@ -89,11 +119,14 @@ struct NetworkUsedView: View {
                 .monospacedDigit()
                 .rollingDigits()
                 .animation(.snappy, value: bytes)
-                // A figure cannot be inferred from anything else on the row, so
-                // it is never the part that is shortened.
-                .layoutPriority(1)
                 .lineLimit(1)
+                // And if it still will not fit — a month of traffic, a warning
+                // mark and a reset button all on one row — it gives up a fifth
+                // of its size rather than its last digits. Smaller is still
+                // readable. Cut is not.
+                .minimumScaleFactor(0.8)
         }
+        .layoutPriority(1)
     }
 }
 

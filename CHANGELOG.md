@@ -139,6 +139,15 @@ All notable changes to HashNotch are recorded here.
   bar above already answers, and a two-colour fill at this size ran its own
   boundary straight underneath the figure on the right.
 
+- **The used-today figures are never cut short.** With the mark that says the
+  count started late on the row, the download figure came out as "30.5…" — and
+  with a longer span and a reset button, both figures did. A spacer is endlessly
+  flexible and so is a line of text, so the row squeezed the two together and
+  took the shortfall out of the numbers. The figures are served before the gaps
+  now, and if a row still cannot hold everything, the name gives way instead: a
+  label can be worked out from the row it sits on, and a number cannot be worked
+  out from anything.
+
 - **How much you have used no longer looks like how fast you are going.** The
   total sat directly under the speed row and was drawn exactly like it — same
   label, same pair of arrows and figures, same colours, same size — so two
