@@ -2468,6 +2468,28 @@ MainActor.assumeIsolated {
     check("the shortest choice is ten seconds",
           TokenScanInterval.allCases.first?.seconds == 10)
 
+    // THE BATTERY'S PROPORTIONS. It is drawn rather than picked from Apple's
+    // symbols, which means its shape is this app's responsibility and can drift
+    // out of proportion a piece at a time. It did: the first draft was
+    // hand-picked at 22 by 10.5 with a nub on the end, seven per cent longer
+    // than Apple's own battery, and it read as stretched beside text that
+    // follows Apple's proportions everywhere else.
+    check("the battery is as long as Apple's for its height",
+          BatteryGlyphShape.lengthForHeight == 2.203)
+    check("and the whole of it keeps that ratio",
+          abs(BatteryGlyphShape.totalWidth / BatteryGlyphShape.height
+              - BatteryGlyphShape.lengthForHeight) < 0.0001)
+    // The nub and the gap come out of the total rather than being added to it,
+    // which is what stops the shape growing every time a part of it is tuned.
+    check("the nub and its gap come out of the length, not on top of it",
+          abs(BatteryGlyphShape.bodyWidth + BatteryGlyphShape.capWidth
+              + BatteryGlyphShape.capGap - BatteryGlyphShape.totalWidth) < 0.0001)
+    check("the body is the largest part of it",
+          BatteryGlyphShape.bodyWidth > BatteryGlyphShape.capWidth * 5)
+    // It stands beside 11-point text; a battery shorter than the words next to
+    // it is what makes even a correct ratio look long.
+    check("it is as tall as the words beside it", BatteryGlyphShape.height == 11)
+
     // Low-battery announcements fire exactly when a threshold is crossed
     // downward, never on charge or within a band.
     check("low fires crossing 20", BatteryMonitor.crossedLowThreshold(from: 21, to: 20) == 20)

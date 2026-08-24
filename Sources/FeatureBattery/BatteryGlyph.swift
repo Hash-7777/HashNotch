@@ -21,20 +21,33 @@ struct BatteryGlyph: View {
     let isLowPowerMode: Bool
     let theme: Theme
 
-    /// The proportions macOS uses, in points, at the size the panel wants.
+    /// How long the whole thing is for its height, nub included.
     ///
-    /// Measured off the menu bar's own battery rather than invented: it is
-    /// roughly two units wide for one tall, with a cap about a twelfth of the
-    /// width, and a shell drawn as a hairline outline rather than a solid.
-    private let width: CGFloat = 22
-    private let height: CGFloat = 10.5
-    private let capWidth: CGFloat = 1.7
-    private let capHeight: CGFloat = 4.2
+    /// Measured off Apple's own battery rather than chosen: `battery.100`,
+    /// `battery.50` and `battery.0` all ink out at 58.00 x 26.33 points at 40pt,
+    /// which is this. The first draft of this glyph was hand-picked at 22 by
+    /// 10.5 with a nub on the end, which came to 2.362 — seven per cent longer
+    /// than Apple's, and it read as a stretched battery sitting next to text
+    /// that is drawn to Apple's proportions everywhere else on the row.
+    private static let lengthForHeight: CGFloat = BatteryGlyphShape.lengthForHeight
+
+    /// Everything else follows from the height, so the shape has ONE number to
+    /// get right and cannot drift out of proportion a piece at a time.
+    ///
+    /// Eleven points, which is the size of the text it sits beside — a battery
+    /// shorter than the words next to it is what makes a correct ratio still
+    /// look long.
+    private var height: CGFloat { BatteryGlyphShape.height }
+    private var totalWidth: CGFloat { BatteryGlyphShape.totalWidth }
+    private var capWidth: CGFloat { BatteryGlyphShape.capWidth }
+    private var capGap: CGFloat { BatteryGlyphShape.capGap }
+    private var width: CGFloat { BatteryGlyphShape.bodyWidth }
+    private var capHeight: CGFloat { height * 0.40 }
     /// The gap between the shell and the charge inside it.
-    private let inset: CGFloat = 1.6
+    private var inset: CGFloat { height * 0.152 }
 
     var body: some View {
-        HStack(spacing: 1.1) {
+        HStack(spacing: capGap) {
             ZStack(alignment: .leading) {
                 // The shell. Quiet, because it is the frame and not the
                 // reading — the same relationship the menu bar's has.
@@ -131,4 +144,23 @@ struct BatteryGlyph: View {
         case .discharging: return "Battery \(percentage) percent"
         }
     }
+}
+
+/// The battery's proportions, on their own so the checks can hold them to the
+/// measurement rather than leaving the shape to be re-judged by eye every time
+/// somebody touches it.
+///
+/// The view above is a view and cannot be reached from a framework-free checks
+/// target; these are the numbers that decide whether it looks like a battery.
+package enum BatteryGlyphShape {
+    /// How long the whole thing is for its height, nub included — Apple's own,
+    /// measured off `battery.100`, `battery.50` and `battery.0`, which all ink
+    /// out at 58.00 x 26.33 points.
+    package static let lengthForHeight: CGFloat = 2.203
+    /// The size of the text it sits beside.
+    package static let height: CGFloat = 11
+    package static var totalWidth: CGFloat { height * lengthForHeight }
+    package static var capWidth: CGFloat { height * 0.155 }
+    package static var capGap: CGFloat { height * 0.1 }
+    package static var bodyWidth: CGFloat { totalWidth - capWidth - capGap }
 }

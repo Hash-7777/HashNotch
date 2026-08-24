@@ -152,6 +152,14 @@ All notable changes to HashNotch are recorded here.
   which reads as the app having counted something twice even when both figures
   are right. They are now added together under the program's own name.
 
+- **The battery is the shape of a battery again.** Drawing it rather than
+  picking one of Apple's symbols made its proportions this app's problem, and
+  the first attempt was hand-picked — seven per cent longer for its height than
+  Apple's own, which read as stretched beside text that follows Apple's
+  proportions everywhere else on the row. Apple's battery was measured, and the
+  shape now follows from that one number and its own height, so no part of it
+  can be tuned without the rest keeping step.
+
 - **A big figure is shown in full instead of being cut short.** A month's
   download came out as "14.18…" — the row ran out of room and abbreviated the
   one thing on it that cannot be inferred from anything else. Two fixes, and
