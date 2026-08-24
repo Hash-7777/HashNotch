@@ -13,6 +13,12 @@ public final class FeatureRegistry {
     /// start or stop the one that changed without disturbing the others.
     private var running: Set<String> = []
 
+    /// Which features were put down because the screen went away, rather than
+    /// because anybody switched them off. Remembered so that coming back picks
+    /// up exactly what was up, and so the two reasons for a feature not running
+    /// cannot be confused for one another.
+    private var suspended: Set<String> = []
+
     public init() {}
 
     /// The order a fresh install shows the indicators in.
@@ -153,6 +159,43 @@ public final class FeatureRegistry {
     public func stopAll() {
         features.forEach { $0.stop() }
         running.removeAll()
+        suspended.removeAll()
+    }
+
+    /// Put down everything that is running because nobody can see it.
+    ///
+    /// Which features were up is remembered, so coming back does not depend on
+    /// re-deriving it from settings that may have changed in the meantime.
+    public func suspendAll() {
+        for feature in features where running.contains(feature.id) {
+            feature.suspend()
+        }
+        suspended = running
+        running.removeAll()
+    }
+
+    /// The screen is back: pick up what was put down, then settle everything
+    /// else the ordinary way.
+    ///
+    /// A feature switched OFF while the screen was away is stopped rather than
+    /// resumed — being suspended is not the same as being off, and the switch
+    /// has to win. A feature switched ON while away is started by the sync at
+    /// the end, which is the one place that decides what should be running.
+    public func resumeAll(context: FeatureContext) {
+        guard context.settings.hasAcceptedReading else {
+            stopAll()
+            return
+        }
+        for feature in features where suspended.contains(feature.id) {
+            if context.settings.isEnabled(feature.id) {
+                feature.resume(context: context)
+                running.insert(feature.id)
+            } else {
+                feature.stop()
+            }
+        }
+        suspended.removeAll()
+        syncRunning(context: context)
     }
 
     /// Offer a sideways swipe over the open panel to the features, in
@@ -172,4 +215,8 @@ public final class FeatureRegistry {
     /// The ids of the features currently running. Package-visible so the checks
     /// can prove that switching one off actually stops it.
     package var runningIDs: Set<String> { running }
+
+    /// The ids put down because the screen went away, as opposed to switched
+    /// off. Package-visible for the same reason as `runningIDs`.
+    package var suspendedIDs: Set<String> { suspended }
 }

@@ -18,8 +18,19 @@ import AppKit
 /// login window above ordinary windows, so in practice the island is already
 /// covered — but "in practice" and "covered" are not the same as "not there",
 /// and this is the one claim where that difference matters. The overlay is
-/// taken off screen and every feature is stopped, so there is nothing to be
+/// taken off screen and every feature is put down, so there is nothing to be
 /// covered and nothing being read while the Mac is locked.
+///
+/// **Put down, not switched off.** The two are not the same and the difference
+/// costs a timer. Everything a feature MEASURES stops either way — that is what
+/// the claim above is about, and `suspend()` falls back to `stop()` so a
+/// feature that says nothing on the subject cannot leak a reading through this
+/// door. What may survive is something the PERSON created rather than something
+/// the app read: a countdown they set themselves. Before this, locking the Mac
+/// or letting the display sleep silently threw a running timer away — no alert,
+/// no countdown, and nothing anywhere saying one had been set. A display that
+/// sleeps after ten minutes is not an unusual thing to happen to a twenty-five
+/// minute timer; it is the ordinary thing.
 @MainActor
 public final class PowerCoordinator {
     private let registry: FeatureRegistry
@@ -82,13 +93,13 @@ public final class PowerCoordinator {
     private func pause() {
         guard !isPaused else { return }
         isPaused = true
-        registry.stopAll()
+        registry.suspendAll()
     }
 
     private func resume() {
         guard isPaused else { return }
         isPaused = false
-        registry.syncRunning(context: context)
+        registry.resumeAll(context: context)
     }
 
     /// Off the screen, and everything stopped with it.

@@ -110,8 +110,17 @@ standing in front of it.
 macOS already puts the login window above ordinary windows, so the island would
 be *covered* anyway. Covered is not the same as absent, and this is the one
 claim where the difference is worth code: the overlay is taken off screen and
-the features are stopped, so there is nothing to be covered and nothing being
+every feature is put down, so there is nothing to be covered and nothing being
 read. Everything returns when you unlock.
+
+One thing survives a lock, and it is worth being exact about because the
+sentence above is otherwise absolute: **a countdown you started yourself.** The
+timer stops ticking like everything else — no wakeups, nothing drawn, nothing
+read — but the moment it is due is kept, so a timer set before you locked the
+Mac still goes off during it. That is not a reading. It is a time you typed in,
+and holding on to it opens no file, runs nothing, and asks the system for
+nothing. Before this it was thrown away, which is to say that locking your Mac
+silently cancelled your timer.
 
 The same applies when the display sleeps, where it is a battery decision as much
 as a privacy one.
@@ -161,8 +170,13 @@ as a privacy one.
   notice looks there, macOS asks. Deny it and every other feature keeps
   working; you simply get no "download finished" notice.
 - **Notifications** — asked the first time you start the timer, so it can post
-  a banner when the timer ends. Deny it and the timer still chimes and shows
-  "Time's up" in the notch.
+  a banner when the timer ends. The alert is handed to macOS when the timer
+  starts, rather than posted by the app when it notices the countdown reach zero
+  — that is what makes it arrive on time when the display has gone to sleep, and
+  it means one pending alert sits with the system until it fires or you cancel
+  the timer, including if you quit HashNotch in between. Cancelling the timer
+  takes it back. Deny the permission and the timer chimes instead, and the panel
+  says so rather than leaving you to notice that no banner ever came.
 
 - **Accessibility** — asked **only if you turn on "Control video in your
   browser"**, and never otherwise. It is off by default. macOS gates pressing

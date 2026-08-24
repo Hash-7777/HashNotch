@@ -171,6 +171,45 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **Locking your Mac no longer cancels your timer.** This is the serious one.
+  Every indicator is stopped when the island leaves the screen — that is the
+  privacy promise, and it is the right thing for all of them but one. Stopping
+  the timer threw away the countdown, so a timer set at your desk was silently
+  gone when you came back: no alert, no countdown, and nothing anywhere saying
+  one had ever been started. The display sleeping after ten minutes is not an
+  unusual thing to happen to a twenty-five minute timer; it is the ordinary
+  thing, so this was most timers. The deadline is now kept, because a countdown
+  is not a reading — it is a time you typed in yourself. Everything the app
+  MEASURES still stops dead on a lock, and a feature that says nothing on the
+  subject still stops entirely, so nothing else can survive a lock by accident.
+
+- **The alert arrives on time, even with the screen asleep.** It used to be
+  posted at the moment the app itself noticed the countdown reach zero — and the
+  app stops sampling when the display sleeps, so the one moment a timer most
+  needs to be heard was a moment when nothing was running to hear it. The
+  deadline is now handed to macOS when the timer starts, so the alert is the
+  system's job: it lands on time whether the display is asleep, the panel is
+  shut, or the app is busy. Cancelling the timer takes the alert back with it —
+  before, a cancelled timer's alert had an unrepeatable name and nothing could
+  ever have cancelled it.
+
+- **A timer going off while music plays is now visible.** The strip shows one
+  thing at a time and the media indicator is registered first, so at equal
+  standing it kept the strip through the exact moment the timer had something to
+  say. "Time's up" now takes the strip for its few seconds, with the island's
+  edge lit orange, and hands it straight back. The countdown itself keeps the
+  lower standing — a song you are listening to beats a number ticking down.
+
+- **If you refuse notifications, the panel says so.** The app asked for
+  permission and threw the answer away, so somebody who said no got no banner,
+  no explanation, and an app that looked exactly as it had before. The timer
+  says which alert you are getting and offers to open the settings page where
+  that can be changed. A chime needs somebody within earshot; a banner waits.
+
+- **The timer remembers how long you set it for.** The length lived on a view
+  that is rebuilt every time the panel opens, so 45 minutes was back at 10 the
+  next time you hovered the notch — and dialling it up again is nine presses.
+
 - **One program, one row.** macOS reports a command and an application of the
   same name separately — `claude` and `Claude` — and it reports a browser's
   networking under its helper processes, whose names it then cuts short, so

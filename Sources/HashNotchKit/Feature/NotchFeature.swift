@@ -142,7 +142,30 @@ public protocol NotchFeature: AnyObject {
     func start(context: FeatureContext)
 
     /// Stop sampling / observing and release resources.
+    ///
+    /// This is the user having switched the feature OFF, and off means off: no
+    /// files opened, no subprocess run, nothing left scheduled anywhere, and
+    /// no state kept that would bring any of it back on its own.
     func stop()
+
+    /// The screen has gone away — locked, or asleep — and nobody can see this.
+    ///
+    /// Stop the work. What separates this from `stop()` is only that the user
+    /// has not asked for anything to end: a feature that is holding something
+    /// the PERSON created, rather than something it measured, may keep it.
+    ///
+    /// The default is `stop()`, so a feature that says nothing here behaves
+    /// exactly as it did before this existed, and no reading survives a lock by
+    /// accident. Only the timer overrides it, and it does so because a
+    /// countdown is not a reading — it is a deadline somebody typed in, and
+    /// throwing it away when the display sleeps was losing timers.
+    func suspend()
+
+    /// The screen is back. Pick up whatever `suspend()` put down.
+    ///
+    /// The default is `start(context:)`, which is what a feature that keeps
+    /// nothing needs.
+    func resume(context: FeatureContext)
 }
 
 public extension NotchFeature {
@@ -152,6 +175,8 @@ public extension NotchFeature {
     func makeCompactTrailingView(context: FeatureContext) -> AnyView? { nil }
     func start(context: FeatureContext) {}
     func stop() {}
+    func suspend() { stop() }
+    func resume(context: FeatureContext) { start(context: context) }
     var livePriority: Int { LivePriority.ongoing }
     var outlineTint: Color? { nil }
     var outlineUrgency: Double { 0 }

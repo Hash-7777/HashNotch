@@ -15,6 +15,7 @@ import FeatureThermal
 import FeatureStorage
 import FeatureCPU
 import FeatureMemory
+import FeatureTimer
 
 /// Writes `content` to a fresh temp file and returns its URL.
 func tempFile(_ content: String) -> URL {
@@ -4427,6 +4428,231 @@ func strayCheckDomains() -> [String] {
         .filter { $0.hasPrefix(checkDomainPrefix) && $0.hasSuffix(".plist") }
         .map { String($0.dropLast(".plist".count)) }
 }
+
+// MARK: - The timer
+//
+// This feature had no checks at all until now, which is not a coincidence: it
+// was the one feature the suite could not see, and it was quietly losing
+// timers. The first check below is the failure itself — a timer set, the screen
+// taken away, and the timer expected to still be there afterwards.
+
+@MainActor
+func timerChecks() {
+    // The real thing: a countdown, and then exactly what a locked Mac or a
+    // sleeping display does to the feature holding it.
+    let defaults = InMemoryDefaults()
+    let settings = checkStore(defaults: InMemoryDefaults())
+    let timer = TimerFeature(defaults: defaults)
+    let registry = FeatureRegistry()
+    registry.register([timer])
+    settings.seed(features: registry.features)
+    let context = FeatureContext(settings: settings)
+    registry.syncRunning(context: context)
+
+    timer.countdown.begin(minutes: 25)
+    guard case .running(let endsAt, _) = timer.countdown.phase else {
+        check("a timer that has been started is running", false)
+        return
+    }
+    check("a timer that has been started is running", true)
+
+    // The screen goes away.
+    registry.suspendAll()
+    check("the screen going away puts the timer down", registry.runningIDs.isEmpty)
+    check("and remembers that it was up", registry.suspendedIDs == ["timer"])
+    check(
+        "the deadline outlives the screen going away",
+        TimerDeadlineStore.load(from: defaults)?.endsAt == endsAt
+    )
+
+    // And comes back.
+    registry.resumeAll(context: context)
+    check("the screen coming back starts it again", registry.runningIDs == ["timer"])
+    check(
+        "and the countdown is the same one, not a new one",
+        timer.countdown.phase == .running(endsAt: endsAt, total: 25 * 60)
+    )
+
+    // Switched off is a different thing from put down, and it has to win.
+    timer.stop()
+    check("switching the timer off ends the countdown", timer.countdown.phase == .idle)
+    check(
+        "and takes the deadline with it",
+        TimerDeadlineStore.load(from: defaults) == nil
+    )
+}
+MainActor.assumeIsolated { timerChecks() }
+
+@MainActor
+func timerSwitchedOffWhileAwayChecks() {
+    // A feature switched off while the screen was away must come back stopped,
+    // not resumed. Being put down is not being off, and the switch has to win.
+    let settings = checkStore(defaults: InMemoryDefaults())
+    let feature = CountingFeature(id: "counted")
+    let registry = FeatureRegistry()
+    registry.register([feature])
+    settings.seed(features: registry.features)
+    let context = FeatureContext(settings: settings)
+    registry.syncRunning(context: context)
+    registry.suspendAll()
+    settings.update("counted") { $0.enabled = false }
+    registry.resumeAll(context: context)
+    check(
+        "a feature switched off while the screen was away stays off",
+        feature.isRunning == false && registry.runningIDs.isEmpty
+    )
+    check("and is not left waiting to be resumed", registry.suspendedIDs.isEmpty)
+}
+MainActor.assumeIsolated { timerSwitchedOffWhileAwayChecks() }
+
+@MainActor
+func timerFinishTakesTheStripChecks() {
+    // A timer going off while music plays used to be invisible: both sat at the
+    // same standing and the media feature is registered first, so it kept the
+    // strip through the one moment the timer had something to say.
+    let timer = TimerFeature(defaults: InMemoryDefaults())
+    check(
+        "a running countdown does not take the strip from the music",
+        timer.livePriority == LivePriority.ongoing
+    )
+    timer.countdown.begin(minutes: 1)
+    check("a running countdown is still only ongoing", timer.livePriority == LivePriority.ongoing)
+    check("and does not light the island's edge", timer.outlineTint == nil)
+}
+MainActor.assumeIsolated { timerFinishTakesTheStripChecks() }
+
+// What a deadline found on the way back should do about itself.
+let deadlineNow = Date()
+check(
+    "a deadline still to come is picked up",
+    TimerRestore.resumption(
+        from: TimerDeadline(endsAt: deadlineNow.addingTimeInterval(300), total: 600),
+        now: deadlineNow
+    ) == .resume(TimerDeadline(endsAt: deadlineNow.addingTimeInterval(300), total: 600))
+)
+check(
+    "one that came due while nobody was looking is announced",
+    TimerRestore.resumption(
+        from: TimerDeadline(endsAt: deadlineNow.addingTimeInterval(-120), total: 600),
+        now: deadlineNow
+    ) == .finished(TimerDeadline(endsAt: deadlineNow.addingTimeInterval(-120), total: 600))
+)
+
+// The app must not make a second noise about a timer the system already
+// announced on time. Whether it should is a fact recorded when the timer
+// started, not a guess made on the next launch.
+check(
+    "a deadline the system was given comes back saying so",
+    {
+        let handed = TimerDeadline(
+            endsAt: deadlineNow.addingTimeInterval(-120), total: 600, alertScheduled: true)
+        guard case .finished(let found) = TimerRestore.resumption(from: handed, now: deadlineNow)
+        else { return false }
+        return found.alertScheduled
+    }()
+)
+check(
+    "and one that was never handed over says that instead",
+    {
+        let ours = TimerDeadline(endsAt: deadlineNow.addingTimeInterval(-120), total: 600)
+        guard case .finished(let found) = TimerRestore.resumption(from: ours, now: deadlineNow)
+        else { return false }
+        return found.alertScheduled == false
+    }()
+)
+// A record written before that field existed has to keep loading, and has to
+// load as the reading that alerts rather than the one that goes quiet.
+check(
+    "a deadline written by an older build still loads, and alerts",
+    {
+        let older = #"{"endsAt":760000000,"total":600}"#
+        guard let data = older.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(TimerDeadline.self, from: data)
+        else { return false }
+        return decoded.total == 600 && decoded.alertScheduled == false
+    }()
+)
+check(
+    "one from long enough ago is not announced at all",
+    TimerRestore.resumption(
+        from: TimerDeadline(
+            endsAt: deadlineNow.addingTimeInterval(-TimerRestore.catchUpWindow - 60), total: 600),
+        now: deadlineNow
+    ) == .expired
+)
+check(
+    "and no deadline means nothing to do",
+    TimerRestore.resumption(from: nil, now: deadlineNow) == nil
+)
+
+// An alert that is late says so. One that is not, does not — "your timer is
+// done", read at 14:05 about a timer that ended at 13:58, is not true.
+check(
+    "an alert on time does not claim a time",
+    TimerRestore.finishedBody(endedAt: deadlineNow, now: deadlineNow) == "Your HashNotch timer is done."
+)
+check(
+    "a late alert says when it ended",
+    TimerRestore.finishedBody(
+        endedAt: deadlineNow.addingTimeInterval(-600), now: deadlineNow
+    ).contains("ended at")
+)
+check(
+    "a second late is not late enough to qualify",
+    TimerRestore.finishedBody(
+        endedAt: deadlineNow.addingTimeInterval(-1), now: deadlineNow
+    ) == "Your HashNotch timer is done."
+)
+
+// The record itself.
+let deadlineDefaults = InMemoryDefaults()
+check("no deadline kept is no deadline found", TimerDeadlineStore.load(from: deadlineDefaults) == nil)
+let keptDeadline = TimerDeadline(endsAt: deadlineNow.addingTimeInterval(90), total: 90)
+TimerDeadlineStore.save(keptDeadline, to: deadlineDefaults)
+check(
+    "a deadline comes back exactly as it went in",
+    TimerDeadlineStore.load(from: deadlineDefaults).map {
+        abs($0.endsAt.timeIntervalSince(keptDeadline.endsAt)) < 0.001 && $0.total == 90
+    } == true
+)
+TimerDeadlineStore.clear(from: deadlineDefaults)
+check("and clearing it leaves nothing", TimerDeadlineStore.load(from: deadlineDefaults) == nil)
+
+// The stepper's rules, which used to live inside the view's body.
+check("a short timer steps by a minute", TimerLength.step(for: 5) == 1)
+check("a medium one by five", TimerLength.step(for: 20) == 5)
+check("an hour or more by a quarter", TimerLength.step(for: 60) == 15)
+check("the stepper stops at one minute", TimerLength.adjusted(1, by: -1) == 1)
+check("and at ten hours", TimerLength.adjusted(TimerLength.longest, by: 1) == TimerLength.longest)
+check("a nonsense length is brought back inside", TimerLength.clamped(-30) == TimerLength.shortest)
+check("and so is an absurd one", TimerLength.clamped(99_999) == TimerLength.longest)
+check(
+    "stepping up and back down again returns where it started",
+    (1...59).allSatisfy { minutes in
+        let up = TimerLength.adjusted(minutes, by: 1)
+        return up > minutes && TimerLength.adjusted(up, by: -1) <= up
+    }
+)
+
+// The length is remembered, because dialling 45 minutes again is nine presses.
+let lengthDefaults = InMemoryDefaults()
+check(
+    "a length never set offers the first-time one",
+    TimerLengthStore.load(from: lengthDefaults) == TimerLength.initial
+)
+TimerLengthStore.save(45, to: lengthDefaults)
+check("a length that was set is remembered", TimerLengthStore.load(from: lengthDefaults) == 45)
+TimerLengthStore.save(100_000, to: lengthDefaults)
+check(
+    "and a stored length that makes no sense is brought back inside",
+    TimerLengthStore.load(from: lengthDefaults) == TimerLength.longest
+)
+
+// The clock face itself, at the two places its shape changes.
+check("under an hour is minutes and seconds", TimerViews.clock(90) == "1:30")
+check("a whole hour grows an hours column", TimerViews.clock(3600) == "1:00:00")
+check("and the last second before it does not", TimerViews.clock(3599) == "59:59")
+check("nothing left reads as zero", TimerViews.clock(0) == "0:00")
 
 // MARK: - The total that stopped looking like a speed
 //

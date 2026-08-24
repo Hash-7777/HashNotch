@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import HashNotchKit
 
@@ -52,9 +53,6 @@ struct TimerDetailView: View {
     @ObservedObject var engine: TimerEngine
     let theme: Theme
 
-    /// The user's own timer length, adjusted with the stepper.
-    @State private var customMinutes = 10
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             NotchSectionHeader("TIMER", icon: .timer, theme: theme)
@@ -97,22 +95,58 @@ struct TimerDetailView: View {
                 }
                 .frame(width: Panel.rowWidth)
             }
+            if engine.notificationsAllowed == false { refusedNotice }
         }
+    }
+
+    /// Said only when it is true, and only once a timer has actually asked.
+    ///
+    /// An app that has been refused notification permission and goes on looking
+    /// exactly as it did is an app that has quietly stopped doing what it says.
+    /// The alert still happens — it chimes instead — and the difference matters:
+    /// a chime needs somebody within earshot of this Mac, and a banner waits.
+    /// Saying which one you are getting is the whole of it.
+    private var refusedNotice: some View {
+        Button {
+            guard let url = URL(
+                string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+            ) else { return }
+            NSWorkspace.shared.open(url)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "bell.slash")
+                    .font(.system(size: 8.5, weight: .bold))
+                Text("Notifications are off — this will chime instead")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: 9))
+            .foregroundStyle(theme.subtitleColor)
+            .frame(width: Panel.rowWidth)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Open System Settings, where notifications for HashNotch can be turned back on")
     }
 
     /// Set your own length: minus / value / plus, then start.
     private var customRow: some View {
         HStack(spacing: 8) {
-            stepButton("minus") { customMinutes = max(1, customMinutes - step) }
-            Text("\(customMinutes) min")
+            stepButton("minus") {
+                engine.preferredMinutes = TimerLength.adjusted(engine.preferredMinutes, by: -1)
+            }
+            Text("\(engine.preferredMinutes) min")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(theme.textColor)
                 .monospacedDigit()
                 .frame(minWidth: 52)
-            stepButton("plus") { customMinutes = min(600, customMinutes + step) }
+            stepButton("plus") {
+                engine.preferredMinutes = TimerLength.adjusted(engine.preferredMinutes, by: 1)
+            }
             Spacer(minLength: 0)
             Button {
-                engine.begin(minutes: customMinutes)
+                engine.begin(minutes: engine.preferredMinutes)
             } label: {
                 // A timer glyph and the word, not a play triangle. The triangle
                 // is the universal mark for "play this media", and sitting in a
@@ -137,9 +171,6 @@ struct TimerDetailView: View {
             .buttonStyle(.plain)
         }
     }
-
-    /// Coarser steps at higher values so long durations are quick to dial.
-    private var step: Int { customMinutes >= 60 ? 15 : (customMinutes >= 20 ? 5 : 1) }
 
     private func stepButton(_ symbol: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -166,9 +197,9 @@ struct TimerDetailView: View {
     }
 }
 
-enum TimerViews {
+package enum TimerViews {
     /// mm:ss (or h:mm:ss beyond an hour).
-    static func clock(_ seconds: Int) -> String {
+    package static func clock(_ seconds: Int) -> String {
         if seconds >= 3600 {
             return String(format: "%d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60)
         }
