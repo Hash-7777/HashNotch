@@ -182,55 +182,19 @@ struct NetworkDetailView: View {
 
     /// How much has gone through, over the span the settings ask for.
     ///
-    /// A second row rather than a second pair of numbers in the first one:
-    /// speed and total are different questions — what is happening now, and
-    /// what has happened — and a row that answered both at once would have to
-    /// be read twice to answer either.
+    /// A block of its own rather than another row, because a total and a speed
+    /// are different kinds of thing and drawing them the same way was making
+    /// the second one read as a second opinion about the first. See
+    /// `NetworkUsedView` for the whole of that reasoning.
     private var used: some View {
-        NotchRow("Used \(period.caption)", theme: theme) {
-            HStack(spacing: 12) {
-                // Whatever has to be admitted about these figures is admitted
-                // HERE, as a mark beside them, rather than as a line of small
-                // print underneath.
-                //
-                // It used to be that line. It was honest and it was in the
-                // wrong place: it turned a one-line readout into a two-line
-                // one, and it did so exactly when the numbers were long, so
-                // the row changed shape as the day went on. A panel row is
-                // read at a glance and its height should not depend on how
-                // much data somebody has used.
-                //
-                // A mark is still an admission — it is visible, it is beside
-                // the figure it qualifies, and it is not the ordinary state of
-                // the row — and the sentence is one hover away rather than
-                // gone. Nothing is quietly dropped: every case that produced a
-                // line produces a mark.
-                if let note = caption {
-                    Image(systemName: "exclamationmark.circle")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(theme.subtitleColor)
-                        .help(note)
-                }
-                amount("arrow.down", monitor.usage.received, theme.downColor)
-                amount("arrow.up", monitor.usage.sent, theme.upColor)
-                // Only where it means something. A span counted from the
-                // beginning of a day or a month starts itself; this one is the
-                // one that has to be started by hand, and the button belongs
-                // beside the figure it clears rather than in a settings window
-                // two clicks away from it.
-                if period == .sinceReset {
-                    Button {
-                        monitor.resetUsage()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(theme.subtitleColor)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Start counting again from now")
-                }
-            }
-        }
+        NetworkUsedView(
+            received: monitor.usage.received,
+            sent: monitor.usage.sent,
+            periodCaption: period.caption,
+            note: caption,
+            onReset: period == .sinceReset ? { monitor.resetUsage() } : nil,
+            theme: theme
+        )
     }
 
     /// Which programs the traffic went through: a list that opens and shuts,
@@ -242,6 +206,10 @@ struct NetworkDetailView: View {
     /// no arrangement of the same row that fixes that, because the sameness is
     /// the message. A breakdown has to look subordinate to the thing it breaks
     /// down.
+    ///
+    /// The total above has since become a block of its own, with a split bar of
+    /// the same two colours as these — heavier than these, because it is what
+    /// they are a breakdown of.
     ///
     /// So it is a disclosure now: one quiet heading that names the biggest
     /// while shut, and a list of its own kind of row while open. Shut, it costs
@@ -396,19 +364,20 @@ struct NetworkDetailView: View {
         )
         let downShare = NetworkAppUsageMath.downShare(
             received: app.received, total: app.total)
+        let height = NetworkUsedMath.breakdownBarHeight
         return ZStack(alignment: .leading) {
             Capsule().fill(theme.textColor.opacity(0.08))
-                .frame(width: Panel.rowWidth, height: 2.5)
+                .frame(width: Panel.rowWidth, height: height)
             HStack(spacing: 0) {
                 Rectangle().fill(theme.downColor.opacity(0.85))
                     .frame(width: width * downShare)
                 Rectangle().fill(theme.upColor.opacity(0.85))
                     .frame(width: width * (1 - downShare))
             }
-            .frame(height: 2.5)
+            .frame(height: height)
             .clipShape(Capsule())
         }
-        .frame(width: Panel.rowWidth, height: 2.5)
+        .frame(width: Panel.rowWidth, height: height)
     }
 
     /// What has to be admitted about the figures, or nothing when they are

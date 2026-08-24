@@ -100,6 +100,19 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **How much you have used no longer looks like how fast you are going.** The
+  total sat directly under the speed row and was drawn exactly like it — same
+  label, same pair of arrows and figures, same colours, same size — so two
+  readings that answer completely different questions looked like one reading
+  given twice. A speed is true for an instant and moves both ways; a total only
+  grows, and you look at it once a day. It is now a block rather than a row: one
+  figure large enough to be the answer, a bar underneath showing how much of it
+  came down and how much went up, and those two figures named quietly beneath
+  that. The bar divides the total rather than filling towards anything — there
+  is no allowance, no plan and no limit here, and a bar that fills would invent
+  one. It is drawn a little heavier than the per-program bars under it, because
+  it is the thing they are a breakdown of.
+
 - **Every heading in the panel now has its own mark.** A small drawn picture in
   front of each one — a chip for the processor, a memory chip, a stack of
   platters for the disk, a globe for the internet, a thermometer, a stopwatch, a
