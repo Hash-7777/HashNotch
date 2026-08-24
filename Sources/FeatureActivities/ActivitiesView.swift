@@ -160,7 +160,7 @@ struct ActivitiesDetailView: View {
     var body: some View {
         if !monitor.activities.isEmpty || monitor.hookState.needsAttention {
             VStack(alignment: .leading, spacing: 8) {
-                NotchSectionHeader("ACTIVITIES", theme: theme)
+                NotchSectionHeader("ACTIVITIES", icon: .activities, theme: theme)
                 ForEach(monitor.activities) { activity in
                     row(activity)
                 }

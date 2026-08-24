@@ -57,7 +57,7 @@ struct TimerDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            NotchSectionHeader("TIMER", theme: theme)
+            NotchSectionHeader("TIMER", icon: .timer, theme: theme)
             switch engine.phase {
             case .idle:
                 // Just the one row. The 5/15/25 pills were three guesses at a

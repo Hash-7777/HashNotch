@@ -100,6 +100,19 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **Every heading in the panel now has its own mark.** A small drawn picture in
+  front of each one — a chip for the processor, a memory chip, a stack of
+  platters for the disk, a globe for the internet, a thermometer, a stopwatch, a
+  spark for the AI count — so a row can be found by its shape before it is read.
+  The panel is a dense list of unrelated readings and the eye needed somewhere to
+  land. They are drawn rather than borrowed from the system's symbol set, for one
+  reason worth knowing: a system symbol that a given version of macOS does not
+  have draws nothing at all, silently, and nothing on a newer Mac would ever
+  notice the empty space it leaves on an older one. Every mark is laid out on one
+  grid at one line weight, so they read as a family, and the checks measure them
+  — that each stays inside its own box, that no two came out the same drawing,
+  and that they are the same shape at every size.
+
 - **The battery is drawn to the level it is actually at.** Both on the notch and
   in the panel, it is now a real battery that fills and empties, the way the one
   in your menu bar does — with the bolt while it charges, a pause while it is

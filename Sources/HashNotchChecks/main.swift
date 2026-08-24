@@ -4428,6 +4428,119 @@ func strayCheckDomains() -> [String] {
         .map { String($0.dropLast(".plist".count)) }
 }
 
+// MARK: - The panel's drawn marks
+//
+// These are the checks that the icon family cannot be got wrong quietly. Every
+// one of them is about a failure that produces no error and no warning: a mark
+// that inks outside the box it was given clips against the word beside it, a
+// mark that came out identical to another is a copy-and-paste nobody would spot
+// at nine points, and a mark whose geometry does not scale is one that is only
+// right at the size it was drawn at.
+
+let iconBox = CGRect(x: 0, y: 0, width: 100, height: 100)
+
+check(
+    "every mark draws something",
+    NotchIcon.allCases.allSatisfy { !NotchIconGeometry.parts(for: $0, in: iconBox).isEmpty }
+)
+
+/// The ink of one mark: its paths grown by half their own line weight, which is
+/// how far a stroke actually reaches beyond the line it is drawn along.
+func inkBounds(_ icon: NotchIcon, in box: CGRect) -> CGRect {
+    NotchIconGeometry.parts(for: icon, in: box).reduce(CGRect.null) { union, part in
+        let bounds = part.path.boundingRect
+        switch part.style {
+        case .stroke(let width): return union.union(bounds.insetBy(dx: -width / 2, dy: -width / 2))
+        case .fill: return union.union(bounds)
+        }
+    }
+}
+
+check(
+    "no mark inks outside the box it was given",
+    NotchIcon.allCases.allSatisfy { icon in
+        let ink = inkBounds(icon, in: iconBox)
+        return ink.minX >= -0.01 && ink.minY >= -0.01
+            && ink.maxX <= iconBox.width + 0.01 && ink.maxY <= iconBox.height + 0.01
+    }
+)
+
+check(
+    "every mark uses most of the room it is given",
+    NotchIcon.allCases.allSatisfy { icon in
+        let ink = inkBounds(icon, in: iconBox)
+        return ink.width >= 60 && ink.height >= 60
+    }
+)
+
+// A mark that came out the same as another one is the copy-and-paste failure
+// this family is most exposed to: eleven marks written one after another, each
+// from the shape of the last.
+check(
+    "no two marks are the same drawing",
+    Set(NotchIcon.allCases.map { icon in
+        NotchIconGeometry.parts(for: icon, in: iconBox)
+            .map { "\($0.path.description)|\($0.style)" }
+            .joined(separator: ";")
+    }).count == NotchIcon.allCases.count
+)
+
+// The whole point of drawing on a grid: one drawing, any size. If a mark were
+// laid out in points anywhere, this is where it would show.
+check(
+    "a mark at twice the size is twice the drawing",
+    NotchIcon.allCases.allSatisfy { icon in
+        let small = inkBounds(icon, in: CGRect(x: 0, y: 0, width: 50, height: 50))
+        let large = inkBounds(icon, in: CGRect(x: 0, y: 0, width: 100, height: 100))
+        return abs(small.width * 2 - large.width) < 0.01
+            && abs(small.height * 2 - large.height) < 0.01
+    }
+)
+
+check(
+    "a mark drawn away from the origin moves with its box",
+    NotchIcon.allCases.allSatisfy { icon in
+        let here = inkBounds(icon, in: CGRect(x: 0, y: 0, width: 40, height: 40))
+        let there = inkBounds(icon, in: CGRect(x: 17, y: 23, width: 40, height: 40))
+        return abs(there.minX - here.minX - 17) < 0.01
+            && abs(there.minY - here.minY - 23) < 0.01
+    }
+)
+
+check(
+    "every line in the family is drawn at one of the two family weights",
+    NotchIcon.allCases.allSatisfy { icon in
+        NotchIconGeometry.parts(for: icon, in: iconBox).allSatisfy { part in
+            switch part.style {
+            case .fill: return true
+            case .stroke(let width):
+                return abs(width - NotchIconGeometry.strokeWeight) < 0.001
+                    || abs(width - NotchIconGeometry.detailWeight) < 0.001
+            }
+        }
+    }
+)
+
+// The rule that made the family readable at the size it is actually used at.
+// Written down as a check because it is the one thing a later mark would be
+// most likely to ignore — it looks like a detail and it is the difference
+// between a processor and a blob.
+check(
+    "a line inside an outline is lighter than the outline",
+    NotchIconGeometry.detailWeight < NotchIconGeometry.strokeWeight
+)
+
+check(
+    "line weight scales with the mark",
+    {
+        let small = NotchIconGeometry.parts(for: .cpu, in: CGRect(x: 0, y: 0, width: 50, height: 50))
+        let large = NotchIconGeometry.parts(for: .cpu, in: CGRect(x: 0, y: 0, width: 100, height: 100))
+        guard case .stroke(let thin) = small.first?.style,
+              case .stroke(let thick) = large.first?.style else { return false }
+        return abs(thin * 2 - thick) < 0.001
+    }()
+)
+
 // Nothing here creates a preference domain any more, so there is nothing of
 // this run's to clean up. See `InMemoryDefaults` for why: no amount of tidying
 // from inside the process survives the exit, because `cfprefsd` writes an empty

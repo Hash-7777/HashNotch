@@ -13,7 +13,7 @@ struct StorageDetailView: View {
                 // disk is still called Macintosh HD, which names the hardware
                 // rather than the thing being reported and reads as a label
                 // nobody got round to changing.
-                NotchSectionHeader("STORAGE", theme: theme)
+                NotchSectionHeader("STORAGE", icon: .storage, theme: theme)
 
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("\(usage.percentUsed)%")

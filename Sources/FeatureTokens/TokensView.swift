@@ -37,7 +37,7 @@ struct TokensDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            NotchSectionHeader("AI TOKENS", theme: theme)
+            NotchSectionHeader("AI TOKENS", icon: .tokens, theme: theme)
             row("Total AI tokens", monitor.today.total, emphasized: true)
             // "Number only" is a request for the number. The per-tool breakdown
             // is the part someone choosing that style is asking not to see.

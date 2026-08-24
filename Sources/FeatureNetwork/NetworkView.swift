@@ -140,7 +140,7 @@ struct NetworkDetailView: View {
     }
 
     private var row: some View {
-        NotchRow("Internet", theme: theme) {
+        NotchRow("Internet", icon: .internet, theme: theme) {
             switch style {
             case .stacked:
                 VStack(alignment: .trailing, spacing: 1) {

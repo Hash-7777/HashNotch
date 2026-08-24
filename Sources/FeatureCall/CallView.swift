@@ -66,7 +66,7 @@ struct CallDetailView: View {
     var body: some View {
         if let use = monitor.use {
             VStack(alignment: .leading, spacing: 7) {
-                NotchSectionHeader("MICROPHONE", theme: theme)
+                NotchSectionHeader("MICROPHONE", icon: .microphone, theme: theme)
 
                 HStack(spacing: 9) {
                     if let icon = monitor.appIcon() {

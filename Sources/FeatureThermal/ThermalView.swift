@@ -75,7 +75,7 @@ struct ThermalDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            NotchSectionHeader("TEMPERATURE", theme: theme)
+            NotchSectionHeader("TEMPERATURE", icon: .temperature, theme: theme)
 
             if monitor.sensors.isEmpty {
                 NotchRow("Pressure", theme: theme) {

@@ -10,7 +10,7 @@ struct AirPodsDetailView: View {
     var body: some View {
         if let battery = monitor.battery, !battery.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                NotchSectionHeader("AIRPODS", theme: theme)
+                NotchSectionHeader("AIRPODS", icon: .airpods, theme: theme)
                 if let single = battery.single, battery.left == nil, battery.right == nil {
                     row("AirPods", single)
                 } else {

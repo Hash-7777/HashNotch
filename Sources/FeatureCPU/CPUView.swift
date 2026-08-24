@@ -17,7 +17,7 @@ struct CPUDetailView: View {
     /// and ceiling rules give the height a meaning.
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            NotchRow("CPU", theme: theme) {
+            NotchRow("CPU", icon: .cpu, theme: theme) {
                 if style != .graph {
                     Text(text)
                         .foregroundStyle(tint)

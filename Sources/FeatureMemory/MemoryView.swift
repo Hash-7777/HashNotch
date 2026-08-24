@@ -10,7 +10,7 @@ struct MemoryDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            NotchRow("Memory", theme: theme) {
+            NotchRow("Memory", icon: .memory, theme: theme) {
                 if style != .graph {
                     Text(text)
                         .foregroundStyle(tint)
