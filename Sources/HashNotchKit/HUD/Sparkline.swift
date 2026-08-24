@@ -57,6 +57,19 @@ public struct Sparkline: View {
         }
     }
 
+    /// How deep the wash under the line is drawn, in points, whatever the
+    /// reading.
+    package static let washDepth: CGFloat = 11
+
+    /// Where the wash reaches nothing, as a fraction of the fill's own height.
+    ///
+    /// Pure so it can be measured: the whole point is that a tall fill fades
+    /// early and a short one is left alone, and that is one division.
+    package static func washStop(fillHeight: CGFloat) -> Double {
+        guard fillHeight > 0 else { return 1 }
+        return min(1, Double(washDepth / fillHeight))
+    }
+
     /// A shape needs two points; one sample is a dot and none is nothing.
     package static let minimumSamplesForShape = 2
 
@@ -93,6 +106,11 @@ public struct Sparkline: View {
             .stroke(tint.opacity(0.45), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
         } else {
             let path = shape(in: size)
+            // Where the highest point of the line sits, which is where the wash
+            // begins and therefore what decides how far down the gradient has
+            // to travel to be gone in eleven points.
+            let top = path.points.map(\.y).min() ?? 0
+            let stop = Self.washStop(fillHeight: size.height - top)
             ZStack {
                 // The wash under the line, which says how much of the box the
                 // reading is using without the eye having to measure the line
@@ -107,17 +125,22 @@ public struct Sparkline: View {
                 // saying one thing, "high", that the figure beside it already
                 // said in words.
                 //
-                // Reaching nothing at 85% of the way down means a tall fill
-                // loses its bottom half entirely and reads as a wash under the
-                // line, while a short one — a processor at a fifth — is barely
-                // touched, because it never gets far enough down the gradient
-                // to fade. The same change, and it lands where the problem is.
+                // So the wash is a fixed DEPTH rather than a fixed proportion:
+                // eleven points below the line, wherever the line happens to
+                // be. Fading by a proportion of the fill was the first attempt
+                // and it was only half a fix — 85% of a tall fill is still
+                // tall, and memory still drew a band, just a darker one.
+                //
+                // A depth cannot: a processor at a fifth has five points of
+                // fill and is untouched, memory at three quarters has twenty
+                // and keeps the top eleven of them. Every graph gets the same
+                // glow under its line and none of them gets a slab.
                 path.filled(in: size)
                     .fill(
                         LinearGradient(
                             stops: [
                                 .init(color: tint.opacity(0.22), location: 0),
-                                .init(color: tint.opacity(0), location: 0.85),
+                                .init(color: tint.opacity(0), location: stop),
                             ],
                             startPoint: .top,
                             endPoint: .bottom

@@ -106,9 +106,9 @@ All notable changes to HashNotch are recorded here.
   most Macs sits around three quarters and barely moves — filled three quarters
   of its box with solid colour. It was the heaviest thing in the panel, and all
   it was saying was "high", which the figure beside it already said in words.
-  The wash now fades to nothing before it reaches the bottom, so a tall one
-  loses its lower half and reads as a wash again, while a short one — the
-  processor at a fifth — is left alone.
+  The wash is now a fixed depth below the line — the same shallow glow whatever
+  the reading — so memory gets a line with a glow under it and the processor,
+  which never had the room to slab, is untouched.
 
 - **Press a number on the timer's wheel to go to it.** Dragging was the only way
   there, so a number sitting three places along, in plain sight, had to be
