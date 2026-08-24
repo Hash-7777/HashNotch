@@ -211,7 +211,12 @@ public final class NetworkMonitor: ObservableObject {
             || lastAppRead == .distantPast else { return }
         lastAppRead = now
         guard let reading = AppTrafficReader.read() else { return }
-        appLedger = NetworkAppUsageMath.folded(appLedger, reading: reading, now: now)
+        // Asked here rather than inside the fold, so the arithmetic stays a
+        // plain function of what it is handed. One `sysctl` per process in the
+        // sample, and only processes this user owns are ever in it.
+        appLedger = NetworkAppUsageMath.folded(
+            appLedger, reading: reading, now: now,
+            startTimes: ProcessStart.startTimes(for: reading.keys))
         publishUsage(now: now)
     }
 

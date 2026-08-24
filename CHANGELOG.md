@@ -180,6 +180,18 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **A program could be shown using more data than your Mac used in total.** The
+  by-app list read "not in the last sample" as "started since the last sample",
+  and therefore counted the whole of that program's counter as new traffic. The
+  premise is false: `nettop` lists the programs with traffic at that instant, so
+  a program that is merely quiet for a minute is simply not in the sample — and
+  when it came back, its entire lifetime's traffic was booked into today. A
+  program that had been running quietly since the morning could out-count the
+  whole machine. HashNotch now asks the system when each program actually
+  started, and counts a whole counter only when the program really did begin
+  since the last look; anything it cannot establish is treated as history, which
+  is the direction that under-counts rather than the one that invents.
+
 - **The word "Battery" no longer disappears while the battery is charging.**
   While macOS has no time-to-full estimate yet, that row's trailing text is a
   whole sentence, and the trailing side had the higher claim on the room — so

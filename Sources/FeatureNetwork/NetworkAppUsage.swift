@@ -90,14 +90,26 @@ package struct AppUsageLedger: Codable, Equatable, Sendable {
     package var started: Bool
     package var reset: AppUsageReset?
 
+    /// When the last sample was taken.
+    ///
+    /// The whole of the fix for the breakdown out-counting the total: it is
+    /// what makes "did this process start since we last looked?" a question
+    /// that can be answered rather than guessed at. Optional because a record
+    /// written before this existed has no such time, and one that cannot say
+    /// when it last looked treats every unfamiliar process as history — the
+    /// direction that under-counts.
+    package var lastSampleAt: Date?
+
     package init(
         days: [AppDayUsage] = [],
         lastSeen: [String: ProcessBytes] = [:],
         started: Bool = false,
-        reset: AppUsageReset? = nil
+        reset: AppUsageReset? = nil,
+        lastSampleAt: Date? = nil
     ) {
         self.days = days
         self.lastSeen = lastSeen
+        self.lastSampleAt = lastSampleAt
         self.started = started
         self.reset = reset
     }
@@ -218,32 +230,67 @@ package enum NetworkAppUsageMath {
         return raw
     }
 
+    /// Whether a process's whole counter is traffic this app has not counted
+    /// yet — which is true only if the process started since the last sample.
+    ///
+    /// This is the question that used to be answered by assumption, and the
+    /// assumption was wrong in a way that could make a program's figure exceed
+    /// the total it was a breakdown of.
+    ///
+    /// The old reasoning: a process missing from the last sample must have
+    /// started since, and a process's counter starts at zero when the process
+    /// does, so all of it is new. Sound reasoning, false premise. `nettop`
+    /// lists the processes with traffic on the links it was asked about, so a
+    /// process that is merely QUIET at the moment of a sample is not in it — and
+    /// when it goes busy again, its whole lifetime's counter was booked into
+    /// today. Measured on a real Mac before the fix: across four samples half a
+    /// minute apart, two processes appeared that were absent from the first,
+    /// and both had started half an hour before it.
+    ///
+    /// So the premise is checked. Anything that cannot be established — no
+    /// start time, no record of a previous sample — is treated as history,
+    /// because the two errors are not equal: under-counting shows a figure that
+    /// is honestly a floor, which the panel already says it is, and
+    /// over-counting shows a breakdown bigger than the thing it breaks down,
+    /// which is arithmetic anybody can see is wrong.
+    package static func countsWholeCounter(startedAt: Date?, since lastSample: Date?) -> Bool {
+        guard let lastSample, let startedAt else { return false }
+        return startedAt > lastSample
+    }
+
     /// How much of a process's counter is new since it was last read.
     ///
-    /// Three cases, and the middle one is where this differs from the interface
-    /// rule on purpose:
     /// - Nothing has ever been read: nothing. Every counter in that first
     ///   sample holds traffic from before anybody was watching.
-    /// - Never seen before, but not the first sample: ALL of it. A process this
-    ///   app has not met since its last look is one that started since, and a
-    ///   process's counter starts at zero when the process does. The interface
-    ///   rule says the opposite for exactly the same reason — an interface's
-    ///   counter starts when the Mac boots, long before this app looks at it,
-    ///   so its first value is history and a process's first value is not.
+    /// - Never seen before: all of it ONLY if the process is known to have
+    ///   started since the last sample — see `countsWholeCounter`. Otherwise
+    ///   nothing, and this reading becomes its baseline.
     /// - Grown: the difference, which is the ordinary case.
-    /// - Shrunk: all of it. A process id can be handed back and given to
-    ///   something else, and the something else starts at zero.
-    package static func delta(previous: UInt64?, current: UInt64, hasStarted: Bool) -> UInt64 {
+    /// - Shrunk: a process id handed back and given to something else, so all
+    ///   of what it now holds — on the same condition, since the something else
+    ///   must also have started since we last looked.
+    package static func delta(
+        previous: UInt64?,
+        current: UInt64,
+        hasStarted: Bool,
+        isNew: Bool
+    ) -> UInt64 {
         guard hasStarted else { return 0 }
-        guard let previous else { return current }
-        return current >= previous ? current - previous : current
+        guard let previous else { return isNew ? current : 0 }
+        if current >= previous { return current - previous }
+        return isNew ? current : 0
     }
 
     /// Folds one reading of the per-process counters into the ledger.
+    /// - Parameter startTimes: when each process in the reading started, by the
+    ///   same key. Supplied by the caller rather than looked up here, so this
+    ///   stays a plain function of its arguments and the checks can hand it any
+    ///   history they like.
     package static func folded(
         _ ledger: AppUsageLedger,
         reading: [String: ProcessBytes],
         now: Date,
+        startTimes: [String: Date] = [:],
         calendar: Calendar = .current
     ) -> AppUsageLedger {
         var next = ledger
@@ -263,10 +310,14 @@ package enum NetworkAppUsageMath {
                 continue
             }
 
+            let isNew = countsWholeCounter(
+                startedAt: startTimes[key], since: ledger.lastSampleAt)
             let received = delta(
-                previous: previous?.received, current: bytes.received, hasStarted: ledger.started)
+                previous: previous?.received, current: bytes.received,
+                hasStarted: ledger.started, isNew: isNew)
             let sent = delta(
-                previous: previous?.sent, current: bytes.sent, hasStarted: ledger.started)
+                previous: previous?.sent, current: bytes.sent,
+                hasStarted: ledger.started, isNew: isNew)
             guard received > 0 || sent > 0 else { continue }
             var entry = added[program] ?? AppBytes()
             entry.received &+= received
@@ -306,6 +357,7 @@ package enum NetworkAppUsageMath {
         }
         next.lastSeen = seen
         next.started = true
+        next.lastSampleAt = now
         return next
     }
 

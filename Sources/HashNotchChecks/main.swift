@@ -1260,16 +1260,61 @@ MainActor.assumeIsolated {
 
     // The delta rule, which is where this differs from the interface one ON
     // PURPOSE. An interface's counter starts when the Mac boots, so its first
-    // value is history. A process's counter starts when the process does, so
-    // the first value of a process met since the last look is not.
+    // value is history. A process's counter starts when the process does — so
+    // the whole counter of a process that genuinely started since the last look
+    // is not history, and the whole counter of one that merely went quiet and
+    // came back very much is.
     check("nothing at all is counted from the very first sample",
-          NetworkAppUsageMath.delta(previous: nil, current: 9_000_000, hasStarted: false) == 0)
-    check("a process met since the last look contributes all it holds",
-          NetworkAppUsageMath.delta(previous: nil, current: 9_000_000, hasStarted: true) == 9_000_000)
+          NetworkAppUsageMath.delta(
+            previous: nil, current: 9_000_000, hasStarted: false, isNew: true) == 0)
+    check("a process that really did start since the last look contributes all it holds",
+          NetworkAppUsageMath.delta(
+            previous: nil, current: 9_000_000, hasStarted: true, isNew: true) == 9_000_000)
+    // The bug this replaced: an unfamiliar process used to contribute its whole
+    // counter on the assumption that unfamiliar meant new, and a program that
+    // had been running quietly for hours could therefore book a lifetime of
+    // traffic into one minute — enough to exceed the total it is a breakdown
+    // of.
+    check("a process that was merely quiet contributes nothing until it grows",
+          NetworkAppUsageMath.delta(
+            previous: nil, current: 9_000_000, hasStarted: true, isNew: false) == 0)
     check("a process that grew contributes the difference",
-          NetworkAppUsageMath.delta(previous: 400, current: 900, hasStarted: true) == 500)
+          NetworkAppUsageMath.delta(
+            previous: 400, current: 900, hasStarted: true, isNew: false) == 500)
     check("a reused process id contributes what it now holds",
-          NetworkAppUsageMath.delta(previous: 900, current: 30, hasStarted: true) == 30)
+          NetworkAppUsageMath.delta(
+            previous: 900, current: 30, hasStarted: true, isNew: true) == 30)
+    check("but a counter that fell without a new process behind it contributes nothing",
+          NetworkAppUsageMath.delta(
+            previous: 900, current: 30, hasStarted: true, isNew: false) == 0)
+
+    // The rule that decides `isNew`, which is the premise that used to be
+    // assumed.
+    let sampleAt = Date()
+    check("a process that started after the last sample is new",
+          NetworkAppUsageMath.countsWholeCounter(
+            startedAt: sampleAt.addingTimeInterval(5), since: sampleAt))
+    check("one that started before it is not, however unfamiliar",
+          NetworkAppUsageMath.countsWholeCounter(
+            startedAt: sampleAt.addingTimeInterval(-1800), since: sampleAt) == false)
+    check("a start time that cannot be told is treated as history",
+          NetworkAppUsageMath.countsWholeCounter(startedAt: nil, since: sampleAt) == false)
+    check("and so is anything at all when there was no previous sample",
+          NetworkAppUsageMath.countsWholeCounter(
+            startedAt: sampleAt.addingTimeInterval(5), since: nil) == false)
+
+    // The pid on the end of a nettop key, which is how a start time is asked
+    // for at all.
+    check("a pid is read off the end of a key", ProcessStart.pid(fromKey: "Google Chrome.451") == 451)
+    check("a key with no pid gives none", ProcessStart.pid(fromKey: "Chrome.helper") == nil)
+    check("and neither does one that is all pid", ProcessStart.pid(fromKey: ".451") == nil)
+    // This process exists, so its own start time must be answerable and must be
+    // in the past — which is also the only end-to-end proof that the sysctl
+    // call is shaped correctly.
+    check("this very process can be asked when it started",
+          ProcessStart.startedAt(pid: getpid()).map { $0 <= Date() } == true)
+    check("a pid that cannot exist answers with nothing",
+          ProcessStart.startedAt(pid: pid_t(Int32.max)) == nil)
 
     func appReading(_ pairs: [(String, UInt64, UInt64)], at: Date) -> [String: ProcessBytes] {
         var result: [String: ProcessBytes] = [:]
@@ -1302,17 +1347,50 @@ MainActor.assumeIsolated {
     check("a process that sent nothing is not written down at all",
           appsSecond.days.first?.apps["Mail"] == nil)
 
-    // Two processes of one program add up as one program.
+    // Two processes of one program add up as one program. The helper is met
+    // for the first time here and it really is new — it started between the two
+    // samples — so its whole counter is traffic nobody has counted yet.
     let appsMerged = NetworkAppUsageMath.folded(
         appsSecond,
         reading: appReading(
             [("Safari.1", 5_400_000, 950_000), ("Safari Helper.9", 70_000, 0)],
             at: usageNow.addingTimeInterval(120)),
         now: usageNow.addingTimeInterval(120),
+        startTimes: ["Safari Helper.9": usageNow.addingTimeInterval(90)],
         calendar: usageCalendar
     )
     check("a program and its helper are one row",
           appsMerged.days.first?.apps["Safari"]?.received == 470_000)
+
+    // And the failure that made all this necessary, end to end: the same
+    // unfamiliar process, with the same counter, that had been running long
+    // before anybody looked. `nettop` leaves out a process that is merely quiet,
+    // so meeting one for the first time says nothing about when it started.
+    // Counted whole, a program running quietly for hours books a lifetime of
+    // traffic into one minute — which is how a breakdown comes to be bigger
+    // than the total it breaks down.
+    let quietAllAlong = NetworkAppUsageMath.folded(
+        appsSecond,
+        reading: appReading(
+            [("Safari.1", 5_300_000, 950_000), ("Dropbox.9", 4_000_000_000, 0)],
+            at: usageNow.addingTimeInterval(120)),
+        now: usageNow.addingTimeInterval(120),
+        startTimes: ["Dropbox.9": usageNow.addingTimeInterval(-86_400)],
+        calendar: usageCalendar
+    )
+    check("a program that was only quiet does not book its whole lifetime into today",
+          quietAllAlong.days.first?.apps["Dropbox"] == nil)
+    // It is baselined rather than ignored, so what it does NEXT is counted.
+    let quietThenBusy = NetworkAppUsageMath.folded(
+        quietAllAlong,
+        reading: appReading(
+            [("Dropbox.9", 4_000_500_000, 0)], at: usageNow.addingTimeInterval(180)),
+        now: usageNow.addingTimeInterval(180),
+        startTimes: ["Dropbox.9": usageNow.addingTimeInterval(-86_400)],
+        calendar: usageCalendar
+    )
+    check("but everything it sends after that is",
+          quietThenBusy.days.first?.apps["Dropbox"]?.received == 500_000)
 
     // The same refusal the totals make: the app was away across a change of
     // day, so what went through cannot be put against any one of them.
