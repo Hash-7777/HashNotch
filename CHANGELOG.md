@@ -113,6 +113,23 @@ All notable changes to HashNotch are recorded here.
   total sat directly under the speed row and was drawn exactly like it — same
   label, same pair of arrows and figures, same colours, same size — so two
   readings that answer completely different questions looked like one reading
+  given twice. What separates them now is the mark in front of the words, a
+  rising set of bars against the speed row's globe; the unit on the figures; and
+  the space between them, since the two directions sit at opposite ends of the
+  row rather than side by side. They are two answers, not one pair.
+
+- **The by-app list is now a picture as well as a list.** It was a name, two
+  figures and a hairline bar under each row — which put four bars in one block
+  once the total's own is counted, stacked one under another. Each row is now
+  the length it used, so the comparison is the shape of the list itself, in one
+  quiet colour rather than two: which way a program's traffic went is what the
+  bar above already answers, and a two-colour fill at this size ran its own
+  boundary straight underneath the figure on the right.
+
+- **How much you have used no longer looks like how fast you are going.** The
+  total sat directly under the speed row and was drawn exactly like it — same
+  label, same pair of arrows and figures, same colours, same size — so two
+  readings that answer completely different questions looked like one reading
   given twice. A speed is true for an instant and moves both ways; a total only
   grows, and you look at it once a day. It is now a block rather than a row: one
   figure large enough to be the answer, a bar underneath showing how much of it

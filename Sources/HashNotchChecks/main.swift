@@ -4732,104 +4732,15 @@ check("a whole hour grows an hours column", TimerViews.clock(3600) == "1:00:00")
 check("and the last second before it does not", TimerViews.clock(3599) == "59:59")
 check("nothing left reads as zero", TimerViews.clock(0) == "0:00")
 
-// MARK: - The total that stopped looking like a speed
+// MARK: - The per-program breakdown's lengths
 //
-// The bar under the "used" figure divides one number into the two directions it
-// is made of. Everything that can go wrong with it is arithmetic: a bar that
-// does not fill its track reads as data unaccounted for, a bar that overruns is
-// drawing more than happened, and a direction that is small but real must not
-// come out as nothing.
+// The used-today row is two figures now — the headline total and the bar that
+// divided it were taken out at the owner's request — so what is left to measure
+// here is the list underneath, where each row is drawn as the length that
+// program used against the biggest.
 
-let usedFull: CGFloat = 260
-
-check(
-    "nothing through draws no bar at all",
-    {
-        let widths = NetworkUsedMath.segmentWidths(
-            received: 0, sent: 0, full: usedFull, floor: NetworkUsedMath.minimumSegment)
-        return widths.down == 0 && widths.up == 0
-    }()
-)
-
-check(
-    "the two directions always fill the track exactly",
-    [
-        (UInt64(1), UInt64(1)), (1_940_000_000, 1_870_000_000), (14_180_000_000, 62_000_000),
-        (903_000, 12_400_000), (5, 0), (0, 5), (UInt64.max / 2, UInt64.max / 2)
-    ].allSatisfy { received, sent in
-        let widths = NetworkUsedMath.segmentWidths(
-            received: received, sent: sent, full: usedFull, floor: NetworkUsedMath.minimumSegment)
-        return abs(widths.down + widths.up - usedFull) < 0.001
-    }
-)
-
-check(
-    "an even split is drawn even",
-    {
-        let widths = NetworkUsedMath.segmentWidths(
-            received: 500, sent: 500, full: usedFull, floor: NetworkUsedMath.minimumSegment)
-        return abs(widths.down - widths.up) < 0.001
-    }()
-)
-
-// The reason the floor exists: a day that is a thousandth upload is still a day
-// with upload in it, and drawing that as nothing is the one answer that is
-// plainly false.
-check(
-    "a direction too small to see is still drawn",
-    {
-        let widths = NetworkUsedMath.segmentWidths(
-            received: 10_000_000_000, sent: 1_000, full: usedFull,
-            floor: NetworkUsedMath.minimumSegment)
-        return widths.up >= NetworkUsedMath.minimumSegment
-    }()
-)
-
-check(
-    "and the room for it is taken from the other direction, not added to the track",
-    {
-        let widths = NetworkUsedMath.segmentWidths(
-            received: 10_000_000_000, sent: 1_000, full: usedFull,
-            floor: NetworkUsedMath.minimumSegment)
-        return abs(widths.down + widths.up - usedFull) < 0.001
-            && widths.down < usedFull
-    }()
-)
-
-// A floor for something that did happen, and none for something that did not.
-check(
-    "a direction with nothing in it is drawn as nothing",
-    {
-        let down = NetworkUsedMath.segmentWidths(
-            received: 4_000, sent: 0, full: usedFull, floor: NetworkUsedMath.minimumSegment)
-        let up = NetworkUsedMath.segmentWidths(
-            received: 0, sent: 4_000, full: usedFull, floor: NetworkUsedMath.minimumSegment)
-        return down.up == 0 && abs(down.down - usedFull) < 0.001
-            && up.down == 0 && abs(up.up - usedFull) < 0.001
-    }()
-)
-
-// The picture and the list under it have to stay parent and child. Equal
-// weights would make the breakdown look like a second reading of the same
-// standing, which is the thing the block was redrawn to stop.
-// The gap between the two halves is taken out of the track, not added to it.
-// A bar that overran its own track would be drawing more than went through.
-check(
-    "the gap between the two halves comes out of the bar, not out of the panel",
-    abs(NetworkUsedMath.drawableWidth(Panel.rowWidth) + NetworkUsedMath.segmentGap - Panel.rowWidth) < 0.001
-)
-check(
-    "and a bar with no room for a gap does not go negative",
-    NetworkUsedMath.drawableWidth(1) >= 0 && NetworkUsedMath.drawableWidth(0) == 0
-)
-
-check(
-    "the breakdown is drawn more quietly than the total it explains",
-    NetworkUsedMath.breakdownFillOpacity < NetworkUsedMath.barOpacity
-)
-// Each program's row is a length that can be compared with the one above it,
-// so a row for something that used almost nothing must still start where every
-// other row starts and still be visible.
+// A program that used a thousandth of what the biggest did still used
+// something, and a row drawn as nothing would say otherwise.
 check(
     "every program that used anything gets a visible length",
     [UInt64(1), 1_000, 500_000_000].allSatisfy { total in
@@ -4843,6 +4754,17 @@ check(
     NetworkAppUsageMath.barWidth(
         total: 10_000_000_000, biggest: 10_000_000_000,
         full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment * 2) == Panel.rowWidth
+)
+check(
+    "a program that used nothing gets no length at all",
+    NetworkAppUsageMath.barWidth(
+        total: 0, biggest: 10_000_000_000,
+        full: Panel.rowWidth, floor: NetworkUsedMath.minimumSegment * 2) == 0
+)
+// The list has to stay visibly subordinate to the figures it explains.
+check(
+    "the breakdown is drawn faintly",
+    NetworkUsedMath.breakdownFillOpacity < 0.5
 )
 
 // MARK: - The panel's drawn marks
