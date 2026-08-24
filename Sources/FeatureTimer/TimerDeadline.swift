@@ -153,15 +153,60 @@ package enum TimerLength {
 
     /// Coarser steps at higher values, so a long timer is quick to dial without
     /// making a short one clumsy.
+    ///
+    /// Kept for the arrow keys, which move by a step rather than by a distance.
     package static func step(for minutes: Int) -> Int {
         if minutes >= 60 { return 15 }
         if minutes >= 20 { return 5 }
         return 1
     }
 
-    /// One press of minus or plus, kept inside the ends.
+    /// One press of an arrow key, kept inside the ends.
     package static func adjusted(_ minutes: Int, by direction: Int) -> Int {
         clamped(minutes + step(for: minutes) * direction)
+    }
+
+    // MARK: The wheel
+
+    /// How far the wheel travels for one minute.
+    ///
+    /// Small enough that a whole minute is a deliberate movement rather than a
+    /// twitch, and large enough for the numbers to have room: at twenty-six the
+    /// wheel was fine at ten minutes and collided with itself at a hundred and
+    /// twenty, where every number on it is three digits wide.
+    package static let pointsPerMinute: CGFloat = 34
+
+    /// How much of a flick's own momentum the wheel keeps.
+    ///
+    /// A drag that is released while still moving should carry on, the way the
+    /// one on a phone does, or every long timer is a series of short drags. The
+    /// system's predicted landing point is where the finger WOULD have stopped,
+    /// which on a trackpad is a very long way — taken whole, a light flick
+    /// crossed hours. Half of it puts a comfortable flick at around half an
+    /// hour and leaves the whole range reachable in a few.
+    package static let flickThrow: CGFloat = 0.5
+
+    /// Where the wheel has been dragged to.
+    ///
+    /// Dragging RIGHT brings the numbers on the left of the middle into it, and
+    /// those are the smaller ones — the same way round as a wheel lying on its
+    /// side, which is what this is drawn as.
+    package static func dragged(from base: Int, by distance: CGFloat) -> Int {
+        guard pointsPerMinute > 0 else { return clamped(base) }
+        let steps = (distance / pointsPerMinute).rounded()
+        // Through a Double, because a drag long enough to overflow an Int when
+        // divided is not impossible on a trackpad and a crash here would be an
+        // absurd way to lose an app.
+        let moved = Double(base) - Double(steps)
+        guard moved.isFinite else { return clamped(base) }
+        return clamped(Int(moved.clamped(to: -1e9...1e9)))
+    }
+
+    /// How far past the last whole minute the wheel is sitting, so it can be
+    /// drawn mid-turn rather than jumping a minute at a time.
+    package static func residual(_ distance: CGFloat) -> CGFloat {
+        guard pointsPerMinute > 0 else { return 0 }
+        return distance - (distance / pointsPerMinute).rounded() * pointsPerMinute
     }
 
     package static func clamped(_ minutes: Int) -> Int {
@@ -188,5 +233,12 @@ package enum TimerLengthStore {
 
     package static func save(_ minutes: Int, to defaults: UserDefaults = .standard) {
         defaults.set(TimerLength.clamped(minutes), forKey: key)
+    }
+}
+
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }

@@ -130,21 +130,21 @@ struct TimerDetailView: View {
         .help("Open System Settings, where notifications for HashNotch can be turned back on")
     }
 
-    /// Set your own length: minus / value / plus, then start.
+    /// Set the length by turning a wheel, then start.
+    ///
+    /// It was a minus button, a figure and a plus button. Two problems with
+    /// that, and the owner asked for the phone's answer instead: a press is one
+    /// step, so any length far from where you started is a lot of presses, and
+    /// the steps had to grow coarser as the number grew to keep that bearable —
+    /// which meant the control silently changed what it did depending on where
+    /// it already was.
+    ///
+    /// A wheel has neither problem. Every minute is one minute wherever you
+    /// are, a slow drag picks one exactly, and a flick carries — so twelve
+    /// minutes and two hours are the same gesture at different speeds.
     private var customRow: some View {
-        HStack(spacing: 8) {
-            stepButton("minus") {
-                engine.preferredMinutes = TimerLength.adjusted(engine.preferredMinutes, by: -1)
-            }
-            Text("\(engine.preferredMinutes) min")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(theme.textColor)
-                .monospacedDigit()
-                .frame(minWidth: 52)
-            stepButton("plus") {
-                engine.preferredMinutes = TimerLength.adjusted(engine.preferredMinutes, by: 1)
-            }
-            Spacer(minLength: 0)
+        HStack(spacing: 10) {
+            TimerWheel(minutes: $engine.preferredMinutes, theme: theme)
             Button {
                 engine.begin(minutes: engine.preferredMinutes)
             } label: {
@@ -172,18 +172,6 @@ struct TimerDetailView: View {
         }
     }
 
-    private func stepButton(_ symbol: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(theme.textColor)
-                .frame(width: 24, height: 24)
-                .background(Circle().fill(Color.white.opacity(0.12)))
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-    }
-
     private var stopButton: some View {
         Button {
             engine.cancel()
@@ -204,5 +192,156 @@ package enum TimerViews {
             return String(format: "%d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60)
         }
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+
+/// A wheel of minutes, lying on its side.
+///
+/// Drawn rather than assembled from a system control, because macOS has no
+/// wheel: `Picker` offers a menu or a list of radio buttons here, and neither is
+/// something you can flick. What it imitates is the one on a phone, and that is
+/// worth imitating for a reason that is not nostalgia — numbers moving under a
+/// fixed mark tell you which way you are going and how fast, and a stepper's
+/// single figure tells you neither.
+///
+/// The arithmetic is not in here. `TimerLength` turns a distance into a number
+/// of minutes and back, so the part that can be wrong can also be measured.
+struct TimerWheel: View {
+    @Binding var minutes: Int
+    let theme: Theme
+
+    /// How far the current drag has travelled. Zero when nothing is being
+    /// dragged, and the committed value in `minutes` is the truth.
+    @State private var travelled: CGFloat = 0
+    @State private var dragging = false
+
+    /// Wide enough for a few minutes either side of the middle at the family's
+    /// spacing, and narrow enough to leave the Start button its room.
+    private static let width: CGFloat = 168
+    private static let height: CGFloat = 30
+    /// How many numbers are drawn each side. More than can be seen, so a number
+    /// is never seen arriving from nowhere.
+    private static let reach = 3
+
+    /// What the wheel currently reads, which during a drag is not yet what has
+    /// been committed.
+    private var showing: Int { TimerLength.dragged(from: minutes, by: travelled) }
+
+    var body: some View {
+        ZStack {
+            // The mark the numbers pass under. Two faint uprights rather than a
+            // filled box: the number between them is the reading, and a box
+            // around it would be a second thing to look at.
+            // Wide enough to clear the biggest number the wheel can show,
+            // which is three digits at fifteen points.
+            HStack(spacing: TimerLength.pointsPerMinute * 1.32) {
+                marker
+                marker
+            }
+            numbers
+        }
+        .frame(width: Self.width, height: Self.height)
+        // The numbers run out at the edges rather than stopping dead, so the
+        // wheel reads as longer than the window it is seen through.
+        .mask(fade)
+        .contentShape(Rectangle())
+        .gesture(drag)
+        .accessibilityLabel("Timer length")
+        .accessibilityValue("\(minutes) minutes")
+        // Still adjustable without dragging, for anybody who would rather not
+        // and for anybody who cannot.
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: minutes = TimerLength.adjusted(minutes, by: 1)
+            case .decrement: minutes = TimerLength.adjusted(minutes, by: -1)
+            @unknown default: break
+            }
+        }
+        .help("Drag to set the length")
+    }
+
+    private var marker: some View {
+        Capsule()
+            .fill(theme.accent.opacity(0.5))
+            .frame(width: 1.5, height: 14)
+    }
+
+    private var numbers: some View {
+        let centre = showing
+        let residual = TimerLength.residual(travelled)
+        return ZStack {
+            ForEach(window(around: centre), id: \.self) { value in
+                number(value, centre: centre, residual: residual)
+            }
+        }
+        // Nothing animates while a finger is on it: the finger is already the
+        // motion, and animating on top of it is what makes a wheel feel like it
+        // is arguing with you.
+        .animation(dragging ? nil : .snappy(duration: 0.22), value: centre)
+    }
+
+    /// The numbers worth drawing: more than fit, so none is ever seen arriving
+    /// from nowhere, and never any that do not exist.
+    private func window(around centre: Int) -> [Int] {
+        let lowest = max(TimerLength.shortest, centre - Self.reach)
+        let highest = min(TimerLength.longest, centre + Self.reach)
+        guard lowest <= highest else { return [centre] }
+        return Array(lowest...highest)
+    }
+
+    /// One number on the wheel. Written out with its parts named rather than as
+    /// one expression — the compiler gave up type-checking the nested version,
+    /// which is its way of saying the same thing a reader would.
+    @ViewBuilder
+    private func number(_ value: Int, centre: Int, residual: CGFloat) -> some View {
+        let isCentre: Bool = value == centre
+        let distance: CGFloat = CGFloat(value - centre)
+        let size: CGFloat = isCentre ? 15 : 11
+        let weight: Font.Weight = isCentre ? .bold : .medium
+        // Away from the middle they fade and shrink, which is what makes a flat
+        // row of numbers read as a wheel turning rather than as a list sliding.
+        let fade: Double = isCentre ? 1 : max(0, 0.55 - Double(abs(distance)) * 0.12)
+        let shrink: CGFloat = isCentre ? 1 : max(0.72, 1 - abs(distance) * 0.09)
+        let slide: CGFloat = distance * TimerLength.pointsPerMinute + residual
+        Text(String(value))
+            .font(.system(size: size, weight: weight, design: .rounded))
+            .foregroundStyle(isCentre ? theme.textColor : theme.subtitleColor)
+            .monospacedDigit()
+            .opacity(fade)
+            .scaleEffect(shrink)
+            .offset(x: slide)
+    }
+
+    /// Solid in the middle, gone at both ends.
+    private var fade: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: 0.16),
+                .init(color: .black, location: 0.84),
+                .init(color: .clear, location: 1),
+            ],
+            startPoint: .leading, endPoint: .trailing)
+    }
+
+    private var drag: some Gesture {
+        DragGesture(minimumDistance: 1)
+            .onChanged { value in
+                dragging = true
+                travelled = value.translation.width
+            }
+            .onEnded { value in
+                // Where the finger was still going when it let go, not where it
+                // stopped. Without this, every long timer is a series of short
+                // drags.
+                let thrown = value.predictedEndTranslation.width * TimerLength.flickThrow
+                let carried = abs(thrown) > abs(value.translation.width)
+                    ? thrown : value.translation.width
+                let settled = TimerLength.dragged(from: minutes, by: carried)
+                dragging = false
+                travelled = 0
+                withAnimation(.snappy(duration: 0.28)) { minutes = settled }
+            }
     }
 }

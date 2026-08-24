@@ -101,6 +101,16 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **The timer's length is set with a wheel now, not a plus and a minus.** Drag
+  it either way and the minutes turn under a fixed mark, the way the one on a
+  phone does; a slow drag picks a minute exactly and a flick carries on past
+  where your finger stopped, so twelve minutes and two hours are the same
+  gesture at different speeds. The buttons had two problems the wheel does not:
+  a press was one step, so any length far from where you started was a lot of
+  presses, and the step had to grow coarser as the number grew to keep that
+  bearable — which meant the control quietly did something different depending
+  on where it already was. Every minute is one minute now, wherever you are.
+
 - **The AI token count is one line.** It was a heading, a total, a row for each
   tool and a line saying when the count was taken — five lines of panel for one
   number, in a panel whose height is the scarcest thing it has. It is now a

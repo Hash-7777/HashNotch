@@ -4697,6 +4697,62 @@ TimerDeadlineStore.clear(from: deadlineDefaults)
 check("and clearing it leaves nothing", TimerDeadlineStore.load(from: deadlineDefaults) == nil)
 
 // The stepper's rules, which used to live inside the view's body.
+// The wheel. Everything about it that can be wrong is a distance turning into
+// a number of minutes, which is a plain function and is therefore measured here
+// rather than by dragging it.
+check(
+    "the wheel starts where it was left",
+    TimerLength.dragged(from: 10, by: 0) == 10
+)
+check(
+    "dragging right winds the minutes down",
+    TimerLength.dragged(from: 30, by: TimerLength.pointsPerMinute * 4) == 26
+)
+check(
+    "and dragging left winds them up",
+    TimerLength.dragged(from: 30, by: -TimerLength.pointsPerMinute * 4) == 34
+)
+check(
+    "a movement smaller than half a minute changes nothing",
+    TimerLength.dragged(from: 10, by: TimerLength.pointsPerMinute * 0.4) == 10
+)
+check(
+    "and one past half a minute moves a whole one",
+    TimerLength.dragged(from: 10, by: TimerLength.pointsPerMinute * 0.6) == 9
+)
+check(
+    "the wheel cannot be wound past either end",
+    TimerLength.dragged(from: 2, by: TimerLength.pointsPerMinute * 500) == TimerLength.shortest
+        && TimerLength.dragged(from: 590, by: -TimerLength.pointsPerMinute * 500) == TimerLength.longest
+)
+// A trackpad can report a very long throw, and a distance big enough to
+// overflow the arithmetic behind it would be an absurd way to lose an app.
+check(
+    "an impossible drag is survived rather than overflowed",
+    TimerLength.dragged(from: 10, by: .greatestFiniteMagnitude) == TimerLength.shortest
+        && TimerLength.dragged(from: 10, by: -.greatestFiniteMagnitude) == TimerLength.longest
+        && TimerLength.dragged(from: 10, by: .nan) == 10
+)
+// The part drawn mid-turn: how far past the last whole minute the wheel sits.
+// It must never reach a whole step, or a number would be drawn a full place
+// away from where it belongs.
+check(
+    "what is left over is always less than half a minute",
+    stride(from: -400.0, through: 400.0, by: 3.7).allSatisfy { distance in
+        abs(TimerLength.residual(CGFloat(distance))) <= TimerLength.pointsPerMinute / 2 + 0.001
+    }
+)
+check(
+    "a whole number of minutes leaves nothing over",
+    abs(TimerLength.residual(TimerLength.pointsPerMinute * 3)) < 0.001
+)
+// A flick has to carry further than the finger did, or a long timer is a series
+// of short drags — but not so far that a light one crosses hours.
+check(
+    "a flick carries, and not too far",
+    TimerLength.flickThrow > 0 && TimerLength.flickThrow < 1
+)
+
 check("a short timer steps by a minute", TimerLength.step(for: 5) == 1)
 check("a medium one by five", TimerLength.step(for: 20) == 5)
 check("an hour or more by a quarter", TimerLength.step(for: 60) == 15)
