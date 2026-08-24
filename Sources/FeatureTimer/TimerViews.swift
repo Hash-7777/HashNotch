@@ -199,54 +199,81 @@ package enum TimerViews {
 /// A wheel of minutes, lying on its side.
 ///
 /// Drawn rather than assembled from a system control, because macOS has no
-/// wheel: `Picker` offers a menu or a list of radio buttons here, and neither is
-/// something you can flick. What it imitates is the one on a phone, and that is
-/// worth imitating for a reason that is not nostalgia — numbers moving under a
-/// fixed mark tell you which way you are going and how fast, and a stepper's
-/// single figure tells you neither.
+/// wheel: `Picker` offers a menu or a column of radio buttons here, and neither
+/// is something anybody can flick. What it imitates is the one on a phone, and
+/// that is worth imitating for a reason that is not nostalgia — numbers moving
+/// under a fixed mark tell you which way you are going and how fast, and a
+/// stepper's single figure tells you neither.
 ///
-/// The arithmetic is not in here. `TimerLength` turns a distance into a number
-/// of minutes and back, so the part that can be wrong can also be measured.
+/// **One number holds its state.** `position` is where the strip is, measured
+/// in minutes and fractional while it turns, and every number on the strip is
+/// placed against it. That is the whole of the design, and it is a correction:
+/// the first version kept the committed minute and the finger's travel
+/// separately and worked out what to draw from the pair, which lurched on
+/// release and scattered on a press. See `TimerLength.position(from:draggedBy:)`
+/// for what those two faults looked like.
+///
+/// **Nothing fades by hand.** Every number is drawn at one size and one weight
+/// apart from the one under the band, and the falling-away at the edges is a
+/// mask over the whole strip rather than an opacity worked out per number. A
+/// number therefore does not change as it travels — it is simply somewhere the
+/// mask is thinner — which is why the strip reads as one moving object.
+///
+/// The arithmetic is not in here. `TimerLength` turns a drag or a press into a
+/// position, so the part that can be wrong can also be measured.
 struct TimerWheel: View {
     @Binding var minutes: Int
     let theme: Theme
 
-    /// How far the current drag has travelled. Zero when nothing is being
-    /// dragged, and the committed value in `minutes` is the truth.
-    @State private var travelled: CGFloat = 0
-    @State private var dragging = false
+    /// Where the strip is, in minutes. The only state the wheel has.
+    @State private var position: CGFloat = CGFloat(TimerLength.initial)
+    /// A position to open at instead of the one the binding carries.
+    ///
+    /// Only ever passed when the wheel is being drawn for inspection rather
+    /// than used. A still picture of a wheel cannot show the one thing that
+    /// matters about it — what a half-turned strip looks like — and this is how
+    /// that picture gets taken.
+    var startingAt: CGFloat?
+    /// Where it was when the current turn began.
+    @State private var anchor: CGFloat = CGFloat(TimerLength.initial)
+    @State private var turning = false
 
-    /// Wide enough for a few minutes either side of the middle at the family's
-    /// spacing, and narrow enough to leave the Start button its room.
+    /// Wide enough for a few minutes either side of the middle, and narrow
+    /// enough to leave the Start button its room.
     private static let width: CGFloat = 168
     private static let height: CGFloat = 26
-    /// How many numbers are drawn each side. More than can be seen, so a number
-    /// is never seen arriving from nowhere.
-    private static let reach = 4
+    /// How many numbers are drawn each side. Well past the edge of the window,
+    /// so a number is never seen arriving from nowhere — it is already drawn,
+    /// out where the mask has taken it to nothing.
+    private static let reach = 5
+    /// How far a finger may move and still have been a press rather than a drag.
+    private static let pressSlop: CGFloat = 3
 
-    /// What the wheel currently reads, which during a drag is not yet what has
-    /// been committed.
-    private var showing: Int { TimerLength.dragged(from: minutes, by: travelled) }
+    /// The minute the wheel is resting on, which during a turn is whichever one
+    /// is passing under the band.
+    private var showing: Int { TimerLength.settled(position) }
 
     var body: some View {
         ZStack {
             band
-            numbers
+            strip
         }
         .frame(width: Self.width, height: Self.height)
         // The numbers run out at the edges rather than stopping dead, so the
-        // wheel reads as longer than the window it is seen through.
+        // wheel reads as longer than the window it is seen through — and this
+        // is also what hides the ones drawn beyond it.
         .mask(fade)
         .contentShape(Rectangle())
-        .gesture(drag)
+        .gesture(turn)
+        .onAppear { position = startingAt ?? CGFloat(minutes) }
         .accessibilityLabel("Timer length")
         .accessibilityValue("\(minutes) minutes")
         // Still adjustable without dragging, for anybody who would rather not
         // and for anybody who cannot.
         .accessibilityAdjustableAction { direction in
             switch direction {
-            case .increment: minutes = TimerLength.adjusted(minutes, by: 1)
-            case .decrement: minutes = TimerLength.adjusted(minutes, by: -1)
+            case .increment: settle(on: TimerLength.adjusted(minutes, by: 1))
+            case .decrement: settle(on: TimerLength.adjusted(minutes, by: -1))
             @unknown default: break
             }
         }
@@ -271,18 +298,13 @@ struct TimerWheel: View {
             .frame(width: TimerLength.pointsPerMinute + 2, height: Self.height - 6)
     }
 
-    private var numbers: some View {
+    private var strip: some View {
         let centre = showing
-        let residual = TimerLength.residual(travelled)
         return ZStack {
             ForEach(window(around: centre), id: \.self) { value in
-                number(value, centre: centre, residual: residual)
+                number(value, centre: centre)
             }
         }
-        // Nothing animates while a finger is on it: the finger is already the
-        // motion, and animating on top of it is what makes a wheel feel like it
-        // is arguing with you.
-        .animation(dragging ? nil : .snappy(duration: 0.22), value: centre)
     }
 
     /// The numbers worth drawing: more than fit, so none is ever seen arriving
@@ -294,29 +316,26 @@ struct TimerWheel: View {
         return Array(lowest...highest)
     }
 
-    /// One number on the wheel. Written out with its parts named rather than as
-    /// one expression — the compiler gave up type-checking the nested version,
-    /// which is its way of saying the same thing a reader would.
+    /// One number, placed against the strip's position rather than against the
+    /// selected minute.
     ///
-    /// **Every number is the same size.** The middle one used to be drawn half
-    /// again as large, and the wheel it made was not the one on a phone: the
-    /// numbers had to be pushed far apart to leave room for it, and a strip of
-    /// widely spaced numbers of differing sizes reads as a row of separate
-    /// labels rather than as one turning thing. What marks the middle is where
-    /// it is — in the band — and how bright it is, and those are enough. Only
-    /// the fading is left to say which way the wheel runs.
+    /// That distinction is the whole fix. Measured against the selection, every
+    /// number moved whenever the selection changed and SwiftUI animated each of
+    /// them separately — a scatter. Measured against `position`, a number's
+    /// place is fixed and the strip is what moves.
+    ///
+    /// Written out with its parts named rather than as one expression: the
+    /// compiler gave up type-checking the nested version, which is its way of
+    /// saying what a reader would.
     @ViewBuilder
-    private func number(_ value: Int, centre: Int, residual: CGFloat) -> some View {
+    private func number(_ value: Int, centre: Int) -> some View {
         let isCentre: Bool = value == centre
-        let distance: CGFloat = CGFloat(value - centre)
         let weight: Font.Weight = isCentre ? .semibold : .medium
-        let fade: Double = isCentre ? 1 : max(0.16, 0.5 - Double(abs(distance)) * 0.11)
-        let slide: CGFloat = distance * TimerLength.pointsPerMinute + residual
+        let slide: CGFloat = (CGFloat(value) - position) * TimerLength.pointsPerMinute
         Text(String(value))
             .font(.system(size: 12, weight: weight, design: .rounded))
             .foregroundStyle(isCentre ? theme.textColor : theme.subtitleColor)
             .monospacedDigit()
-            .opacity(fade)
             .offset(x: slide)
     }
 
@@ -325,47 +344,55 @@ struct TimerWheel: View {
         LinearGradient(
             stops: [
                 .init(color: .clear, location: 0),
-                .init(color: .black, location: 0.16),
-                .init(color: .black, location: 0.84),
+                .init(color: .black, location: 0.2),
+                .init(color: .black, location: 0.8),
                 .init(color: .clear, location: 1),
             ],
             startPoint: .leading, endPoint: .trailing)
     }
 
-    /// How far a finger may move and still have been a press rather than a drag.
-    private static let pressSlop: CGFloat = 3
-
-    private var drag: some Gesture {
+    private var turn: some Gesture {
         // From nothing, so the same gesture sees a press. Two gestures on one
         // view would have to argue about which of them a short movement
-        // belonged to, and the answer is knowable at the end: a press is a drag
+        // belonged to, and the answer is knowable at the end: a press is a turn
         // that went nowhere.
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                if !turning {
+                    turning = true
+                    anchor = position
+                }
                 guard abs(value.translation.width) > Self.pressSlop else { return }
-                dragging = true
-                travelled = value.translation.width
+                position = TimerLength.position(from: anchor, draggedBy: value.translation.width)
             }
             .onEnded { value in
-                // A press: go to the number under it.
+                turning = false
                 guard abs(value.translation.width) > Self.pressSlop else {
-                    dragging = false
-                    travelled = 0
-                    let pressed = TimerLength.tapped(
-                        from: minutes, atX: value.location.x, width: Self.width)
-                    withAnimation(.snappy(duration: 0.24)) { minutes = pressed }
+                    settle(on: TimerLength.tapped(
+                        from: showing, atX: value.location.x, width: Self.width))
                     return
                 }
-                // Otherwise, where the finger was still going when it let go,
-                // not where it stopped. Without this, every long timer is a
-                // series of short drags.
+                // Where the finger was still going when it let go, not where it
+                // stopped. Without this, every long timer is a series of short
+                // drags.
                 let thrown = value.predictedEndTranslation.width * TimerLength.flickThrow
                 let carried = abs(thrown) > abs(value.translation.width)
                     ? thrown : value.translation.width
-                let settled = TimerLength.dragged(from: minutes, by: carried)
-                dragging = false
-                travelled = 0
-                withAnimation(.snappy(duration: 0.28)) { minutes = settled }
+                settle(on: TimerLength.settled(
+                    TimerLength.position(from: anchor, draggedBy: carried)))
             }
+    }
+
+    /// Come to rest on a minute: the strip glides there, and that minute is the
+    /// answer.
+    ///
+    /// Both in one transaction, because they are one event. Setting them apart
+    /// is what made the wheel lurch — for a frame the strip would be back where
+    /// the turn started while the answer had already moved on.
+    private func settle(on target: Int) {
+        withAnimation(.snappy(duration: 0.26)) {
+            position = CGFloat(target)
+            minutes = target
+        }
     }
 }

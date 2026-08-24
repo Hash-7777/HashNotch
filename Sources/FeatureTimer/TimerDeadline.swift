@@ -194,20 +194,45 @@ package enum TimerLength {
     /// hour and leaves the whole range reachable in a few.
     package static let flickThrow: CGFloat = 0.5
 
-    /// Where the wheel has been dragged to.
+    /// Where the wheel is, measured in minutes, and fractional while it turns.
     ///
-    /// Dragging RIGHT brings the numbers on the left of the middle into it, and
-    /// those are the smaller ones — the same way round as a wheel lying on its
-    /// side, which is what this is drawn as.
-    package static func dragged(from base: Int, by distance: CGFloat) -> Int {
-        guard pointsPerMinute > 0 else { return clamped(base) }
-        let steps = (distance / pointsPerMinute).rounded()
-        // Through a Double, because a drag long enough to overflow an Int when
-        // divided is not impossible on a trackpad and a crash here would be an
-        // absurd way to lose an app.
-        let moved = Double(base) - Double(steps)
-        guard moved.isFinite else { return clamped(base) }
-        return clamped(Int(moved.clamped(to: -1e9...1e9)))
+    /// **The wheel has one number describing its state, and this is it.** It
+    /// used to have two — the minute that was committed, and how far the finger
+    /// had travelled since — with what you see worked out from the pair. That
+    /// is what produced the lurch on letting go: the two were put down in
+    /// separate steps, so for a single frame the travel had been zeroed while
+    /// the minute had not, the wheel drew itself back where the drag began, and
+    /// then flew to where it had been released from. The same two-part state
+    /// made a press worse — every number's position was measured from the
+    /// selected one, so changing the selection moved all of them at once and
+    /// SwiftUI animated each independently, which is a scatter rather than a
+    /// wheel turning.
+    ///
+    /// One number cannot disagree with itself. Everything on the strip is
+    /// placed against it, so animating it moves the whole strip together, which
+    /// is the only motion a wheel has.
+    ///
+    /// Dragging RIGHT brings the numbers left of the middle into it, and those
+    /// are the smaller ones — the same way round as a wheel lying on its side.
+    package static func position(from anchor: CGFloat, draggedBy distance: CGFloat) -> CGFloat {
+        guard pointsPerMinute > 0, anchor.isFinite, distance.isFinite else {
+            return clampedPosition(anchor)
+        }
+        return clampedPosition(anchor - distance / pointsPerMinute)
+    }
+
+    /// The minute a position rests on.
+    package static func settled(_ position: CGFloat) -> Int {
+        guard position.isFinite else { return shortest }
+        let rounded = Double(position).rounded()
+        return clamped(Int(rounded.clamped(to: -1e9...1e9)))
+    }
+
+    /// A position kept between the two ends, so the strip cannot be dragged off
+    /// into empty space.
+    package static func clampedPosition(_ position: CGFloat) -> CGFloat {
+        guard position.isFinite else { return CGFloat(shortest) }
+        return min(max(position, CGFloat(shortest)), CGFloat(longest))
     }
 
     /// The minute somebody pressed, rather than the one they dragged to.
@@ -227,13 +252,6 @@ package enum TimerLength {
         let moved = Double(base) + Double(steps)
         guard moved.isFinite else { return clamped(base) }
         return clamped(Int(moved.clamped(to: -1e9...1e9)))
-    }
-
-    /// How far past the last whole minute the wheel is sitting, so it can be
-    /// drawn mid-turn rather than jumping a minute at a time.
-    package static func residual(_ distance: CGFloat) -> CGFloat {
-        guard pointsPerMinute > 0 else { return 0 }
-        return distance - (distance / pointsPerMinute).rounded() * pointsPerMinute
     }
 
     package static func clamped(_ minutes: Int) -> Int {

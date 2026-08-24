@@ -110,6 +110,17 @@ All notable changes to HashNotch are recorded here.
   the reading — so memory gets a line with a glow under it and the processor,
   which never had the room to slab, is untouched.
 
+- **The timer's wheel turns as one thing now.** Letting go of a drag made it
+  lurch — for an instant it snapped back to where the drag had started before
+  flying to where it was released — and pressing a number made every other
+  number scatter to its new place rather than the strip sliding there. Both came
+  from the same cause: the wheel kept two separate notes of where it was, the
+  minute it had settled on and how far your finger had moved since, and worked
+  out what to draw from the pair. They could disagree for a frame, and did.
+  There is one number now, and everything on the wheel is placed against it, so
+  turning it moves the whole strip together — which is the only motion a wheel
+  has.
+
 - **Press a number on the timer's wheel to go to it.** Dragging was the only way
   there, so a number sitting three places along, in plain sight, had to be
   pushed for. The wheel also reads like the one on a phone now: every number at
