@@ -13,9 +13,19 @@ public final class TokensFeature: NotchFeature {
     public let id = "tokens"
     public let title = "AI tokens"
 
+    /// The first option is what a fresh install gets, and it is the one that
+    /// says when the figure was taken.
+    ///
+    /// It was the other way round, which meant a new install showed a token
+    /// count with nothing saying how old it was — and that count is not live.
+    /// It is taken on a schedule the reader chooses, and can be set to no
+    /// schedule at all, so an hour-old figure presented as though it were
+    /// current is the one thing this row must not do by default. Anybody who
+    /// would rather see the number alone can still say so, and then the age is
+    /// a hover away.
     public let displayOptions: [FeatureOption] = [
+        FeatureOption(id: TokensStyle.labeled.rawValue, title: "Number and when it was counted"),
         FeatureOption(id: TokensStyle.number.rawValue, title: "Number only"),
-        FeatureOption(id: TokensStyle.labeled.rawValue, title: "Number and \"today\""),
     ]
 
     private let monitor = TokensMonitor()

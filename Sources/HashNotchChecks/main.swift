@@ -2834,7 +2834,7 @@ MainActor.assumeIsolated {
         NetworkFeature().displayOptions.first?.id == "graph"
             && BatteryFeature().displayOptions.first?.id == "iconAndPercent"
 
-            && TokensFeature().displayOptions.first?.id == "number"
+            && TokensFeature().displayOptions.first?.id == "labeled"
             && ThermalFeature().displayOptions.first?.id == "symbolAndNumber"
             && MemoryFeature().displayOptions.first?.id == "numberAndGraph"
             && CPUFeature().displayOptions.first?.id == "numberAndGraph"

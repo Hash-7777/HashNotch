@@ -169,6 +169,14 @@ All notable changes to HashNotch are recorded here.
   preferences. A settings file that still names it loads exactly as before —
   a key nothing recognises is ignored, not refused.
 
+- **A fresh install shows when the AI token count was taken.** The row starts on
+  "Number and when it was counted" rather than the number alone. That figure is
+  not live — it is counted on a schedule you choose, and can be set to no
+  schedule at all — so a number presented with nothing saying how old it is, on
+  an install that has never been configured, is the one thing this row should
+  not do by default. Choose "Number only" and the age moves to the row's
+  tooltip.
+
 - **The AI token count's display choice works again.** Collapsing that section
   to a single line took its setting with it: the row was rewritten and stopped
   consulting the choice at all, so picking "Number only" or "Number and today"
