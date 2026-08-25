@@ -8,7 +8,6 @@ import HashNotchKit
 public final class AirPodsFeature: NotchFeature {
     public let id = "airpods"
     public let title = "AirPods"
-    public let placement: FeaturePlacement = .expanded
 
     private let monitor = AirPodsMonitor()
 

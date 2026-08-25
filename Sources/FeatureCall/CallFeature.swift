@@ -13,7 +13,6 @@ import HashNotchKit
 public final class CallFeature: NotchFeature {
     public let id = "call"
     public let title = "Microphone"
-    public let placement: FeaturePlacement = .leading
 
     /// Above music, below anything asking for an answer. Somebody's microphone
     /// being live outranks what is playing — it is the thing they would want to

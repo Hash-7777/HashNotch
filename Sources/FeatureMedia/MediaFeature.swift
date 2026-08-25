@@ -7,7 +7,6 @@ import HashNotchKit
 public final class MediaFeature: NotchFeature {
     public let id = "media"
     public let title = "Now playing"
-    public let placement: FeaturePlacement = .leading
 
     private let monitor = MediaMonitor()
 

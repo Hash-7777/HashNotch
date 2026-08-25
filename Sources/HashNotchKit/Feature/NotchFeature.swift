@@ -1,24 +1,5 @@
 import SwiftUI
 
-/// Where a feature is placed in the notch HUD.
-public enum FeaturePlacement: String, Sendable, CaseIterable, Codable {
-    /// Compact readout to the left of the physical notch.
-    case leading
-    /// Compact readout to the right of the physical notch.
-    case trailing
-    /// Shown only in the expanded panel below the notch.
-    case expanded
-
-    /// Friendly label for the settings UI.
-    public var label: String {
-        switch self {
-        case .leading: return "Left of notch"
-        case .trailing: return "Right of notch"
-        case .expanded: return "Expanded only"
-        }
-    }
-}
-
 /// One selectable way a feature can display itself (e.g. number vs. word vs.
 /// symbol). Features declare their options; the settings UI lists them and the
 /// feature's view reads the chosen one from `FeatureContext`.
@@ -51,10 +32,6 @@ public protocol NotchFeature: AnyObject {
 
     /// Human-readable name, shown in the expanded panel and settings.
     var title: String { get }
-
-    /// Default placement when the user has not chosen one. The live placement
-    /// comes from settings, so the user can move features left or right.
-    var placement: FeaturePlacement { get }
 
     /// The display styles this feature offers (e.g. number / word / symbol).
     /// The first is the default. Return `[]` for a feature with no choices.

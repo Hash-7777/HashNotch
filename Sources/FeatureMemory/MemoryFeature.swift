@@ -20,7 +20,6 @@ package enum MemoryStyle: String {
 public final class MemoryFeature: NotchFeature {
     public let id = "memory"
     public let title = "Memory"
-    public let placement: FeaturePlacement = .expanded
 
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: MemoryStyle.numberAndGraph.rawValue, title: "Amount and graph"),

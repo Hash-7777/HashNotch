@@ -162,6 +162,12 @@ All notable changes to HashNotch are recorded here.
   picked "Icon only", the battery reads exactly as it did — that name now falls
   back to the row it was already drawing.
 
+  Each feature's "placement" went with them: left of the notch, right of it, or
+  panel only, which was how a pill knew which side to sit on. Nothing read it,
+  the settings window never offered it, and it was still being saved into your
+  preferences. A settings file that still names it loads exactly as before —
+  a key nothing recognises is ignored, not refused.
+
 - **The AI token count's display choice works again.** Collapsing that section
   to a single line took its setting with it: the row was rewritten and stopped
   consulting the choice at all, so picking "Number only" or "Number and today"

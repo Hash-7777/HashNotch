@@ -94,11 +94,9 @@ let checkDomainPrefix = "hashnotch.checks."
 private final class StubFeature: NotchFeature {
     let id: String
     let title: String
-    let placement: FeaturePlacement
-    init(id: String, placement: FeaturePlacement) {
+    init(id: String) {
         self.id = id
         self.title = id
-        self.placement = placement
     }
 }
 
@@ -108,7 +106,6 @@ private final class StubFeature: NotchFeature {
 private final class CountingFeature: NotchFeature {
     let id: String
     let title: String
-    let placement: FeaturePlacement = .expanded
     private(set) var isRunning = false
     private(set) var starts = 0
     /// Whether this stub will claim a sideways swipe, and what it last saw.
@@ -139,16 +136,11 @@ MainActor.assumeIsolated {
     // Registry keeps registration order.
     let ordered = FeatureRegistry()
     ordered.register([
-        StubFeature(id: "a", placement: .leading),
-        StubFeature(id: "b", placement: .trailing),
-        StubFeature(id: "c", placement: .leading),
+        StubFeature(id: "a"),
+        StubFeature(id: "b"),
+        StubFeature(id: "c"),
     ])
     check("registry keeps order", ordered.features.map(\.id) == ["a", "b", "c"])
-
-    // Registry filters by placement.
-    check("filter leading", ordered.features(for: .leading).map(\.id) == ["a", "c"])
-    check("filter trailing", ordered.features(for: .trailing).map(\.id) == ["b"])
-    check("filter expanded empty", ordered.features(for: .expanded).isEmpty)
 
     // Switching a feature off stops it, rather than merely hiding it. This is a
     // privacy promise as much as a battery one: a feature that is off must not
@@ -293,9 +285,9 @@ MainActor.assumeIsolated {
     let orderSettings = checkStore(defaults: orderDefaults)
     let orderRegistry = FeatureRegistry()
     orderRegistry.register([
-        StubFeature(id: "first", placement: .expanded),
-        StubFeature(id: "second", placement: .expanded),
-        StubFeature(id: "third", placement: .expanded),
+        StubFeature(id: "first"),
+        StubFeature(id: "second"),
+        StubFeature(id: "third"),
     ])
     orderSettings.seed(features: orderRegistry.features)
 
@@ -339,7 +331,7 @@ MainActor.assumeIsolated {
     )
 
     // Registering after the cache is warm must not hand back the old list.
-    orderRegistry.register(StubFeature(id: "late", placement: .expanded))
+    orderRegistry.register(StubFeature(id: "late"))
     orderSettings.seed(features: orderRegistry.features)
     check(
         "a feature registered later still reaches the draw order",
@@ -2208,7 +2200,7 @@ MainActor.assumeIsolated {
     // is no colour, so adding a feature never changes what the edge does.
     check(
         "a feature with nothing to say leaves the edge alone",
-        StubFeature(id: "quiet", placement: .leading).outlineTint == nil
+        StubFeature(id: "quiet").outlineTint == nil
     )
 
     // One island, or none. A second copy of this app doubles everything it
@@ -2817,9 +2809,9 @@ MainActor.assumeIsolated {
     check(
         "features are arranged whatever order they are registered in", {
             let shuffled: [NotchFeature] = [
-                StubFeature(id: "storage", placement: .expanded),
-                StubFeature(id: "media", placement: .leading),
-                StubFeature(id: "battery", placement: .trailing),
+                StubFeature(id: "storage"),
+                StubFeature(id: "media"),
+                StubFeature(id: "battery"),
             ]
             return FeatureRegistry.inDefaultOrder(shuffled).map(\.id) == ["media", "battery", "storage"]
         }()
@@ -2829,8 +2821,8 @@ MainActor.assumeIsolated {
     check(
         "an unlisted feature goes to the end", {
             let withNew: [NotchFeature] = [
-                StubFeature(id: "brandnew", placement: .expanded),
-                StubFeature(id: "media", placement: .leading),
+                StubFeature(id: "brandnew"),
+                StubFeature(id: "media"),
             ]
             return FeatureRegistry.inDefaultOrder(withNew).map(\.id) == ["media", "brandnew"]
         }()
@@ -3632,10 +3624,9 @@ check(
     // Settings: defaults, updates, and persistence round-trip.
     let defaults = InMemoryDefaults()
     let store = checkStore(defaults: defaults)
-    let stub = StubFeature(id: "x", placement: .leading)
+    let stub = StubFeature(id: "x")
     store.seed(features: [stub])
     check("settings seed enables", store.isEnabled("x"))
-    check("settings seed placement", store.features["x"]?.placement == .leading)
 
     store.update("x") { $0.enabled = false; $0.styleID = "word" }
     check("settings update disables", store.isEnabled("x") == false)
@@ -4151,6 +4142,15 @@ check(
 
     let migrated = SettingsStore(defaults: freshDefaults, legacyDefaults: legacyDefaults)
     check("settings carry over from the old name", migrated.isEnabled("x") == false)
+    // That document was written when a feature's config had a `placement` in
+    // it, and it still says `"placement":"trailing"`. The field is gone; the
+    // file is not, and it is on somebody's Mac. An unknown key has to be
+    // ignored rather than refused, or removing a field would empty the settings
+    // of everybody who had ever saved one.
+    check(
+        "a saved file naming a field that no longer exists still loads",
+        migrated.style(for: "x") == "word" && migrated.features["x"]?.order == 4
+    )
     check("settings carry over the style", migrated.style(for: "x") == "word")
     check("settings carry over launch at login", migrated.launchAtLogin)
     check("carried-over settings are not a first run", migrated.isFirstRun == false)
@@ -4366,8 +4366,8 @@ MainActor.assumeIsolated {
     ]
     let registry = FeatureRegistry()
     registry.register([
-        StubFeature(id: "alpha", placement: .expanded),
-        StubFeature(id: "beta", placement: .leading),
+        StubFeature(id: "alpha"),
+        StubFeature(id: "beta"),
     ])
     settings.seed(features: registry.features)
 
@@ -4477,10 +4477,6 @@ MainActor.assumeIsolated {
         descriptors.enumerated().allSatisfy { settings.features[$0.element.id]?.order == $0.offset }
     )
     check("resetting everything keeps consent given", settings.hasAcceptedReading)
-    check(
-        "resetting everything keeps each feature's own placement",
-        settings.features["beta"]?.placement == .leading
-    )
 
 }
 

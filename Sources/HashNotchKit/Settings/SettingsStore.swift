@@ -2,15 +2,21 @@ import Foundation
 import Combine
 
 /// Saved configuration for one feature.
+/// Saved configuration for one feature.
+///
+/// It used to carry a `placement` as well — left of the notch, right of it, or
+/// panel only — from when each feature drew a compact pill somewhere around the
+/// hardware. Nothing has drawn one for a long time, the settings window never
+/// offered the choice, and the field was read by nothing but itself. A saved
+/// file that still has the key decodes exactly as before: an unknown key is
+/// ignored, so nobody's settings are disturbed by its going.
 public struct FeatureConfig: Codable, Equatable {
     public var enabled: Bool
-    public var placement: FeaturePlacement
     public var styleID: String
     public var order: Int
 
-    public init(enabled: Bool, placement: FeaturePlacement, styleID: String, order: Int) {
+    public init(enabled: Bool, styleID: String, order: Int) {
         self.enabled = enabled
-        self.placement = placement
         self.styleID = styleID
         self.order = order
     }
@@ -531,7 +537,6 @@ public final class SettingsStore: ObservableObject {
         if let stored = features[feature.id] { return stored }
         return FeatureConfig(
             enabled: true,
-            placement: feature.placement,
             styleID: feature.displayOptions.first?.id ?? "default",
             order: index
         )
@@ -575,10 +580,6 @@ public final class SettingsStore: ObservableObject {
     /// its default. Writing a fresh default entry for each descriptor keeps the
     /// store complete at every moment.
     ///
-    /// `placement` is carried over rather than reset. It is the feature's own
-    /// declaration of where it can appear, not a choice the user ever makes,
-    /// and the settings UI stopped offering it long ago.
-    ///
     /// Two things are deliberately NOT reset:
     ///
     /// - **Consent.** `hasAcceptedReading` stays true. `isFirstRun` is fixed
@@ -606,7 +607,6 @@ public final class SettingsStore: ObservableObject {
         for (index, descriptor) in descriptors.enumerated() {
             rebuilt[descriptor.id] = FeatureConfig(
                 enabled: true,
-                placement: features[descriptor.id]?.placement ?? .expanded,
                 styleID: descriptor.options.first?.id ?? "default",
                 order: index
             )

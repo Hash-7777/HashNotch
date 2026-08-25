@@ -31,7 +31,6 @@ package enum ThermalWording {
 public final class ThermalFeature: NotchFeature {
     public let id = "thermal"
     public let title = "Temperature"
-    public let placement: FeaturePlacement = .trailing
 
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: ThermalStyle.symbolAndNumber.rawValue, title: "Symbol and number"),

@@ -52,7 +52,6 @@ Every feature implements `NotchFeature` (in `HashNotchKit`):
 public protocol NotchFeature: AnyObject {
     var id: String { get }
     var title: String { get }
-    var placement: FeaturePlacement { get }
     var displayOptions: [FeatureOption] { get }
 
     /// The feature's row in the open panel; nil to show nothing there.
@@ -76,15 +75,20 @@ public protocol NotchFeature: AnyObject {
 }
 ```
 
-Everything but `id`, `title` and `placement` has a default, so a simple feature
-implements three members and its own view.
+Everything but `id` and `title` has a default, so a simple feature implements
+two members and its own view.
 
-There used to be a fourth required member, `makeView`, for a compact pill drawn
-beside the notch. Nothing had drawn one since the island was redesigned, so
-every feature was implementing a view that could not appear — and any display
-choice that only changed a pill was a setting that did nothing. Both are gone.
+Two requirements have been taken out, and they went together. `makeView` built
+a compact pill to sit beside the notch, and `placement` said which side of it
+the pill went. Nothing had drawn a pill since the island was redesigned, so
+every feature was implementing a view that could not appear, and any display
+choice that only changed a pill was a setting that did nothing. `placement`
+outlived it by a little, read by nothing and never offered in the settings
+window, until it went too.
+
 What appears beside the notch now is the live strip, which one feature at a time
-owns through `makeCompactLeadingView` and `makeCompactTrailingView`.
+owns through `makeCompactLeadingView` and `makeCompactTrailingView`, and which
+is decided by `livePriority` rather than by any placement.
 
 A feature owns its own data source (an `ObservableObject` monitor) and its own
 SwiftUI views. `FeatureContext` is how it reaches shared services: the settings

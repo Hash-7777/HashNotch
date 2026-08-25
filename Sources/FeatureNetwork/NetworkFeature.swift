@@ -23,7 +23,6 @@ package enum NetworkStyle: String {
 public final class NetworkFeature: NotchFeature {
     public let id = "network"
     public let title = "Internet speed"
-    public let placement: FeaturePlacement = .leading
 
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: NetworkStyle.graph.rawValue, title: "Graph and speed"),

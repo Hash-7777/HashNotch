@@ -12,7 +12,6 @@ package enum TokensStyle: String {
 public final class TokensFeature: NotchFeature {
     public let id = "tokens"
     public let title = "AI tokens"
-    public let placement: FeaturePlacement = .leading
 
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: TokensStyle.number.rawValue, title: "Number only"),

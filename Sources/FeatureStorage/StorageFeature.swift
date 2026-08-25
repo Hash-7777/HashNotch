@@ -11,7 +11,6 @@ import HashNotchKit
 public final class StorageFeature: NotchFeature {
     public let id = "storage"
     public let title = "Storage"
-    public let placement: FeaturePlacement = .expanded
 
     private let monitor = StorageMonitor()
 

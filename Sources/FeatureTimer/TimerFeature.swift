@@ -9,7 +9,6 @@ import HashNotchKit
 public final class TimerFeature: NotchFeature {
     public let id = "timer"
     public let title = "Timer"
-    public let placement: FeaturePlacement = .expanded
 
     private let engine: TimerEngine
 

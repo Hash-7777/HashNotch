@@ -69,9 +69,6 @@ public final class FeatureRegistry {
     }
 
     /// Features assigned to a given placement, in registration order.
-    public func features(for placement: FeaturePlacement) -> [NotchFeature] {
-        features.filter { $0.placement == placement }
-    }
 
     /// The enabled features, in the order they should be drawn.
     ///

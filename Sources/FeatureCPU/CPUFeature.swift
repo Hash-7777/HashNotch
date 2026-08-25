@@ -14,7 +14,6 @@ package enum CPUStyle: String {
 public final class CPUFeature: NotchFeature {
     public let id = "cpu"
     public let title = "CPU"
-    public let placement: FeaturePlacement = .expanded
 
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: CPUStyle.numberAndGraph.rawValue, title: "Number and graph"),
