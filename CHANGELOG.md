@@ -25,6 +25,13 @@ All notable changes to HashNotch are recorded here.
   want to be stopped for. The file is still written, and a tool you added to it
   yourself is left alone.
 
+### Changed
+
+- **The AI tokens row drops a word it did not need.** It said "counted 5 min
+  ago"; it says "5 min ago". The row already carries its own name, its mark, the
+  figure itself and the button that counts again — "counted" was a label on the
+  one thing it could not have been anything else.
+
 ### Fixed
 
 - **The button that connects Claude Code now works — it never has.** The

@@ -1723,6 +1723,31 @@ MainActor.assumeIsolated {
           HookInstallation.failureReason(from: "   \n\n")
               == "It did not finish. Nothing was changed.")
 
+    // HOW OLD THE TOKEN FIGURE IS. The word "counted" came off the front of
+    // every one of these: the row names itself, so the age is all that is news.
+    let countNow = Date()
+    check("a count that has never run says so",
+          TokenFreshness.text(countedAt: nil, isCounting: false, now: countNow) == "not yet")
+    check("a count under way says so",
+          TokenFreshness.text(countedAt: countNow, isCounting: true, now: countNow) == "counting…")
+    check("a fresh count is just now",
+          TokenFreshness.text(countedAt: countNow.addingTimeInterval(-30),
+                              isCounting: false, now: countNow) == "just now")
+    check("minutes are minutes",
+          TokenFreshness.text(countedAt: countNow.addingTimeInterval(-5 * 60),
+                              isCounting: false, now: countNow) == "5 min ago")
+    check("an hour is an hour",
+          TokenFreshness.text(countedAt: countNow.addingTimeInterval(-2 * 3600),
+                              isCounting: false, now: countNow) == "2h ago")
+    check("no wording anywhere still says counted",
+          ![nil, countNow].flatMap { (at: Date?) in
+              [true, false].map { TokenFreshness.text(countedAt: at, isCounting: $0, now: countNow) }
+          }.contains { $0.contains("counted") })
+    // A clock that goes backwards must not produce "-3 min ago".
+    check("a figure from the future is not negative minutes",
+          TokenFreshness.text(countedAt: countNow.addingTimeInterval(300),
+                              isCounting: false, now: countNow) == "just now")
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))

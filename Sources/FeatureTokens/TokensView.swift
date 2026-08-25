@@ -102,13 +102,11 @@ struct TokensDetailView: View {
     }
 
     private var freshnessText: String {
-        guard let countedAt = monitor.countedAt else { return "not counted yet" }
-        if monitor.isCounting { return "counting…" }
-        let seconds = Int(Date().timeIntervalSince(countedAt))
-        if seconds < 60 { return "counted just now" }
-        let minutes = seconds / 60
-        if minutes < 60 { return "counted \(minutes) min ago" }
-        return "counted \(minutes / 60)h ago"
+        TokenFreshness.text(
+            countedAt: monitor.countedAt,
+            isCounting: monitor.isCounting,
+            now: Date()
+        )
     }
 
     private func row(_ label: String, _ value: Int64, emphasized: Bool = false) -> some View {
