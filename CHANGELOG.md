@@ -150,6 +150,13 @@ All notable changes to HashNotch are recorded here.
   bearable — which meant the control quietly did something different depending
   on where it already was. Every minute is one minute now, wherever you are.
 
+- **The AI token count's display choice works again.** Collapsing that section
+  to a single line took its setting with it: the row was rewritten and stopped
+  consulting the choice at all, so picking "Number only" or "Number and today"
+  in Settings did nothing. "Number only" now shows the figure alone and moves
+  how old the count is into the row's tooltip, so nothing true is lost — a count
+  that might be an hour old still says so to anybody who asks it.
+
 - **The AI token count is one line.** It was a heading, a total, a row for each
   tool and a line saying when the count was taken — five lines of panel for one
   number, in a panel whose height is the scarcest thing it has. It is now a
