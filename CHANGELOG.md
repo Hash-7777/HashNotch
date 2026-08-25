@@ -27,6 +27,32 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The button that connects Claude Code now works — it never has.** The
+  installer it runs, the same script the README has always told people to run by
+  hand, could not be parsed by the only bash macOS ships. Not a bad path and not
+  a permission: the file died at parse time, on every Mac, from the day it was
+  written. The cause was an apostrophe. macOS is on bash 3.2, which tracks
+  quotes *through* a here-document while it looks for the end of a `$( ... )`,
+  so "Claude's own window" in a JavaScript comment opened a quote that never
+  closed, and bash gave up at the bottom of the file naming a line that had
+  nothing wrong with it. The script now keeps that block in a small function
+  where the here-document is read the way it is written, so the prose in it can
+  say whatever it likes.
+
+  Half of it did run before dying, which is why this looked like a mystery
+  rather than a failure: the hook itself was copied into place, and only the
+  registration that comes after — the part that tells Claude Code the hook
+  exists — was never reached. Anybody who ran the installer and saw an error
+  they could not read has a hook installed and unregistered; running it once
+  more finishes the job.
+
+  Every shell script this repository ships is now parsed by `/bin/bash`
+  specifically, on this machine and again on GitHub, before anything can be
+  pushed. `/bin/bash` and not `bash`: a developer with a newer bash first on
+  their PATH runs the broken file successfully from a terminal and concludes it
+  is fine, while the app — which launches it from the environment Finder gives —
+  can only ever find the 3.2 that fails.
+
 - **A question that has just been asked no longer claims to have been waiting
   seven minutes.** The notch tells you how long an answer has been owed, and it
   was reading the wrong clock. A poster reuses one name for everything it sends

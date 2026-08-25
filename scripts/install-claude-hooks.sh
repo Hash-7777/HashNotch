@@ -134,7 +134,29 @@ if [ -f "$SETTINGS" ]; then
     | while IFS= read -r stale; do rm -f "$stale"; done
 fi
 
-RESULT="$(osascript -l JavaScript - "$SETTINGS" "$HOOK_DST" <<'JXA'
+# Registering the hooks is wrapped in a function purely so that the here-document
+# below is NOT written inside a command substitution.
+#
+# macOS ships exactly one bash, 3.2.57, and that is the one this runs under: the
+# app launches this script from Finder's environment, where PATH is
+# /usr/bin:/bin:/usr/sbin:/sbin, so `#!/usr/bin/env bash` finds /bin/bash and
+# nothing else. Bash 3.2 tracks quotes while it hunts for the closing paren of a
+# `$( ... )`, and it does that THROUGH a here-document body instead of skipping
+# it. So an apostrophe in a JavaScript comment — "Claude's own window" — opens a
+# quote that never closes, and the whole script dies at parse time with
+# "unexpected EOF while looking for matching `''". Not at the apostrophe: at the
+# end of the file, naming a line that has nothing wrong with it.
+#
+# That is what happened. This script was unrunnable on stock macOS from the day
+# it was written, and the failure had no relation to the prose that caused it.
+# Prose is exactly what gets edited most often here, so the answer cannot be
+# "avoid apostrophes" — it has to be a shape where they cannot matter. A
+# here-document at the top level is skipped properly; only the one inside `$( )`
+# is not. The call below is therefore a plain function call with nothing to
+# misparse, and `scripts/*.sh` is now held to `/bin/bash -n` by the checks and
+# by CI, so this cannot come back quietly.
+register_hooks() {
+  osascript -l JavaScript - "$1" "$2" <<'JXA'
 function run(argv) {
   ObjC.import('Foundation');
   const path = argv[0];
@@ -225,7 +247,9 @@ function run(argv) {
     : 'Installed ' + added + ' hook(s).';
 }
 JXA
-)"
+}
+
+RESULT="$(register_hooks "$SETTINGS" "$HOOK_DST")"
 
 echo "$RESULT"
 case "$RESULT" in

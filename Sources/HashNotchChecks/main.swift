@@ -1652,6 +1652,52 @@ MainActor.assumeIsolated {
     check("somebody who edited their own hook is never nagged",
           HookInstallation.state(installed: edited, available: hookV9) == .current)
 
+    // EVERY SHIPPED SHELL SCRIPT MUST PARSE UNDER THE BASH macOS ACTUALLY SHIPS.
+    //
+    // `install-claude-hooks.sh` did not, from the day it was written until the
+    // day this check was added — a month of a script the README tells people to
+    // run and the panel offers a button for. Nothing here ever parsed it.
+    //
+    // /bin/bash specifically, not `bash`, and that distinction is the whole
+    // bug. macOS ships bash 3.2.57 and nothing newer; the app launches these
+    // from Finder's environment, where PATH is /usr/bin:/bin:/usr/sbin:/sbin,
+    // so `#!/usr/bin/env bash` can only ever find /bin/bash. A developer with a
+    // newer bash first on their PATH runs the same file successfully from a
+    // terminal and concludes it works. It does not. Bash 3.2 tracks quotes
+    // through a here-document body while hunting for the close of a `$( ... )`,
+    // so an apostrophe in a comment inside such a here-document opens a quote
+    // that never closes and the file dies at parse time — pointing at the last
+    // line, which is innocent.
+    //
+    // The scripts are found from this file's own path rather than from the
+    // working directory, so the answer does not depend on where the checks were
+    // run from. Finding none is a failure and not a pass: a check that quietly
+    // has nothing to look at is the shape of the false pass this repository has
+    // been caught by before.
+    let scriptsFolder = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // HashNotchChecks
+        .deletingLastPathComponent()   // Sources
+        .deletingLastPathComponent()   // repository root
+        .appendingPathComponent("scripts")
+    let shippedScripts = ((try? FileManager.default.contentsOfDirectory(
+        at: scriptsFolder, includingPropertiesForKeys: nil)) ?? [])
+        .filter { $0.pathExtension == "sh" }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    check("the shipped scripts are where the checks look for them",
+          shippedScripts.count >= 5)
+    for script in shippedScripts {
+        let bash = Process()
+        bash.executableURL = URL(fileURLWithPath: "/bin/bash")
+        bash.arguments = ["-n", script.path]
+        // Its complaint belongs to this check, not to the run's output.
+        bash.standardError = Pipe()
+        bash.standardOutput = Pipe()
+        let parsed = (try? bash.run()) != nil
+        bash.waitUntilExit()
+        check("\(script.lastPathComponent) parses under the bash macOS ships",
+              parsed && bash.terminationStatus == 0)
+    }
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))
