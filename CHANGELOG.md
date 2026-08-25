@@ -4,6 +4,18 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Added
+
+- **The agent side sets itself up, from Settings.** Connecting an AI tool to the
+  notch used to mean finding a shell script inside the app and running it in a
+  terminal, and choosing which tools should stop and ask you meant creating a
+  text file by hand and typing tool names into it. Both were documented, which
+  is not the same as being usable. There is a page in Settings now with a button
+  that connects Claude Code, and four switches — commands run on your Mac,
+  creating a file, changing a file, fetching a page from the web — for what you
+  want to be stopped for. The file is still written, and a tool you added to it
+  yourself is left alone.
+
 ### Fixed
 
 - **A question that has just been asked no longer claims to have been waiting
