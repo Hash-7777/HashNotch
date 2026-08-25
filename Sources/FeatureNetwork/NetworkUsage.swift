@@ -483,7 +483,12 @@ package enum NetworkInterfaces {
 /// numbers a day and the names of this Mac's own network interfaces — no
 /// address, no site, nothing about where any of it went.
 package enum NetworkUsageStore {
-    private static let key = "hashnotch.network.usage.v1"
+    /// Package-visible so a check can put a document written by an older build
+    /// under it and prove it still loads. What it guards against is quiet: this
+    /// store answers nil for anything it cannot decode and the caller starts a
+    /// fresh ledger, so a change to the stored shape does not fail loudly — it
+    /// empties somebody's running totals without a word.
+    package static let key = "hashnotch.network.usage.v1"
 
     package static func load(from defaults: UserDefaults = .standard) -> NetworkUsageLedger? {
         guard let data = defaults.data(forKey: key),

@@ -5061,6 +5061,28 @@ check(
     NetworkUsedMath.breakdownFillOpacity < 0.5
 )
 
+// A stored record outlives the shape it was written with. `NetworkUsageStore`
+// answers nil for anything it cannot decode, and the caller then starts a FRESH
+// ledger — so a change to the stored shape does not fail loudly, it silently
+// empties somebody's running totals. This is the check that stands between a
+// future field and that.
+check(
+    "a day's traffic written by an older build still loads",
+    {
+        let defaults = InMemoryDefaults()
+        let day = Calendar.current.startOfDay(for: Date())
+        // Deliberately the OLD shape: the two fields a ledger has always had,
+        // and nothing else. Anything added since must decode from this.
+        let older = """
+        {"days":[{"day":\(day.timeIntervalSinceReferenceDate),"received":900,"sent":100}],\
+        "lastSeen":{}}
+        """
+        defaults.set(Data(older.utf8), forKey: NetworkUsageStore.key)
+        guard let loaded = NetworkUsageStore.load(from: defaults) else { return false }
+        return loaded.days.count == 1 && loaded.days.first?.received == 900
+    }()
+)
+
 // MARK: - Temperatures
 //
 // Which rows exist depends on the Mac — sensor names are model-specific — but
