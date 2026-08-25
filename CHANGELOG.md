@@ -34,6 +34,23 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The notch stops asking about tool calls the agent was never going to ask
+  about.** A tool you tick under Agents is intercepted before it runs — and the
+  event that makes that possible fires before the permission decision, so the
+  hook had no way of knowing whether anybody was ever going to be asked. In a
+  session that approves its own tool calls, every single command therefore put
+  "Allow Bash?" on the notch, held the call for the full twenty seconds, and
+  then handed it back so the agent ran it anyway. Twenty seconds, on every
+  command, for a question nobody had asked. The agent says which permission
+  mode it is in, so the hook now reads it: nothing is intercepted in a session
+  that approves everything, or in plan mode, and when only edits are being
+  accepted automatically it still asks about commands. An older agent that
+  sends no mode at all is treated as one that asks, because a question that did
+  not need asking costs a moment and a missing one costs the whole feature.
+
+  **This one needs you to act:** the hook's version has moved to 12, so the
+  notch will tell you it is out of date. Press Update on the notice.
+
 - **The button that connects Claude Code now works — it never has.** The
   installer it runs, the same script the README has always told people to run by
   hand, could not be parsed by the only bash macOS ships. Not a bad path and not

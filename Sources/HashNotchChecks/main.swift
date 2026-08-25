@@ -1748,6 +1748,174 @@ MainActor.assumeIsolated {
           TokenFreshness.text(countedAt: countNow.addingTimeInterval(300),
                               isCounting: false, now: countNow) == "just now")
 
+    // ── THE ASK ACTION, END TO END ───────────────────────────────────────────
+    //
+    // Everything above tests a Swift function. This drives the actual hook
+    // script the way Claude Code drives it — a payload on stdin, an event name
+    // as the argument — and reads what it does. That is the only way to test
+    // this feature, because the whole of it lives in the shell: which calls get
+    // intercepted, what lands in the feed, how an answer is read back, and what
+    // is printed for the agent to obey.
+    //
+    // Hermetic, and it has to be. The hook asks the system two questions —
+    // whether the app is running, and what answers are on file — and both are
+    // asked by running a command. So both commands are replaced by stubs found
+    // first on PATH: `pgrep` says the app is up, and `defaults` stands in for a
+    // person answering on the notch. Nothing here reads or writes the real
+    // preference domain, which matters more than convenience: a throwaway
+    // domain cannot be cleaned up afterwards (see the note on `cfprefsd` above),
+    // so the only safe test is one that never creates one.
+    //
+    // HOME points at a scratch folder, so the feed, the tool list and the logos
+    // are all the test's own. `osascript` is deliberately NOT stubbed: writing
+    // the feed is the part most likely to break, and a test that faked it would
+    // be testing itself.
+    let askRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("hashnotch-ask-\(UUID().uuidString)")
+    let askHome = askRoot.appendingPathComponent("home")
+    let askBin = askRoot.appendingPathComponent("bin")
+    let hookScript = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("scripts/claude-code-hook.sh")
+
+    func writeExecutable(_ url: URL, _ body: String) {
+        try? body.write(to: url, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+    }
+
+    /// Run the hook as Claude Code runs it. `answer` is what the imaginary
+    /// person on the notch says: nil means nobody touches it.
+    func runHook(
+        _ event: String,
+        payload: String,
+        tools: [String],
+        answer: String? = nil,
+        seconds: String = "1"
+    ) -> (out: String, feed: String, seen: String) {
+        try? FileManager.default.removeItem(at: askHome)
+        try? FileManager.default.createDirectory(
+            at: askHome.appendingPathComponent(".hashnotch"), withIntermediateDirectories: true)
+        if !tools.isEmpty {
+            try? (tools.joined(separator: "\n") + "\n").write(
+                to: askHome.appendingPathComponent(".hashnotch/ask-tools.txt"),
+                atomically: true, encoding: .utf8)
+        }
+
+        let task = Process()
+        task.executableURL = hookScript
+        task.arguments = [event]
+        var env = ["HOME": askHome.path,
+                   "PATH": "\(askBin.path):/usr/bin:/bin:/usr/sbin:/sbin",
+                   "HASHNOTCH_ASK_SECONDS": seconds]
+        if let answer { env["HN_TEST_ANSWER"] = answer }
+        task.environment = env
+
+        let input = Pipe(), output = Pipe()
+        task.standardInput = input
+        task.standardOutput = output
+        task.standardError = Pipe()
+        guard (try? task.run()) != nil else { return ("<hook would not run>", "", "") }
+        input.fileHandleForWriting.write(Data(payload.utf8))
+        try? input.fileHandleForWriting.close()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+
+        let feed = (try? String(
+            contentsOf: askHome.appendingPathComponent(".hashnotch/activities.json"),
+            encoding: .utf8)) ?? ""
+        let seen = (try? String(
+            contentsOf: askHome.appendingPathComponent(".seen.json"),
+            encoding: .utf8)) ?? ""
+        return (String(decoding: data, as: UTF8.self), feed, seen)
+    }
+
+    try? FileManager.default.createDirectory(at: askBin, withIntermediateDirectories: true)
+    // The app is up. Without this the hook correctly declines to ask at all,
+    // since nobody can answer a question nobody can see.
+    writeExecutable(askBin.appendingPathComponent("pgrep"), "#!/bin/sh\nexit 0\n")
+    // A person at the notch. Reads the question the hook has just posted and
+    // answers it, which is what makes the answered path testable at all: the
+    // token is random and only exists once the question is on screen.
+    writeExecutable(askBin.appendingPathComponent("defaults"), """
+    #!/bin/sh
+    # Keep a copy of what was on the notch at the moment somebody looked at it.
+    # The hook takes its own question down before it exits, so the feed is empty
+    # by the time the test can read it — this snapshot is the only place the
+    # question can be examined, and it is taken from exactly where a person
+    # would have been looking.
+    cp "$HOME/.hashnotch/activities.json" "$HOME/.seen.json" 2>/dev/null || true
+    [ -n "$HN_TEST_ANSWER" ] || exit 1
+    tok=$(sed -n 's/.*"asks" *: *"\\([^"]*\\)".*/\\1/p' "$HOME/.hashnotch/activities.json" 2>/dev/null | head -1)
+    [ -n "$tok" ] || exit 1
+    printf '{\\n    "%s" = "%s 1700000000";\\n}\\n' "$tok" "$HN_TEST_ANSWER"
+    """)
+
+    let bashCall = #"{"tool_name":"Bash","permission_mode":"default","tool_input":{"command":"rm -rf /tmp/x"}}"#
+
+    // A tool nobody listed is not intercepted, and costs nothing.
+    let unlisted = runHook("clear", payload: bashCall, tools: ["Write"])
+    check("a tool that was not chosen is never asked about", unlisted.out.isEmpty)
+    check("and no question is posted for it", !unlisted.feed.contains("claude-ask"))
+
+    // A chosen tool, in a session that does ask, becomes a question.
+    let askPosted = runHook("clear", payload: bashCall, tools: ["Bash"])
+    check("a chosen tool puts a question on the notch", askPosted.seen.contains("\"id\": \"claude-ask\""))
+    check("the question names the tool", askPosted.seen.contains("Allow Bash?"))
+    check("the question carries a token to answer under", askPosted.seen.contains("\"asks\""))
+    check("the question shows what is about to run", askPosted.seen.contains("rm -rf /tmp/x"))
+    // Nobody answered, so it hands the decision back exactly as if the hook had
+    // never run. This is the path that must never deny something by accident.
+    check("an unanswered question escalates rather than denying",
+          askPosted.out.contains("\"permissionDecision\":\"escalate\""))
+
+    // Answered on the notch: the decision reaches the agent, and the question
+    // is taken back down.
+    let allowed = runHook("clear", payload: bashCall, tools: ["Bash"], answer: "allow", seconds: "5")
+    check("allow on the notch allows the call",
+          allowed.out.contains("\"permissionDecision\":\"allow\""))
+    check("and the question is taken down after it", !allowed.feed.contains("claude-ask"))
+
+    let denied = runHook("clear", payload: bashCall, tools: ["Bash"], answer: "deny", seconds: "5")
+    check("deny on the notch denies the call",
+          denied.out.contains("\"permissionDecision\":\"deny\""))
+    check("and that question is taken down too", !denied.feed.contains("claude-ask"))
+
+    // THE 21-SECOND TAX. PreToolUse fires before the permission decision, so
+    // without reading the mode the hook stopped every single call in a session
+    // that approves its own — held it for the full wait, then escalated so the
+    // agent ran it anyway.
+    for mode in ["auto", "bypassPermissions", "plan"] {
+        let quiet = runHook(
+            "clear",
+            payload: #"{"tool_name":"Bash","permission_mode":"\#(mode)"}"#,
+            tools: ["Bash"])
+        check("a session in \(mode) is never interrupted", quiet.out.isEmpty)
+        check("and nothing is posted in \(mode)", !quiet.feed.contains("claude-ask"))
+    }
+
+    // acceptEdits is the one that is not all-or-nothing: edits go through
+    // without asking, commands still ask.
+    let editsMode = #"{"tool_name":"Write","permission_mode":"acceptEdits"}"#
+    check("an edit is not queried when edits are already accepted",
+          runHook("clear", payload: editsMode, tools: ["Write", "Bash"]).out.isEmpty)
+    let bashInEdits = #"{"tool_name":"Bash","permission_mode":"acceptEdits"}"#
+    check("but a command still is",
+          runHook("clear", payload: bashInEdits, tools: ["Write", "Bash"]).out
+              .contains("permissionDecision"))
+
+    // A payload with no mode at all is an older agent, or one that stopped
+    // sending it. Asking a question that did not need asking costs a moment;
+    // silently skipping one that did is the failure this feature exists to
+    // prevent, so the unknown case asks.
+    check("an unknown mode still asks",
+          runHook("clear", payload: #"{"tool_name":"Bash"}"#, tools: ["Bash"]).out
+              .contains("permissionDecision"))
+
+    try? FileManager.default.removeItem(at: askRoot)
+    check("the ask checks leave nothing behind",
+          !FileManager.default.fileExists(atPath: askRoot.path))
+
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))
