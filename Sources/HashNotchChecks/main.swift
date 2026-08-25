@@ -2840,6 +2840,21 @@ MainActor.assumeIsolated {
             && CPUFeature().displayOptions.first?.id == "numberAndGraph"
     )
 
+// Every switch in the settings window has to reach something. This is the one
+// that did not: "Requests wait for you" was a toggle nothing read, and it went.
+// A saved file that still names it must load, the same way one naming a removed
+// placement does — a stored document outlives the field it was written with.
+check(
+    "a saved file naming an alert setting that no longer exists still loads",
+    {
+        let older = #"{"noticeSeconds":7,"requestsWaitForYou":false}"#
+        guard let data = older.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(AlertSettings.self, from: data)
+        else { return false }
+        return decoded.noticeSeconds == 7
+    }()
+)
+
 // A choice that has been taken away must not take the row with it.
 //
 // "Icon only" existed while there was a pill beside the notch to draw it on.

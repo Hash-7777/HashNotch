@@ -670,14 +670,6 @@ public struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
 
-                SettingDivider()
-
-                SettingRow(
-                    "Requests wait for you",
-                    detail: "An alert asking for something waits, instead of leaving on its own."
-                ) {
-                    Toggle("", isOn: $settings.alerts.requestsWaitForYou).labelsHidden()
-                }
 
             }
 

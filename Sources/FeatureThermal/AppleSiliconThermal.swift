@@ -92,9 +92,14 @@ final class AppleSiliconThermal: @unchecked Sendable {
             guard celsius.isFinite, celsius > 0, celsius < 130 else { continue }
 
             var name = "Sensor \(index)"
+            // The type is checked and then the cast is asked rather than
+            // forced. The check above makes the force safe today; it makes it
+            // safe only as long as the two lines stay together, and the cost of
+            // asking is nothing at all.
             if let property = copyProperty(service, "Product" as CFString)?.takeRetainedValue(),
-               CFGetTypeID(property) == CFStringGetTypeID() {
-                name = (property as! CFString) as String
+               CFGetTypeID(property) == CFStringGetTypeID(),
+               let product = property as? String {
+                name = product
             }
 
             results.append((name, celsius))

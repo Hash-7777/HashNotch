@@ -200,14 +200,20 @@ public enum NetworkUsagePeriod: String, Codable, CaseIterable, Sendable {
 }
 
 /// How alerts behave.
+///
+/// There was a second switch here, "Requests wait for you", and nothing ever
+/// read it. What it described is not a choice the app has to make: an alert
+/// that is asking for something carries no self-dismissal at all, so it waits
+/// by construction, and the thing that ends it is the asker giving up — a hook
+/// that stops waiting after twenty seconds — rather than a timer here. Switching
+/// it off could only have meant taking a question off the screen while
+/// something was still waiting for its answer, which is not a behaviour worth
+/// offering.
 public struct AlertSettings: Codable, Equatable {
     /// How long a "something finished" notice stays on the notch. The poster
     /// suggests a duration; this is the reader's preference, and the reader
     /// wins — it is your notch.
     public var noticeSeconds: Double = 3
-    /// Whether an alert that is asking for something — a permission prompt —
-    /// waits for you instead of leaving on its own.
-    public var requestsWaitForYou: Bool = true
 
     public init() {}
 }

@@ -438,7 +438,17 @@ package enum NetworkInterfaces {
                 let link = raw.loadUnaligned(fromByteOffset: linkOffset, as: sockaddr_dl.self)
                 let nameLength = Int(link.sdl_nlen)
                 guard nameLength > 0 else { continue }
-                let nameOffset = linkOffset + MemoryLayout.offset(of: \sockaddr_dl.sdl_data)!
+                // Asked for rather than assumed. `offset(of:)` answers nil for
+                // a field it cannot address directly, and this one is a C
+                // tuple whose import is Swift's business rather than ours — so
+                // a force unwrap here is a bet that the compiler will keep
+                // importing a system header the same way for ever, settled by
+                // crashing. It runs once a second on every Mac this ships to.
+                // Skipping an interface it cannot name is the whole cost of
+                // being wrong.
+                guard let dataOffset = MemoryLayout.offset(of: \sockaddr_dl.sdl_data)
+                else { continue }
+                let nameOffset = linkOffset + dataOffset
                 guard nameOffset + nameLength <= size else { continue }
                 let name = String(decoding: raw[nameOffset..<(nameOffset + nameLength)], as: UTF8.self)
 

@@ -151,6 +151,13 @@ All notable changes to HashNotch are recorded here.
   bearable — which meant the control quietly did something different depending
   on where it already was. Every minute is one minute now, wherever you are.
 
+- **One more switch that did nothing has gone.** "Requests wait for you", under
+  alerts, was read by no code at all. What it described is not a choice the app
+  has to make: an alert that asks for something carries no self-dismissal, so it
+  waits by construction, and what ends it is the tool that asked giving up
+  rather than a timer here. Switching it off could only have meant taking a
+  question off the screen while something was still waiting for the answer.
+
 - **Settings no longer offers choices that do nothing.** A compact pill used to
   sit beside the notch for each indicator, and it stopped being drawn when the
   island was redesigned — but nobody removed it, so every feature went on
