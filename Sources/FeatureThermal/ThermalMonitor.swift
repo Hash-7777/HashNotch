@@ -21,7 +21,21 @@ public final class ThermalMonitor: ObservableObject {
     @Published public private(set) var sensors: [TempSensor] = []
     @Published public private(set) var hottestCelsius: Double?
 
-    private let reader = AppleSiliconThermal()
+    /// Where the readings come from: the HID event system if this Mac has it,
+    /// and the SMC otherwise.
+    ///
+    /// Two readers rather than one because no single interface covers every
+    /// Mac. The HID one gives sensors with names — `PMU tdie1`, `NAND CH0 temp`
+    /// — which is why it is asked first, but it exists only on Apple Silicon,
+    /// so on an Intel Mac it resolves nothing and this feature used to have
+    /// nothing to show at all. The SMC has been on every Mac for twenty years
+    /// and is still on this one; its names are four-character keys rather than
+    /// words, which is the only reason it is second.
+    ///
+    /// Chosen once, at init, because which interface a Mac has does not change
+    /// while it is running.
+    private let sensorReader: ThermalSensorReader? =
+        AppleSiliconThermal() ?? SMCThermal()
     private var sampler: VisibleSampler?
     private var observer: NSObjectProtocol?
     /// Reading the sensors means one IOKit round trip per sensor, and Apple
@@ -65,7 +79,7 @@ public final class ThermalMonitor: ObservableObject {
     /// Read off-main, publish on main. Skips if a previous read is still
     /// running, so a slow one never stacks up behind itself.
     private func refresh() {
-        guard !inFlight, let reader else { return }
+        guard !inFlight, let reader = sensorReader else { return }
         inFlight = true
         queue.async { [weak self] in
             let grouped = Self.grouped(reader.read())
@@ -122,6 +136,24 @@ public final class ThermalMonitor: ObservableObject {
             }
     }
 
+    /// What an SMC key is about, from the letter after the T.
+    ///
+    /// Only applied to something shaped like an SMC key — four characters
+    /// beginning with T — so a descriptive name from the other reader is never
+    /// mistaken for one. Anything unrecognised is left to the word rules and
+    /// then to System, which is the honest answer for a sensor nobody can name.
+    package nonisolated static func smcCategory(for rawName: String) -> String? {
+        let characters = Array(rawName)
+        guard characters.count == 4, characters[0] == "T" else { return nil }
+        switch characters[1] {
+        case "B": return "Battery"
+        case "C", "P": return "Processor"
+        case "G": return "Graphics"
+        case "H": return "Drive"
+        default: return nil
+        }
+    }
+
     /// The order the categories are shown in, biggest thing first.
     ///
     /// Not alphabetical and not by temperature: it reads down the machine, from
@@ -144,7 +176,14 @@ public final class ThermalMonitor: ObservableObject {
     /// `nonisolated` for the same reason as `grouped`, which is its only
     /// caller: it is string matching with no state behind it, and it runs on
     /// the sampling queue.
-    private nonisolated static func friendlyCategory(for rawName: String) -> String {
+    package nonisolated static func friendlyCategory(for rawName: String) -> String {
+        // A key off the SMC is four characters and says what it is in the
+        // second one, by a convention that has held across every Mac that has
+        // had one. Matched before the word rules below, because "TB0T" contains
+        // none of those words and would otherwise land in System along with
+        // every other sensor on an Intel Mac — one row called System, which is
+        // barely better than nothing.
+        if let category = smcCategory(for: rawName) { return category }
         let name = rawName.lowercased()
         if name.contains("gas gauge") || name.contains("batt") { return "Battery" }
         if name.contains("gpu") { return "Graphics" }
@@ -173,3 +212,12 @@ public final class ThermalMonitor: ObservableObject {
         }
     }
 }
+
+/// What the monitor needs of a source of temperatures, so it can hold whichever
+/// one this Mac has without knowing which that is.
+protocol ThermalSensorReader: Sendable {
+    func read() -> [(name: String, celsius: Double)]
+}
+
+extension AppleSiliconThermal: ThermalSensorReader {}
+extension SMCThermal: ThermalSensorReader {}

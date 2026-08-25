@@ -101,6 +101,17 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **Temperatures now work on every Mac, not only Apple Silicon ones.** The
+  reader asked the HID event system, which gives sensors with proper names — and
+  exists only on Apple Silicon. On an Intel Mac it found nothing, so that whole
+  section fell back to the coarse pressure word and no Mac made before 2020 ever
+  showed a temperature. There is now a second reader that talks to the System
+  Management Controller, which every Mac has had for twenty years and which is
+  still there on Apple Silicon. It is asked when the first one comes up empty.
+  It finds its sensors by asking the SMC how many keys it has and walking them,
+  rather than from a list of key names copied off one particular model — which
+  is what lets it work on a Mac nobody has tried it on.
+
 - **The temperature rows stay put.** They were ordered hottest first, so the
   moment the drive passed the processor the two swapped places and "the second
   row" meant something different from one minute to the next. They now read down

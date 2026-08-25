@@ -5084,6 +5084,104 @@ check(
 )
 
 // MARK: - Temperatures
+
+// The SMC reader is what makes this work on a Mac the other reader cannot see —
+// every Intel one. Its decoding is plain arithmetic over four bytes, so it is
+// measured here rather than on hardware nobody has to hand.
+
+// The SMC's own fixed-point form: a signed byte of degrees and a byte of
+// fraction.
+check(
+    "a fixed-point reading decodes to its temperature",
+    SMCThermal.celsius(type: "sp78", size: 2, bytes: [0x1A, 0x80]) == 26.5
+)
+check(
+    "and an ordinary float does too",
+    {
+        let bits = Float(25.5).bitPattern
+        let bytes = [UInt8(bits & 0xff), UInt8((bits >> 8) & 0xff),
+                     UInt8((bits >> 16) & 0xff), UInt8((bits >> 24) & 0xff)]
+        return SMCThermal.celsius(type: "flt ", size: 4, bytes: bytes) == 25.5
+    }()
+)
+// A wrong temperature is worse than a missing one, so anything that is not
+// plainly a temperature is refused rather than guessed at.
+check(
+    "a type this does not understand is refused",
+    SMCThermal.celsius(type: "ui32", size: 4, bytes: [1, 2, 3, 4]) == nil
+)
+check(
+    "a size that does not match the type is refused",
+    SMCThermal.celsius(type: "sp78", size: 4, bytes: [0x1A, 0x80, 0, 0]) == nil
+)
+check(
+    "too few bytes are refused rather than read past",
+    SMCThermal.celsius(type: "sp78", size: 2, bytes: [0x1A]) == nil
+)
+// A sensor that is off, or reading below freezing, is a sensor with nothing to
+// say — not a temperature to put on a row. The fixed-point form cannot exceed
+// about 128 by construction, so the upper bound is only ever reached by a float.
+check(
+    "a reading no Mac could be at is refused",
+    {
+        func float(_ value: Float) -> [UInt8] {
+            let bits = value.bitPattern
+            return [UInt8(bits & 0xff), UInt8((bits >> 8) & 0xff),
+                    UInt8((bits >> 16) & 0xff), UInt8((bits >> 24) & 0xff)]
+        }
+        return SMCThermal.celsius(type: "sp78", size: 2, bytes: [0x00, 0x00]) == nil
+            && SMCThermal.celsius(type: "sp78", size: 2, bytes: [0xFF, 0x00]) == nil
+            && SMCThermal.celsius(type: "flt ", size: 4, bytes: float(500)) == nil
+            && SMCThermal.celsius(type: "flt ", size: 4, bytes: float(.nan)) == nil
+            && SMCThermal.celsius(type: "flt ", size: 4, bytes: float(.infinity)) == nil
+    }()
+)
+// And one a Mac genuinely can be at is kept, however unwelcome.
+check(
+    "a hot but real reading is kept",
+    SMCThermal.celsius(type: "sp78", size: 2, bytes: [0x64, 0x00]) == 100
+)
+check(
+    "a key is four characters, and survives the round trip",
+    SMCThermal.text(fromKey: SMCThermal.key(fromText: "TC0P")) == "TC0P"
+        && SMCThermal.text(fromKey: SMCThermal.key(fromText: "#KEY")) == "#KEY"
+)
+
+// What a four-character key is about, by the convention every Mac's SMC has
+// used. Without this every sensor on an Intel Mac falls through to System and
+// the panel shows one row.
+check(
+    "an SMC key says which part of the machine it is on",
+    ThermalMonitor.smcCategory(for: "TB0T") == "Battery"
+        && ThermalMonitor.smcCategory(for: "TC0P") == "Processor"
+        && ThermalMonitor.smcCategory(for: "TC0D") == "Processor"
+        && ThermalMonitor.smcCategory(for: "TG0P") == "Graphics"
+        && ThermalMonitor.smcCategory(for: "TH0P") == "Drive"
+)
+check(
+    "a key it cannot place is left for the words to answer",
+    ThermalMonitor.smcCategory(for: "TW0P") == nil
+        && ThermalMonitor.smcCategory(for: "TA0P") == nil
+)
+check(
+    "and a descriptive name is never mistaken for a key",
+    ThermalMonitor.smcCategory(for: "PMU tdie1") == nil
+        && ThermalMonitor.smcCategory(for: "gas gauge battery") == nil
+        && ThermalMonitor.smcCategory(for: "Temp") == nil
+)
+// End to end, with the keys an Intel Mac reports.
+check(
+    "an Intel Mac's keys fold into the same named rows",
+    ThermalMonitor.grouped([
+        ("TC0P", 61), ("TC0D", 66), ("TG0P", 48), ("TB0T", 31), ("TA0P", 28),
+    ]).map(\.name) == ["Processor", "Graphics", "Battery", "System"]
+)
+check(
+    "and the hottest reading in each is the one shown",
+    ThermalMonitor.grouped([("TC0P", 61), ("TC0D", 66)]).first?.celsius == 66
+)
+
+
 //
 // Which rows exist depends on the Mac — sensor names are model-specific — but
 // the ORDER must not depend on how hot anything is. It used to: the rows were
