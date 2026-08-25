@@ -252,6 +252,27 @@ struct ActivitiesDetailView: View {
         )
     }
 
+    /// Why a question standing on the notch has no Allow and no Deny.
+    ///
+    /// Because answering from here is off until somebody turns it on, one tool
+    /// name per line in a file — and until now the panel said none of that. It
+    /// showed a request with nothing to do about it, which reads as a broken
+    /// button rather than as a feature waiting to be switched on. That is the
+    /// same fault as a display choice that changes nothing: the app knows
+    /// exactly why, and was not saying.
+    ///
+    /// Shown only for a request. A notice is not asking anything, so there is
+    /// nothing missing from it.
+    private var unanswerableNotice: some View {
+        Text("Answering here is off. Name the tools in ~/.hashnotch/ask-tools.txt, one per line.")
+            .font(.system(size: 9))
+            .foregroundStyle(theme.subtitleColor)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 2)
+            .help("A tool named in that file stops and asks here instead of in its own window. Without the file nothing is intercepted at all.")
+    }
+
     /// Answer a question from here, rather than going to find the window that
     /// asked it.
     ///
@@ -328,6 +349,8 @@ struct ActivitiesDetailView: View {
             }
             if let token = activity.asks {
                 answerButtons(token: token)
+            } else if activity.showsCountdown {
+                unanswerableNotice
             }
         }
         .frame(width: Panel.rowWidth, alignment: .leading)

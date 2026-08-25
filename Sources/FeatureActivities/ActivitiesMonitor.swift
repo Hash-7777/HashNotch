@@ -33,10 +33,13 @@ public final class ActivitiesMonitor: ObservableObject {
     private var clock: PollingSampler?
     private weak var presence: LivePresence?
 
-    /// When each self-dismissing notice was first seen, alongside the notice
-    /// itself so a NEW one under a reused id is recognised as new. A notice says
-    /// how long it wants to be shown for, not when it should go: the writer has
-    /// no idea when the app will next look at the file.
+    /// When each activity was first seen, alongside the activity itself so a
+    /// NEW one under a reused id is recognised as new — which matters more than
+    /// it sounds, because a poster reuses one id for everything it sends.
+    ///
+    /// A notice says how long it wants to be shown for, not when it should go:
+    /// the writer has no idea when the app will next look at the file. A
+    /// request uses the same stamp to say how long it has been waiting.
     private var firstSeen: [String: (activity: LiveActivity, at: Date)] = [:]
 
     /// When this activity first arrived, for anything that wants to say how
@@ -124,13 +127,33 @@ public final class ActivitiesMonitor: ObservableObject {
         }
     }
 
-    /// Whether this notice is one whose few seconds have not started counting.
+    /// Whether this activity has just arrived, and so needs its own clock
+    /// started.
     ///
-    /// True for a notice never seen before, and for one whose content differs
-    /// from the last post under the same id — which is what a genuinely new
-    /// alert looks like, since every post carries its own `endsAt`. False for a
-    /// re-read of the same notice, so its clock keeps running from when it
-    /// actually arrived rather than restarting on every glance at the file.
+    /// True for anything never seen before, and for anything whose content
+    /// differs from the last post under the same id — which is what a genuinely
+    /// new alert looks like. False for a re-read of the same one, so its clock
+    /// keeps running from when it actually arrived rather than restarting on
+    /// every glance at the file.
+    ///
+    /// **It used to refuse to start a clock for a standing request**, on the
+    /// reasoning that only a self-dismissing notice needs one to count down
+    /// from. A request needs one too, for the opposite reason: it counts UP,
+    /// and how long an answer has been owed is the whole of what it has to say.
+    /// Refusing it had two consequences, and both were visible.
+    ///
+    /// A feed poster reuses one id for everything it sends — the Claude Code
+    /// hook posts every notice and every request under `claude-code` — so the
+    /// entry left behind by the last notice was still sitting there when a
+    /// request arrived. The request inherited it, and the notch reported a
+    /// question that had just been asked as having waited seven minutes.
+    /// Meanwhile the line that is meant to press harder the longer a request
+    /// stands had no arrival to measure from at all, so it never pressed.
+    ///
+    /// Nothing about a notice changes: a notice with no previous entry is still
+    /// fresh, a repeat of the same one is still not, and a request cannot
+    /// acquire a dismissal by being stamped, because when it dismisses is
+    /// decided by `dismissAfter` and it has none.
     ///
     /// Pure and package-visible: this is the decision that silently swallowed
     /// every repeat alert, so it is pinned by the checks rather than left to be
@@ -139,7 +162,6 @@ public final class ActivitiesMonitor: ObservableObject {
         _ activity: LiveActivity,
         previously: LiveActivity?
     ) -> Bool {
-        guard activity.dismissAfter != nil else { return false }
         guard let previously else { return true }
         return previously != activity
     }

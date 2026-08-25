@@ -23,7 +23,13 @@ set -euo pipefail
 # installed before it claimed to be the same version while drawing something
 # else, which is the precise failure this stamp exists to prevent. CI now
 # refuses a push that changes this file without changing this number.
-HOOK_VERSION=10
+# 11 changes nothing in this script. The version is bumped because it is what
+# the panel compares to tell somebody their installed copy is behind, and what
+# changed is the WIRING: the installer now also registers PostToolUse, without
+# which a request stayed on the notch after it had been answered. An installed
+# hook has no way of knowing its own registration is out of date, so the version
+# is the only thing that can carry the message.
+HOOK_VERSION=11
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's

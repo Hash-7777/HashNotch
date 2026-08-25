@@ -1844,15 +1844,36 @@ MainActor.assumeIsolated {
         "a later alert reusing the same id starts its own clock",
         ActivitiesMonitor.startsFresh(secondAlert, previously: firstAlert)
     )
+    // A standing request needs a clock of its own, and used not to get one.
+    //
+    // This is the failure a screenshot caught: the notch said a question that
+    // had just been asked had been waiting seven minutes. A feed poster reuses
+    // one id for everything it sends, so the entry left by the previous NOTICE
+    // was still there when the request arrived, and the request inherited its
+    // arrival time. The same refusal left the line that is meant to press
+    // harder the longer a request stands with nothing to measure from.
+    let waitingRequest = LiveActivity(
+        id: "claude-code", icon: "hand.raised.fill", title: "Claude needs you",
+        subtitle: nil, progress: nil,
+        endsAt: Date().addingTimeInterval(1800), dismissAfter: nil
+    )
     check(
-        "a countdown keeps no notice clock at all",
+        "a standing request starts its own clock",
+        ActivitiesMonitor.startsFresh(waitingRequest, previously: nil)
+    )
+    check(
+        "and re-reading it does not restart that clock",
+        ActivitiesMonitor.startsFresh(waitingRequest, previously: waitingRequest) == false
+    )
+    check(
+        "a request arriving under an id a notice used starts fresh, not from the notice",
         ActivitiesMonitor.startsFresh(
-            LiveActivity(
-                id: "c", icon: "bicycle", title: "Delivery", subtitle: nil, progress: nil,
-                endsAt: Date().addingTimeInterval(600), dismissAfter: nil
-            ),
-            previously: nil
-        ) == false
+            waitingRequest,
+            previously: LiveActivity(
+                id: "claude-code", icon: "checkmark", title: "Finished", subtitle: nil,
+                progress: nil, endsAt: nil, dismissAfter: 3
+            )
+        )
     )
 
     // The colour the island wears for something posted to the feed. The rule

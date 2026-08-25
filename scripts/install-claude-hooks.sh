@@ -6,7 +6,8 @@
 # What it does — nothing more:
 #   1. Copies claude-code-hook.sh to ~/.hashnotch/ (the hook writes only the
 #      local activities feed).
-#   2. Registers it for Stop, Notification, UserPromptSubmit and PreToolUse in
+#   2. Registers it for Stop, Notification, UserPromptSubmit, PreToolUse and
+#      PostToolUse in
 #      ~/.claude/settings.json (the last two only take a request back down),
 #      backing the file up first. Safe to re-run; already-installed is a no-op.
 #
@@ -157,12 +158,24 @@ function run(argv) {
   let added = 0;
   let removed = 0;
   // Stop says a turn finished. Notification says Claude is asking for
-  // something. The other two take that request back down the moment it has
-  // been dealt with — a prompt submitted, or a tool about to run because
-  // permission was granted — rather than leaving it on the notch until Claude
-  // happens to finish, which can be minutes later.
+  // something. The rest take that request back down the moment it has been
+  // dealt with, rather than leaving it on the notch until Claude happens to
+  // finish — which can be half an hour, since that is how long a standing
+  // request is given.
   //
-  // Those two fire constantly, several times a turn, so the hook is written to
+  // PostToolUse is here because of a wrong assumption in the line it replaces.
+  // The comment used to say PreToolUse fires "because permission was granted";
+  // it does not. PreToolUse runs BEFORE the user is asked, which is what lets
+  // it block a call — so it can never be the thing that notices an answer.
+  // Answering in Claude's own window therefore took the request down only when
+  // the NEXT tool call or prompt came along, and until then the notch went on
+  // saying somebody was waiting for you when nobody was.
+  //
+  // PostToolUse fires after a tool has actually run, which is unambiguously
+  // after any permission decision, so it closes that gap whichever way round
+  // the others fire.
+  //
+  // These fire constantly, several times a turn, so the hook is written to
   // check for a feed entry of its own and exit before starting any subprocess
   // when there is nothing to take down.
   const pairs = [
@@ -170,6 +183,7 @@ function run(argv) {
     ['Notification', 'notification'],
     ['UserPromptSubmit', 'clear'],
     ['PreToolUse', 'clear'],
+    ['PostToolUse', 'clear'],
   ];
 
   // True for any entry that runs THIS hook script, wherever it currently lives

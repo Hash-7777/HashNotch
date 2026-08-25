@@ -2,6 +2,38 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- **A question that has just been asked no longer claims to have been waiting
+  seven minutes.** The notch tells you how long an answer has been owed, and it
+  was reading the wrong clock. A poster reuses one name for everything it sends
+  — every notice and every request from Claude Code arrives under the same one —
+  and the app deliberately started a clock only for the self-dismissing notices.
+  So a request inherited the clock of whatever notice had come before it, and
+  reported that instead. The same refusal is why the line around the notch never
+  pressed harder the longer a request stood, which was written and had never
+  once worked: it had no arrival time to measure from.
+
+- **The notch says why a question has no Allow and no Deny on it.** Answering
+  from the notch is off until you name the tools you want intercepted, one per
+  line in `~/.hashnotch/ask-tools.txt`. Until now the panel showed the question
+  with nothing to do about it and said nothing about why, which reads as a
+  broken button rather than a feature waiting to be turned on.
+
+- **A request comes down when you answer it, not when Claude next does
+  something.** The hook was registered on an event chosen in the belief that it
+  fires "because permission was granted". It does not — it fires *before* you
+  are asked, which is what lets it block a call — so answering in Claude's own
+  window left "Claude needs you" on the notch until the next tool call or
+  prompt, and up to half an hour if neither came. It now also listens for a tool
+  having actually run, which is unambiguously after any answer.
+
+  **This one needs you to act:** re-run `scripts/install-claude-hooks.sh`. The
+  hook's version has moved, so the panel will tell you so and hand you the
+  command.
+
 ## 1.3.0 — the timer survives a locked Mac, and every Mac gets temperatures
 
 ### Added
