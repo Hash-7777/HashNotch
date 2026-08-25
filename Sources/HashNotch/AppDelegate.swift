@@ -70,7 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
 
         // No menu-bar item: the island's gear button is the settings entry.
-        let settingsWindow = SettingsWindowController(settings: settings, registry: registry)
+        let settingsWindow = SettingsWindowController(
+            settings: settings, registry: registry, context: context)
         // The gear opens settings beside the panel it was clicked from, and
         // holds that panel open for as long as they are both showing.
         context.openSettings = { [weak self] in self?.toggleSettings() }

@@ -74,10 +74,18 @@ public final class SettingsWindowController {
     /// coming out from behind the island rather than fading in on the spot.
     private static let slideFrom: CGFloat = 26
 
-    public init(settings: SettingsStore, registry: FeatureRegistry) {
+    /// - Parameter context: handed straight to any feature that supplies its own
+    ///   settings page, and used for nothing else here. The window has no idea
+    ///   what such a page contains.
+    public init(settings: SettingsStore, registry: FeatureRegistry, context: FeatureContext) {
         self.settings = settings
         self.descriptors = registry.features.map {
-            FeatureDescriptor(id: $0.id, title: $0.title, options: $0.displayOptions)
+            FeatureDescriptor(
+                id: $0.id,
+                title: $0.title,
+                options: $0.displayOptions,
+                page: $0.makeSettingsPage(context: context)
+            )
         }
     }
 

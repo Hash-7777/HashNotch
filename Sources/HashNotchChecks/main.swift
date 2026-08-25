@@ -5122,6 +5122,64 @@ check(
     }()
 )
 
+// MARK: - Setting up an agent without a terminal
+//
+// The list of tools to be asked about is a plain text file, because the thing
+// that reads it is a shell script inside somebody else's agent. What it must
+// not be is the only way to turn the feature on. These are the rules the
+// settings page writes it by.
+
+check(
+    "a file nobody has written names no tools",
+    AskTools.parse("") == [] && AskTools.parse("\n\n  \n") == []
+)
+check(
+    "one name per line, exactly as written",
+    AskTools.parse("Bash\nWebFetch\n") == ["Bash", "WebFetch"]
+)
+// The file explains itself to whoever opens it, so the reader has to skip that.
+check(
+    "the header the app writes is not read back as a tool",
+    AskTools.parse(AskTools.text(for: ["Bash"])) == ["Bash"]
+)
+check(
+    "and a comment somebody adds themselves is skipped too",
+    AskTools.parse("# mine\nBash\n  # spaced\nEdit") == ["Bash", "Edit"]
+)
+// A name is matched exactly by the script that reads it, so a name this app has
+// tidied is a name that silently stops matching.
+check(
+    "surrounding space is trimmed but the name itself is untouched",
+    AskTools.parse("  WebFetch  \n") == ["WebFetch"]
+)
+
+// Each switch edits its own line and leaves the rest alone. Somebody may have
+// added a tool this page does not offer, and a toggle must not delete it.
+check(
+    "turning one on adds only that one",
+    AskTools.setting("Edit", on: true, in: ["Bash"]) == ["Bash", "Edit"]
+)
+check(
+    "turning one off removes only that one",
+    AskTools.setting("Bash", on: false, in: ["Bash", "Edit"]) == ["Edit"]
+)
+check(
+    "a tool the app does not offer survives every switch",
+    AskTools.setting("Bash", on: true, in: ["SomeToolOfMine"]) == ["SomeToolOfMine", "Bash"]
+        && AskTools.setting("Bash", on: false, in: ["SomeToolOfMine", "Bash"]) == ["SomeToolOfMine"]
+)
+check(
+    "turning on something already on does not list it twice",
+    AskTools.setting("Bash", on: true, in: ["Bash"]) == ["Bash"]
+)
+// Every tool the page offers has to be a name, and a plain-English line saying
+// what it means — the name alone is what the old text file offered, and it is
+// the part nobody could act on.
+check(
+    "every tool offered says what it means in words",
+    AskTools.offered.allSatisfy { !$0.name.isEmpty && $0.detail.count > 8 }
+)
+
 // MARK: - Temperatures
 
 // The SMC reader is what makes this work on a Mac the other reader cannot see —

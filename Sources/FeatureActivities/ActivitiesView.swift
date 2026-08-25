@@ -264,13 +264,13 @@ struct ActivitiesDetailView: View {
     /// Shown only for a request. A notice is not asking anything, so there is
     /// nothing missing from it.
     private var unanswerableNotice: some View {
-        Text("Answering here is off. Name the tools in ~/.hashnotch/ask-tools.txt, one per line.")
+        Text("Answering here is off. Turn it on in Settings, under Agents.")
             .font(.system(size: 9))
             .foregroundStyle(theme.subtitleColor)
             .lineLimit(2)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 2)
-            .help("A tool named in that file stops and asks here instead of in its own window. Without the file nothing is intercepted at all.")
+            .help("A tool you tick there stops and asks here instead of in its own window. Tick nothing and nothing is intercepted at all.")
     }
 
     /// Answer a question from here, rather than going to find the window that

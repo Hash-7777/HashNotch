@@ -13,6 +13,34 @@ public struct FeatureOption: Identifiable, Hashable, Sendable {
     }
 }
 
+/// A page of one feature's own settings, offered to the settings window.
+///
+/// A feature that needs setting up beyond an on/off switch — one that has to be
+/// connected to something outside the app — hands over a whole page rather than
+/// a control, and the window shows it as its own tab. The core never learns
+/// what is on it, which is the same arrangement as the panel: the feature
+/// supplies the view, and the window supplies the place to put it.
+///
+/// This exists because the alternative was a text file and a shell script. The
+/// hook that lets an agent talk to the notch was installed by running a script
+/// in a terminal, and which tools it should intercept was a list of names in a
+/// file somebody had to create by hand. Both are perfectly good instructions
+/// for a programmer and no use at all to anybody else, which makes them the
+/// same thing as not having the feature.
+@MainActor
+public struct FeatureSettingsPage {
+    public let title: String
+    /// An SF Symbol for the tab.
+    public let symbol: String
+    public let view: AnyView
+
+    public init(title: String, symbol: String, view: AnyView) {
+        self.title = title
+        self.symbol = symbol
+        self.view = view
+    }
+}
+
 /// A sideways swipe over the open panel, in the direction the fingers moved.
 public enum SwipeDirection: String, Sendable, CaseIterable {
     case left
@@ -96,6 +124,10 @@ public protocol NotchFeature: AnyObject {
     /// somebody has any business returning more.
     var outlineUrgency: Double { get }
 
+    /// A page of this feature's own settings, or nil for a feature that needs
+    /// nothing beyond its switch. See `FeatureSettingsPage`.
+    func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage?
+
     /// Act on a sideways swipe over the open panel. Return `true` if this
     /// feature took it, `false` (the default) to let another feature try.
     ///
@@ -146,6 +178,7 @@ public extension NotchFeature {
     func makeExpandedView(context: FeatureContext) -> AnyView? { nil }
     func makeCompactLeadingView(context: FeatureContext) -> AnyView? { nil }
     func makeCompactTrailingView(context: FeatureContext) -> AnyView? { nil }
+    func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage? { nil }
     func start(context: FeatureContext) {}
     func stop() {}
     func suspend() { stop() }

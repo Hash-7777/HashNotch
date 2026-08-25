@@ -119,6 +119,16 @@ public final class ActivitiesFeature: NotchFeature {
         AnyView(ActivitiesTitleView(monitor: monitor, theme: context.theme))
     }
 
+    /// This feature is the only one that has to be connected to something
+    /// outside the app, so it is the only one with a page of its own.
+    public func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage? {
+        FeatureSettingsPage(
+            title: "Agents",
+            symbol: "sparkles",
+            view: AnyView(ActivitiesSettingsView(monitor: monitor, theme: context.theme))
+        )
+    }
+
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         // The section also appears for the stale-hook notice alone. Without
         // this the one place that could carry the warning is the one place that

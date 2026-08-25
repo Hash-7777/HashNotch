@@ -8,11 +8,19 @@ public struct FeatureDescriptor: Identifiable {
     public let id: String
     public let title: String
     public let options: [FeatureOption]
+    /// A page of this feature's own settings, if it has one.
+    public let page: FeatureSettingsPage?
 
-    public init(id: String, title: String, options: [FeatureOption]) {
+    public init(
+        id: String,
+        title: String,
+        options: [FeatureOption],
+        page: FeatureSettingsPage? = nil
+    ) {
         self.id = id
         self.title = title
         self.options = options
+        self.page = page
     }
 }
 
@@ -51,6 +59,10 @@ public struct SettingsView: View {
 
     enum Section: String, CaseIterable, Identifiable {
         case general, indicators, appearance, alerts, position, privacy
+        /// A page a FEATURE supplies. Deliberately unnamed here: the tab's
+        /// words and its symbol come from the feature, because the core does
+        /// not know what any feature does and should not start now.
+        case supplied
         var id: String { rawValue }
 
         var title: String {
@@ -61,6 +73,7 @@ public struct SettingsView: View {
             case .alerts: return "Alerts"
             case .position: return "Position"
             case .privacy: return "Privacy"
+            case .supplied: return ""
             }
         }
 
@@ -72,8 +85,23 @@ public struct SettingsView: View {
             case .alerts: return "bell.fill"
             case .position: return "arrow.up.and.down.and.arrow.left.and.right"
             case .privacy: return "lock.shield.fill"
+            case .supplied: return "puzzlepiece.extension.fill"
             }
         }
+    }
+
+    /// The page a feature has supplied, if any has. Only one is shown: no
+    /// feature but the activity feed has ever needed one, and a window that
+    /// grows a tab per feature stops being a window anybody can find anything
+    /// in.
+    private var suppliedPage: FeatureSettingsPage? {
+        features.compactMap(\.page).first
+    }
+
+    /// The tabs actually shown. The supplied one appears only when a feature
+    /// has supplied it, so a build without that feature has no empty tab.
+    private var sections: [Section] {
+        Section.allCases.filter { $0 != .supplied || suppliedPage != nil }
     }
 
     /// Closes the panel. Supplied by the window that owns it, because a
@@ -208,13 +236,23 @@ public struct SettingsView: View {
     /// word.
     private var tabStrip: some View {
         HStack(spacing: 4) {
-            ForEach(Section.allCases) { item in
+            ForEach(sections) { item in
                 tab(item)
             }
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 10)
+    }
+
+    /// What a tab is called. Every tab but one answers for itself; the supplied
+    /// one is named by whichever feature supplied it.
+    private func title(for item: Section) -> String {
+        item == .supplied ? (suppliedPage?.title ?? "") : item.title
+    }
+
+    private func symbol(for item: Section) -> String {
+        item == .supplied ? (suppliedPage?.symbol ?? item.symbol) : item.symbol
     }
 
     private func tab(_ item: Section) -> some View {
@@ -227,11 +265,11 @@ public struct SettingsView: View {
             section = item
         } label: {
             VStack(spacing: 4) {
-                Image(systemName: item.symbol)
+                Image(systemName: symbol(for: item))
                     .font(.system(size: 12, weight: .semibold))
                     .frame(height: 14)
                     .foregroundStyle(selected ? settings.accent.color : Color.white.opacity(0.55))
-                Text(item.title)
+                Text(title(for: item))
                     .font(.system(size: 10, weight: selected ? .semibold : .regular))
                     .foregroundStyle(selected ? Color.white : Color.white.opacity(0.7))
                     // One line, always. A tab that wraps is taller than its
@@ -250,7 +288,7 @@ public struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(item.title)
+        .help(title(for: item))
     }
 
     // MARK: Pages
@@ -264,6 +302,8 @@ public struct SettingsView: View {
         case .alerts: alerts
         case .position: position
         case .privacy: privacy
+        case .supplied:
+            if let page = suppliedPage { page.view } else { EmptyView() }
         }
     }
 
@@ -1158,16 +1198,19 @@ public enum SettingsReorder {
 
 // MARK: Small building blocks
 
-private struct PageHeader: View {
+/// Published so a feature that supplies its own settings page can build it out
+/// of the same pieces the window's own pages are built from. A page that looks
+/// like a stranger inside the window is worse than no page.
+public struct PageHeader: View {
     let title: String
     let detail: String
 
-    init(_ title: String, detail: String) {
+    public init(_ title: String, detail: String) {
         self.title = title
         self.detail = detail
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title).font(.system(size: 19, weight: .semibold, design: .rounded))
             Text(detail)
@@ -1179,10 +1222,12 @@ private struct PageHeader: View {
     }
 }
 
-private struct SettingCard<Content: View>: View {
+public struct SettingCard<Content: View>: View {
     @ViewBuilder var content: Content
 
-    var body: some View {
+    public init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+    public var body: some View {
         VStack(alignment: .leading, spacing: 0) { content }
             .padding(14)
             .background(
@@ -1196,7 +1241,7 @@ private struct SettingCard<Content: View>: View {
     }
 }
 
-private struct SettingRow<Control: View>: View {
+public struct SettingRow<Control: View>: View {
     let title: String
     let detail: String
     @ViewBuilder var control: Control
@@ -1217,7 +1262,7 @@ private struct SettingRow<Control: View>: View {
     /// that fail visibly rather than quietly.
     let stacked: Bool
 
-    init(
+    public init(
         _ title: String,
         detail: String,
         stacked: Bool = false,
@@ -1243,7 +1288,7 @@ private struct SettingRow<Control: View>: View {
         }
     }
 
-    var body: some View {
+    public var body: some View {
         Group {
             if stacked {
                 VStack(alignment: .leading, spacing: 11) {
@@ -1283,9 +1328,9 @@ private let settingRowMinimumLabelWidth: CGFloat = 150
 private struct SectionLabel: View {
     let text: String
 
-    init(_ text: String) { self.text = text }
+    public init(_ text: String) { self.text = text }
 
-    var body: some View {
+    public var body: some View {
         Text(text.uppercased())
             .font(.system(size: 10, weight: .semibold))
             .tracking(0.6)
@@ -1308,7 +1353,7 @@ private struct PermissionRow: View {
     let why: String
     let ifDenied: String
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             // The icon sits beside the NAME only, not beside the whole row.
             // Indenting three paragraphs past it cost a fifth of the column,
@@ -1366,12 +1411,12 @@ private struct PrivacyLine: View {
     let title: String
     let detail: String
 
-    init(_ title: String, _ detail: String) {
+    public init(_ title: String, _ detail: String) {
         self.title = title
         self.detail = detail
     }
 
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 11))
@@ -1390,8 +1435,10 @@ private struct PrivacyLine: View {
     }
 }
 
-private struct SettingDivider: View {
-    var body: some View {
+public struct SettingDivider: View {
+    public init() {}
+
+    public var body: some View {
         Rectangle()
             .fill(Color.white.opacity(0.07))
             .frame(height: 1)
@@ -1439,12 +1486,12 @@ struct PrivacyNone: View {
     let title: String
     let detail: String
 
-    init(_ title: String, _ detail: String) {
+    public init(_ title: String, _ detail: String) {
         self.title = title
         self.detail = detail
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
@@ -1469,12 +1516,12 @@ struct PrivacyNone: View {
 
 /// A quiet heading inside a card, for when a group of controls needs naming but
 /// does not need a sentence.
-struct SettingGroupLabel: View {
+public struct SettingGroupLabel: View {
     let text: String
 
-    init(_ text: String) { self.text = text }
+    public init(_ text: String) { self.text = text }
 
-    var body: some View {
+    public var body: some View {
         Text(text.uppercased())
             .font(.system(size: 9, weight: .semibold))
             .kerning(1.0)

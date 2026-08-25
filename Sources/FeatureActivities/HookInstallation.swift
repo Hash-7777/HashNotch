@@ -129,6 +129,51 @@ public enum HookInstallation {
     /// app they are running, and because somebody who installed the `.app` has
     /// no source tree to run it from. Quoted, since the folder it lives in has
     /// been called things with spaces in before.
+    /// Set the hook up, from the app, with no terminal involved.
+    ///
+    /// It runs the very script the panel used to ask people to copy and paste,
+    /// out of the app's own bundle. That script is the thing that has always
+    /// done this work; what changes is only who types it.
+    ///
+    /// Off the main thread, because it writes two files and reads a third, and
+    /// the settings window it is called from must not freeze while it does.
+    /// The result comes back on the main thread with whatever the script said,
+    /// so a failure can be shown rather than swallowed.
+    @MainActor
+    public static func install(completion: @escaping @MainActor (Bool, String) -> Void) {
+        guard let script = installerURL else {
+            completion(false, "The installer is missing from this copy of the app.")
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let task = Process()
+            task.executableURL = script
+            let pipe = Pipe()
+            task.standardOutput = pipe
+            task.standardError = pipe
+            do {
+                try task.run()
+            } catch {
+                let message = error.localizedDescription
+                Task { @MainActor in completion(false, message) }
+                return
+            }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+            let output = String(decoding: data, as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let ok = task.terminationStatus == 0
+            Task { @MainActor in completion(ok, output) }
+        }
+    }
+
+    /// The installer inside this app, or nil when running unbundled.
+    public static var installerURL: URL? {
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return nil }
+        return Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Resources/scripts/install-claude-hooks.sh")
+    }
+
     public static var updateCommand: String {
         let path = Bundle.main.bundleURL.pathExtension == "app"
             ? Bundle.main.bundleURL.appendingPathComponent(

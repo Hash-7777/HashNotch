@@ -114,7 +114,12 @@ public final class ActivitiesMonitor: ObservableObject {
     }
 
     /// Looks at the installed hook, at most once a minute, off the main thread.
-    private func refreshHookState() {
+    /// Read the installed hook's version again.
+    ///
+    /// Public because the settings page connects the hook and then needs the
+    /// notice above it to stop saying it is out of date — the alternative is a
+    /// page that reports the state it had before the button was pressed.
+    public func refreshHookState() {
         let now = Date()
         guard now.timeIntervalSince(hookCheckedAt) >= Self.hookCheckInterval else { return }
         hookCheckedAt = now
