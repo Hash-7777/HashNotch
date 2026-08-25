@@ -2,32 +2,6 @@ import SwiftUI
 import HashNotchKit
 
 /// Compact token readout: today's total AI tokens across your tools.
-struct TokensView: View {
-    @ObservedObject var monitor: TokensMonitor
-    let theme: Theme
-    let style: TokensStyle
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(theme.accent)
-            Text(Formatters.compactCount(monitor.today.total))
-                .foregroundStyle(theme.textColor)
-                .monospacedDigit()
-                .rollingDigits()
-            if style == .labeled {
-                Text("today")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(theme.subtitleColor)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Capsule(style: .continuous).fill(theme.pillBackground))
-        .animation(.snappy, value: monitor.today.total)
-    }
-}
 
 /// Expanded detail: today's tokens broken down by source.
 struct TokensDetailView: View {

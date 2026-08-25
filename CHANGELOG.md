@@ -150,6 +150,18 @@ All notable changes to HashNotch are recorded here.
   bearable — which meant the control quietly did something different depending
   on where it already was. Every minute is one minute now, wherever you are.
 
+- **Settings no longer offers choices that do nothing.** A compact pill used to
+  sit beside the notch for each indicator, and it stopped being drawn when the
+  island was redesigned — but nobody removed it, so every feature went on
+  building a view that could not appear, and any display choice that only
+  changed a pill sat in Settings doing nothing at all. The pills are gone, and
+  with them "Icon only" for the battery, which in the panel had been the same
+  row as "Icon and percent" for some time. Every choice that remains changes
+  what you see, and a check now holds each feature's options against the styles
+  it can actually be asked for, so the two cannot drift apart again. If you had
+  picked "Icon only", the battery reads exactly as it did — that name now falls
+  back to the row it was already drawing.
+
 - **The AI token count's display choice works again.** Collapsing that section
   to a single line took its setting with it: the row was rewritten and stopped
   consulting the choice at all, so picking "Number only" or "Number and today"

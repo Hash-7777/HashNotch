@@ -4,7 +4,7 @@ import HashNotchKit
 
 /// How the speed reads. The same two numbers, arranged for different taste and
 /// different amounts of room beside the notch.
-enum NetworkStyle: String {
+package enum NetworkStyle: String {
     /// Both figures stacked, up above down, in the width of one.
     case stacked
     /// Both on one line, separated by a dot, with no arrows.
@@ -68,11 +68,6 @@ public final class NetworkFeature: NotchFeature {
     public func stop() {
         cancellables.removeAll()
         monitor.stop()
-    }
-
-    public func makeView(context: FeatureContext) -> AnyView {
-        let style = NetworkStyle(rawValue: context.settings.style(for: id)) ?? .both
-        return AnyView(NetworkView(monitor: monitor, theme: context.theme, style: style))
     }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {

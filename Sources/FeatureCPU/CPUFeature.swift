@@ -2,7 +2,7 @@ import SwiftUI
 import HashNotchKit
 
 /// How the processor readout is shown.
-enum CPUStyle: String {
+package enum CPUStyle: String {
     case numberAndGraph
     case number
     case graph
@@ -31,8 +31,6 @@ public final class CPUFeature: NotchFeature {
     }
 
     public func stop() { monitor.stop() }
-
-    public func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(CPUDetailView(

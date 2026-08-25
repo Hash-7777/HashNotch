@@ -2,10 +2,17 @@ import SwiftUI
 import HashNotchKit
 
 /// How the battery readout is shown.
-enum BatteryStyle: String {
+/// How the battery row reads.
+///
+/// There used to be a fourth, "Icon only", and it went when the compact pills
+/// did. It meant something on a pill beside the notch — a battery drawn with no
+/// figure — and nothing in the panel, where a row labelled Battery with no
+/// reading after it is not a readout, so the panel showed the percentage
+/// anyway. With the pill gone it was the same row as "Icon and percent" under a
+/// different name, which is a worse thing to offer than one option fewer.
+package enum BatteryStyle: String {
     case iconAndPercent
     case percent
-    case icon
     case timeRemaining
 }
 
@@ -23,7 +30,6 @@ public final class BatteryFeature: NotchFeature {
     public let displayOptions: [FeatureOption] = [
         FeatureOption(id: BatteryStyle.iconAndPercent.rawValue, title: "Icon and percent"),
         FeatureOption(id: BatteryStyle.percent.rawValue, title: "Percent only"),
-        FeatureOption(id: BatteryStyle.icon.rawValue, title: "Icon only"),
         FeatureOption(id: BatteryStyle.timeRemaining.rawValue, title: "Time remaining"),
     ]
 
@@ -75,12 +81,6 @@ public final class BatteryFeature: NotchFeature {
     // readout of a battery it does not have. See `BatteryMonitor.isUnavailable`.
     // Answered when the panel is built, which is right for this question: a
     // desktop Mac never grows a battery, and a laptop never loses one.
-
-    public func makeView(context: FeatureContext) -> AnyView {
-        guard !monitor.isUnavailable else { return AnyView(EmptyView()) }
-        let style = BatteryStyle(rawValue: context.settings.style(for: id)) ?? .iconAndPercent
-        return AnyView(BatteryView(monitor: monitor, theme: context.theme, style: style))
-    }
 
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         guard !monitor.isUnavailable else { return nil }

@@ -55,9 +55,7 @@ public protocol NotchFeature: AnyObject {
     var placement: FeaturePlacement { get }
     var displayOptions: [FeatureOption] { get }
 
-    /// Compact readout.
-    func makeView(context: FeatureContext) -> AnyView
-    /// Richer row for the open panel; nil to show nothing there.
+    /// The feature's row in the open panel; nil to show nothing there.
     func makeExpandedView(context: FeatureContext) -> AnyView?
     /// Always-on views flanking the notch while this feature is live;
     /// nil for none.
@@ -78,8 +76,15 @@ public protocol NotchFeature: AnyObject {
 }
 ```
 
-Everything but `id`, `title`, `placement` and `makeView` has a default, so a
-simple feature implements four members.
+Everything but `id`, `title` and `placement` has a default, so a simple feature
+implements three members and its own view.
+
+There used to be a fourth required member, `makeView`, for a compact pill drawn
+beside the notch. Nothing had drawn one since the island was redesigned, so
+every feature was implementing a view that could not appear — and any display
+choice that only changed a pill was a setting that did nothing. Both are gone.
+What appears beside the notch now is the live strip, which one feature at a time
+owns through `makeCompactLeadingView` and `makeCompactTrailingView`.
 
 A feature owns its own data source (an `ObservableObject` monitor) and its own
 SwiftUI views. `FeatureContext` is how it reaches shared services: the settings
@@ -149,8 +154,14 @@ feature that is off opens no files and spawns no subprocess, which is what
 makes the switch a privacy control rather than a display one.
 
 Features declare their display choices via `displayOptions` and read the
-selected one with `context.settings.style(for: id)` inside `makeView`. The
-island observes the store, so changing a setting updates the notch live.
+selected one with `context.settings.style(for: id)` inside the view they build.
+The island observes the store, so changing a setting updates the panel live.
+
+A choice must change something the reader can actually see, which now means the
+panel. A style whose only effect was on the compact pill is not a style any
+more — see `BatteryStyle`, which lost "Icon only" for exactly that reason. A
+stored choice that no longer exists falls back to the feature's default rather
+than failing.
 
 There is no menu-bar item: `SettingsView` is reached through the gear button in
 the expanded panel (`FeatureContext.openSettings`), and it is also where the app

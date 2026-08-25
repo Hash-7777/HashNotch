@@ -22,11 +22,6 @@ public final class MediaFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
-    public func makeView(context: FeatureContext) -> AnyView {
-        // Media shows flanking the notch and in the expanded detail only.
-        AnyView(EmptyView())
-    }
-
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         AnyView(MediaArtworkView(monitor: monitor, theme: context.theme))
     }

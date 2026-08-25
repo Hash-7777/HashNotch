@@ -60,10 +60,6 @@ public protocol NotchFeature: AnyObject {
     /// The first is the default. Return `[]` for a feature with no choices.
     var displayOptions: [FeatureOption] { get }
 
-    /// Build the compact SwiftUI view shown around the notch. Main actor.
-    /// Read the chosen style from `context.settings.style(for: id)`.
-    func makeView(context: FeatureContext) -> AnyView
-
     /// Optional richer view shown in the expanded panel when the HUD opens on
     /// hover. Return `nil` (the default) to show nothing extra when expanded.
     func makeExpandedView(context: FeatureContext) -> AnyView?

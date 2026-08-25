@@ -112,11 +112,6 @@ public final class ActivitiesFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
-    public func makeView(context: FeatureContext) -> AnyView {
-        // Nothing in the hover row; activities live in the compact strip + detail.
-        AnyView(EmptyView())
-    }
-
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         AnyView(ActivitiesIconView(monitor: monitor, theme: context.theme))
     }

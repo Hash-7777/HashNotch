@@ -2,7 +2,7 @@ import SwiftUI
 import HashNotchKit
 
 /// How the token readout is shown.
-enum TokensStyle: String {
+package enum TokensStyle: String {
     case number
     case labeled
 }
@@ -31,11 +31,6 @@ public final class TokensFeature: NotchFeature {
     }
 
     public func stop() { monitor.stop() }
-
-    public func makeView(context: FeatureContext) -> AnyView {
-        let style = TokensStyle(rawValue: context.settings.style(for: id)) ?? .number
-        return AnyView(TokensView(monitor: monitor, theme: context.theme, style: style))
-    }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(TokensDetailView(

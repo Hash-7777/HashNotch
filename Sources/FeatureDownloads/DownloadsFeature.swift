@@ -48,10 +48,6 @@ public final class DownloadsFeature: NotchFeature {
     public func start(context: FeatureContext) { monitor.start(presence: context.presence) }
     public func stop() { monitor.stop() }
 
-    public func makeView(context: FeatureContext) -> AnyView {
-        AnyView(EmptyView())
-    }
-
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         AnyView(DownloadsIconView(monitor: monitor, theme: context.theme))
     }

@@ -87,13 +87,22 @@ Where it appears on a fresh install comes from `FeatureRegistry.defaultOrder`,
 not from where you put it in the manifest — a feature that is not named there
 goes to the end, which is what a new one should do.
 
-Two things a feature must honour:
+Three things a feature must honour:
 
 - **Off means off.** Stopping must stop the *reading*, not just the drawing. A
   feature that is switched off opens no files, runs no subprocess, and can
   trigger no permission prompt.
 - **Panel-only work belongs to the panel.** If a readout is only visible inside
   the panel, sample it with `VisibleSampler` so it costs nothing while shut.
+
+- **A display choice must change what somebody sees.** Anything in
+  `displayOptions` has to produce a visibly different row, and a check holds the
+  options and the style enum together so one cannot drift from the other. This
+  has been got wrong: the compact pill beside the notch stopped being drawn when
+  the island was redesigned, and nobody removed it — so features went on
+  building a view that could not appear, and every display choice that only
+  changed a pill sat in Settings doing nothing. A setting that does nothing is
+  worse than one that does not exist, because it looks like it worked.
 
 ## Tests
 

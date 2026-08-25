@@ -38,10 +38,6 @@ public final class CallFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
-    public func makeView(context: FeatureContext) -> AnyView {
-        AnyView(EmptyView())
-    }
-
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         AnyView(CallIconView(monitor: monitor, theme: context.theme))
     }

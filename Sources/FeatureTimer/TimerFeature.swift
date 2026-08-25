@@ -64,10 +64,6 @@ public final class TimerFeature: NotchFeature {
     /// finished while nobody was looking.
     public func resume(context: FeatureContext) { engine.start(presence: context.presence) }
 
-    public func makeView(context: FeatureContext) -> AnyView {
-        AnyView(EmptyView())
-    }
-
     public func makeCompactLeadingView(context: FeatureContext) -> AnyView? {
         AnyView(TimerIconView(engine: engine, theme: context.theme))
     }

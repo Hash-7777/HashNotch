@@ -2,7 +2,7 @@ import SwiftUI
 import HashNotchKit
 
 /// How the temperature readout is shown.
-enum ThermalStyle: String {
+package enum ThermalStyle: String {
     case symbolAndNumber
     case number
     case word
@@ -46,11 +46,6 @@ public final class ThermalFeature: NotchFeature {
 
     public func start(context: FeatureContext) { monitor.start(visibility: context.visibility, scale: context.settings.samplingScale) }
     public func stop() { monitor.stop() }
-
-    public func makeView(context: FeatureContext) -> AnyView {
-        let style = ThermalStyle(rawValue: context.settings.style(for: id)) ?? .symbolAndNumber
-        return AnyView(ThermalView(monitor: monitor, theme: context.theme, style: style))
-    }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(ThermalDetailView(

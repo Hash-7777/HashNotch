@@ -3,55 +3,6 @@ import HashNotchKit
 
 /// Compact battery readout. The style selects icon, percent, both, or the
 /// estimated time remaining.
-struct BatteryView: View {
-    @ObservedObject var monitor: BatteryMonitor
-    let theme: Theme
-    let style: BatteryStyle
-
-    var body: some View {
-        HStack(spacing: 6) {
-            // The same drawn battery the panel shows, for the same reason: a
-            // symbol here said `battery.100` for anything running down, so the
-            // shape beside "4%" was a full battery.
-            if style != .percent {
-                BatteryGlyph(
-                    percentage: monitor.percentage,
-                    state: monitor.state,
-                    isLowPowerMode: monitor.isLowPowerMode,
-                    theme: theme
-                )
-            }
-            if let text = valueText {
-                Text(text)
-                    .foregroundStyle(theme.textColor)
-                    .monospacedDigit()
-                    .rollingDigits()
-                    .animation(.snappy, value: monitor.percentage)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-            Capsule(style: .continuous).fill(theme.pillBackground)
-        )
-        .opacity(monitor.hasBattery ? 1 : 0.4)
-    }
-
-    private var valueText: String? {
-        switch style {
-        case .icon:
-            return nil
-        case .percent, .iconAndPercent:
-            return "\(monitor.percentage)%"
-        case .timeRemaining:
-            if let minutes = monitor.minutesRemaining, minutes > 0 {
-                return Formatters.hoursMinutes(minutes)
-            }
-            return "\(monitor.percentage)%"
-        }
-    }
-
-}
 
 /// Compact-live: a brief iPhone-style announcement flanking the notch when
 /// the Mac starts charging or the battery runs low.

@@ -2,7 +2,7 @@ import SwiftUI
 import HashNotchKit
 
 /// How the memory readout is shown.
-enum MemoryStyle: String {
+package enum MemoryStyle: String {
     case numberAndGraph
     case number
     case graph
@@ -38,8 +38,6 @@ public final class MemoryFeature: NotchFeature {
     }
 
     public func stop() { monitor.stop() }
-
-    public func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(MemoryDetailView(

@@ -20,7 +20,6 @@ public final class AirPodsFeature: NotchFeature {
     // Required by the protocol; the island renders the compact strip and the
     // expanded panel separately, and AirPods is panel-only — so the compact
     // view is intentionally empty and everything lives in the expanded view.
-    public func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         guard monitor.battery != nil else { return nil }

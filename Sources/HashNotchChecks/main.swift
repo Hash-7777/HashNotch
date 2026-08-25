@@ -100,7 +100,6 @@ private final class StubFeature: NotchFeature {
         self.title = id
         self.placement = placement
     }
-    func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
 }
 
 /// A stub that remembers whether it is running, so the checks can tell apart a
@@ -126,7 +125,6 @@ private final class CountingFeature: NotchFeature {
         starts += 1
     }
     func stop() { isRunning = false }
-    func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
 
     func handleSwipe(_ direction: SwipeDirection) -> Bool {
         guard claimsSwipes else { return false }
@@ -2843,11 +2841,41 @@ MainActor.assumeIsolated {
         "each indicator starts on its intended style",
         NetworkFeature().displayOptions.first?.id == "graph"
             && BatteryFeature().displayOptions.first?.id == "iconAndPercent"
+
             && TokensFeature().displayOptions.first?.id == "number"
             && ThermalFeature().displayOptions.first?.id == "symbolAndNumber"
             && MemoryFeature().displayOptions.first?.id == "numberAndGraph"
             && CPUFeature().displayOptions.first?.id == "numberAndGraph"
     )
+
+// A choice that has been taken away must not take the row with it.
+//
+// "Icon only" existed while there was a pill beside the notch to draw it on.
+// Somebody who picked it has that word saved in their settings, and it now
+// names nothing — so the lookup has to land somewhere sensible rather than
+// failing. It lands on the default, which draws the row that person was already
+// looking at, because in the panel "Icon only" and "Icon and percent" had been
+// the same row for some time.
+check(
+    "a style that no longer exists falls back to the feature's default",
+    BatteryStyle(rawValue: "icon") == nil
+)
+check(
+    "and the styles that remain are the ones that change the row",
+    BatteryFeature().displayOptions.map(\.id) == ["iconAndPercent", "percent", "timeRemaining"]
+)
+// Nothing may offer a choice it cannot honour: every feature's options must be
+// styles it can still be asked for.
+check(
+    "no feature offers a display choice it no longer has",
+    BatteryFeature().displayOptions.allSatisfy { BatteryStyle(rawValue: $0.id) != nil }
+        && ThermalFeature().displayOptions.allSatisfy { ThermalStyle(rawValue: $0.id) != nil }
+        && NetworkFeature().displayOptions.allSatisfy { NetworkStyle(rawValue: $0.id) != nil }
+        && TokensFeature().displayOptions.allSatisfy { TokensStyle(rawValue: $0.id) != nil }
+        && CPUFeature().displayOptions.allSatisfy { CPUStyle(rawValue: $0.id) != nil }
+        && MemoryFeature().displayOptions.allSatisfy { MemoryStyle(rawValue: $0.id) != nil }
+)
+
     // Five minutes, not thirty.
     //
     // Thirty was chosen while the count only ran with the panel open, where it

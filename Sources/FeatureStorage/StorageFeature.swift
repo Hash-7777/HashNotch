@@ -26,8 +26,6 @@ public final class StorageFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
-    public func makeView(context: FeatureContext) -> AnyView { AnyView(EmptyView()) }
-
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(StorageDetailView(monitor: monitor, theme: context.theme))
     }
