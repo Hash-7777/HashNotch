@@ -1698,6 +1698,31 @@ MainActor.assumeIsolated {
               parsed && bash.terminationStatus == 0)
     }
 
+    // WHAT THE PANEL SAYS WHEN THE INSTALLER REFUSES.
+    //
+    // It used to say "Could not update it" and throw the reason away. The
+    // reason was the whole diagnosis, every time.
+    let bashRefusal = """
+    Installed the notch hook (v11).
+    /Users/someone/HashNotch.app/Contents/Resources/scripts/install-claude-hooks.sh: line 225: unexpected EOF
+    """
+    check("a failure says what the installer said",
+          HookInstallation.failureReason(from: bashRefusal)
+              == "line 225: unexpected EOF")
+    check("and not the steps that did succeed",
+          !HookInstallation.failureReason(from: bashRefusal).contains("Installed the notch hook"))
+    // Only a path ending in a script name is stripped. A message that merely
+    // contains a colon keeps all of itself.
+    check("a message that is not a path keeps its first half",
+          HookInstallation.failureReason(from: "ERROR: settings.json is not valid JSON")
+              == "ERROR: settings.json is not valid JSON")
+    check("trailing blank lines are not the reason",
+          HookInstallation.failureReason(from: "something broke\n\n  \n")
+              == "something broke")
+    check("a script that said nothing at all still says something",
+          HookInstallation.failureReason(from: "   \n\n")
+              == "It did not finish. Nothing was changed.")
+
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.
     let future = ISO8601DateFormatter().string(from: Date().addingTimeInterval(600))

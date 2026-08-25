@@ -167,6 +167,42 @@ public enum HookInstallation {
         }
     }
 
+    /// The one line worth showing when the installer refuses.
+    ///
+    /// Everything the script wrote, out and error together, arrives here. The
+    /// panel row that shows it is a single line of eight-point text, so it
+    /// cannot be the whole transcript — but it must not be a shrug either, and
+    /// for a month it was one. The row said "Could not update it" and dropped
+    /// the output on the floor, while the output itself read
+    /// `install-claude-hooks.sh: line 225: unexpected EOF while looking for
+    /// matching \'` — the entire diagnosis, captured and then discarded. The
+    /// script had never once parsed under the bash macOS ships, and the app
+    /// knew and would not say.
+    ///
+    /// The LAST line, because that is where a shell puts the error that stopped
+    /// it and where this script puts its own `ERROR:` refusal; earlier lines
+    /// are the steps that did succeed. The leading path is stripped because a
+    /// row this narrow spent on `/Users/…/Contents/Resources/scripts/` says
+    /// nothing, and the file it names is never in doubt.
+    public static func failureReason(from output: String) -> String {
+        let lastLine = output
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .last { !$0.isEmpty }
+        guard var reason = lastLine else {
+            return "It did not finish. Nothing was changed."
+        }
+        // `some/path/install-claude-hooks.sh: line 4: ...` → `line 4: ...`.
+        // Only a prefix that ends in a shell script's name, so a message that
+        // simply contains a colon keeps all of itself.
+        if let colon = reason.firstIndex(of: ":"),
+           reason[reason.startIndex..<colon].hasSuffix(".sh") {
+            reason = String(reason[reason.index(after: colon)...])
+                .trimmingCharacters(in: .whitespaces)
+        }
+        return reason.isEmpty ? "It did not finish. Nothing was changed." : reason
+    }
+
     /// The installer inside this app, or nil when running unbundled.
     public static var installerURL: URL? {
         guard Bundle.main.bundleURL.pathExtension == "app" else { return nil }

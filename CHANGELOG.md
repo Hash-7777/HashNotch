@@ -53,6 +53,11 @@ All notable changes to HashNotch are recorded here.
   is fine, while the app — which launches it from the environment Finder gives —
   can only ever find the 3.2 that fails.
 
+- **When the update fails, the notch says what failed.** It used to answer
+  "Could not update it" and drop what the installer had written, which in this
+  case was the entire diagnosis. It now shows the line the script actually
+  refused on, and the whole output on hover.
+
 - **A question that has just been asked no longer claims to have been waiting
   seven minutes.** The notch tells you how long an answer has been owed, and it
   was reading the wrong clock. A poster reuses one name for everything it sends

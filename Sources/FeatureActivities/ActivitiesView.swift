@@ -161,6 +161,9 @@ struct ActivitiesDetailView: View {
     @State private var updatingHook = false
     @State private var updatedHook = false
     @State private var hookProblem: String?
+    /// Everything the installer wrote, kept for the tooltip. The row shows one
+    /// line of it; somebody chasing a failure can hover and read the rest.
+    @State private var hookProblemDetail: String?
 
     var body: some View {
         if !monitor.activities.isEmpty || monitor.hookState.needsAttention {
@@ -235,8 +238,17 @@ struct ActivitiesDetailView: View {
         .font(.system(size: 10, weight: .medium, design: .rounded))
         .frame(width: Panel.rowWidth)
         // The command it runs, for anybody who would rather see what is about
-        // to happen than take a button's word for it.
-        .help("Runs \(HookInstallation.updateCommand)")
+        // to happen than take a button's word for it — and, once it has
+        // refused, everything it wrote, because one line of the row is not
+        // enough to chase a failure with.
+        .help(hookHelp)
+    }
+
+    private var hookHelp: String {
+        guard let hookProblemDetail, !hookProblemDetail.isEmpty else {
+            return "Runs \(HookInstallation.updateCommand)"
+        }
+        return "Runs \(HookInstallation.updateCommand)\n\n\(hookProblemDetail)"
     }
 
     private var hookUpdateDetail: String {
@@ -249,13 +261,19 @@ struct ActivitiesDetailView: View {
     private func updateHook() {
         updatingHook = true
         hookProblem = nil
+        hookProblemDetail = nil
         HookInstallation.install { ok, output in
             updatingHook = false
             if ok {
                 updatedHook = true
                 monitor.refreshHookState()
             } else {
-                hookProblem = output.isEmpty ? "It did not finish. Nothing was changed." : "Could not update it"
+                // What the installer actually said, not a shrug. See
+                // `HookInstallation.failureReason`: this row once threw the
+                // reason away and reported "Could not update it" for a script
+                // that had never parsed on any Mac.
+                hookProblem = HookInstallation.failureReason(from: output)
+                hookProblemDetail = output
             }
         }
     }
