@@ -349,14 +349,6 @@ package enum Formatters2 {
         return waited(Int(now.timeIntervalSince(arrived)))
     }
 
-    static func timeLeft(_ seconds: Int?) -> String? {
-        guard let seconds else { return nil }
-        if seconds < 60 { return "\(seconds)s" }
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes) min" }
-        return "\(minutes / 60)h \(minutes % 60)m"
-    }
-
     /// How long something has been waiting on you.
     ///
     /// A standing request used to show the time LEFT before it gave up and

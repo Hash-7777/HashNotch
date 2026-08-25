@@ -98,18 +98,6 @@ public enum NotchIconGeometry {
         }
     }
 
-    /// How much of the grid a mark is allowed to use.
-    ///
-    /// Not the whole of it: a line has width, and a path that ran to the edge
-    /// would have half its weight hanging outside the box — which is a mark
-    /// that looks clipped beside a word rather than one that sits next to it.
-    /// The margin is half the line weight, so a stroked path drawn to this
-    /// inset inks out exactly at the edge.
-    public static var safeArea: CGRect {
-        CGRect(x: 0, y: 0, width: grid, height: grid)
-            .insetBy(dx: strokeWeight / 2, dy: strokeWeight / 2)
-    }
-
     // MARK: The marks
 
     /// Every mark on the 100 x 100 grid, in the order it is drawn.
