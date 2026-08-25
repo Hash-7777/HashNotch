@@ -45,11 +45,10 @@ struct TokensDetailView: View {
     ///
     /// Nothing that was TRUE has been dropped, only spread out less. How old
     /// the count is stays on the row, in words, because a figure that might be
-    /// an hour old with nothing saying so is a figure that quietly misleads —
-    /// it is the one thing here that could not go to a tooltip. The per-tool
-    /// breakdown did go to one: it is an answer to "where did that come from",
-    /// which is a question somebody asks deliberately, and it was costing three
-    /// lines to answer before it was asked.
+    /// an hour old with nothing saying so is a figure that quietly misleads.
+    /// The per-tool breakdown went to the tooltip: it is an answer to "where
+    /// did that come from", which is a question somebody asks deliberately, and
+    /// it was costing three lines to answer before it was asked.
     ///
     /// The mark is drawn larger than the row's own text because it is now the
     /// only thing naming this section — there is no heading above it any more,
@@ -57,10 +56,22 @@ struct TokensDetailView: View {
     var body: some View {
         NotchRow("AI tokens", icon: .tokens, iconSize: 13, theme: theme) {
             HStack(spacing: 6) {
-                Text(freshnessText)
-                    .font(.system(size: 8.5))
-                    .foregroundStyle(theme.subtitleColor)
-                    .lineLimit(1)
+                // "Number only" is a request for the number, and the age is the
+                // one thing on this row that can be given up without giving up
+                // something true — it moves to the tooltip rather than being
+                // dropped, so a count that might be an hour old still says so
+                // to anybody who asks it.
+                //
+                // Collapsing this section to one line took its setting with it
+                // by accident: the row was rewritten and stopped consulting the
+                // choice at all, so picking either option in Settings did
+                // nothing. That is the failure this branch undoes.
+                if style == .labeled {
+                    Text(freshnessText)
+                        .font(.system(size: 8.5))
+                        .foregroundStyle(theme.subtitleColor)
+                        .lineLimit(1)
+                }
                 Text(Formatters.compactCount(monitor.today.total))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.textColor)
@@ -85,8 +96,14 @@ struct TokensDetailView: View {
                 .help("Count again now")
             }
         }
-        .help(breakdown)
+        .help(tooltip)
         .animation(.snappy, value: monitor.today.total)
+    }
+
+    /// What the row says when asked rather than at a glance: where the figure
+    /// came from, and — when the row is set to the number alone — how old it is.
+    private var tooltip: String {
+        style == .labeled ? breakdown : "\(freshnessText)\n\(breakdown)"
     }
 
     /// Where the figure came from, for somebody who asks.
