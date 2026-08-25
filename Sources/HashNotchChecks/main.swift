@@ -1915,6 +1915,20 @@ MainActor.assumeIsolated {
     check("the ask checks leave nothing behind",
           !FileManager.default.fileExists(atPath: askRoot.path))
 
+    // ── WHAT GOES UNDER A STANDING REQUEST ───────────────────────────────────
+    check("a question offers its answers",
+          RequestFooter.under(token: "ask-1", standing: true, toolsChosen: 2) == .answer(token: "ask-1"))
+    // The bug: a notice is not a question, and every one of them said answering
+    // was switched off while all four switches were on.
+    check("a notice with tools already chosen says nothing about being off",
+          RequestFooter.under(token: nil, standing: true, toolsChosen: 4) == .nothing)
+    check("a notice with nothing chosen offers to turn it on",
+          RequestFooter.under(token: nil, standing: true, toolsChosen: 0) == .offerToTurnItOn)
+    check("something that is only passing through is owed nothing",
+          RequestFooter.under(token: nil, standing: false, toolsChosen: 0) == .nothing)
+    check("a question is answerable whether or not anything is chosen",
+          RequestFooter.under(token: "ask-2", standing: true, toolsChosen: 0) == .answer(token: "ask-2"))
+
     // ── AN ANSWERED QUESTION GOES AWAY AT ONCE ───────────────────────────────
     //
     // It used to stay until the asker took it down, and for ever if the asker

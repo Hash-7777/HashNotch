@@ -329,7 +329,7 @@ struct ActivitiesDetailView: View {
     /// Shown only for a request. A notice is not asking anything, so there is
     /// nothing missing from it.
     private var unanswerableNotice: some View {
-        Text("Answering here is off. Turn it on in Settings, under Agents.")
+        Text("You can answer these on the notch. Turn it on in Settings, under Agents.")
             .font(.system(size: 9))
             .foregroundStyle(theme.subtitleColor)
             .lineLimit(2)
@@ -462,8 +462,14 @@ struct ActivitiesDetailView: View {
                     .tint(theme.accent)
                     .scaleEffect(x: 1, y: 0.7)
             }
-            if activity.showsCountdown {
-                unanswerableNotice
+            switch RequestFooter.under(
+                token: activity.asks,
+                standing: activity.showsCountdown,
+                toolsChosen: monitor.askToolsChosen
+            ) {
+            case .answer: EmptyView()   // drawn as its own box, not a row footer
+            case .offerToTurnItOn: unanswerableNotice
+            case .nothing: EmptyView()
             }
         }
         .frame(width: Panel.rowWidth, alignment: .leading)

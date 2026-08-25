@@ -17,6 +17,12 @@ public final class ActivitiesMonitor: ObservableObject {
     /// before anything is known.
     @Published public private(set) var hookState: HookState = .unknown
 
+    /// How many tools are ticked in Settings, Agents.
+    ///
+    /// Read here rather than in the view so that the panel never opens a file
+    /// while it is drawing, and refreshed whenever the feed moves — which is
+    /// the same moment anything that depends on it can appear.
+    @Published public private(set) var askToolsChosen: Int = 0
 
     private let hookQueue = DispatchQueue(label: "com.hashnotch.hookcheck", qos: .utility)
     private var hookCheckedAt: Date = .distantPast
@@ -127,6 +133,8 @@ public final class ActivitiesMonitor: ObservableObject {
     }
 
     private func reload() {
+        let chosen = AskTools.read().count
+        if chosen != askToolsChosen { askToolsChosen = chosen }
         apply(ActivitiesReader.read())
         // Riding on the feed rather than on a clock of its own. The feed
         // changes when a tool posts, and somebody who has just run the

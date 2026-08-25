@@ -34,6 +34,17 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The notch no longer says answering is switched off while it is switched on.**
+  Every "Claude needs you" carried the line "Answering here is off. Turn it on
+  in Settings, under Agents" underneath it — with all four tools ticked and the
+  file behind them exactly right. The rule behind it was that a request with no
+  answer token must mean the feature is off, and a notice never has a token: it
+  is telling you something, not asking which tool to run. So the one kind of
+  request that can never be answered was the one thing always being told it
+  could have been. That line is now read from the feature it describes, appears
+  only when nothing is actually ticked, and offers to turn it on rather than
+  reporting it broken.
+
 - **A question on the notch is its own box now, and it goes away when you answer
   it.** It was a line of text with two small buttons after it, the same size as
   a temperature reading — the only thing in the panel that stops and waits for a
