@@ -5061,6 +5061,46 @@ check(
     NetworkUsedMath.breakdownFillOpacity < 0.5
 )
 
+// MARK: - Temperatures
+//
+// Which rows exist depends on the Mac — sensor names are model-specific — but
+// the ORDER must not depend on how hot anything is. It used to: the rows were
+// sorted hottest first, so the drive passing the processor swapped them while
+// somebody was reading, and "the second row" meant a different thing one minute
+// to the next.
+
+// The real sensor names this machine reports, thirty-five of them, folded down.
+let realSensors: [(name: String, celsius: Double)] = [
+    ("NAND CH0 temp", 33.0), ("PMU tcal", 51.9), ("PMU tdie1", 45.3),
+    ("PMU2 tdie4", 42.1), ("gas gauge battery", 30.9), ("gas gauge battery", 30.0),
+]
+check(
+    "the sensors a Mac reports fold into a few named rows",
+    ThermalMonitor.grouped(realSensors).map(\.name) == ["Processor", "Drive", "Battery"]
+)
+check(
+    "each row is the hottest reading in its group",
+    ThermalMonitor.grouped(realSensors).first?.celsius == 51.9
+)
+// The same machine, with the drive now hotter than the chip. Same rows, same
+// order, different numbers.
+let hotDrive: [(name: String, celsius: Double)] = [
+    ("NAND CH0 temp", 78.0), ("PMU tcal", 51.9), ("gas gauge battery", 30.9),
+]
+check(
+    "and the rows stay where they were when a cooler thing gets hotter",
+    ThermalMonitor.grouped(hotDrive).map(\.name) == ["Processor", "Drive", "Battery"]
+)
+check(
+    "a Mac whose sensors match nothing still gets a stable answer",
+    ThermalMonitor.grouped([("XYZ mystery 1", 40), ("XYZ mystery 2", 50)]).map(\.name)
+        == ["System"]
+)
+check(
+    "a Mac reporting no sensors at all gets no rows, rather than an empty one",
+    ThermalMonitor.grouped([]).isEmpty
+)
+
 // MARK: - The panel's drawn marks
 //
 // These are the checks that the icon family cannot be got wrong quietly. Every

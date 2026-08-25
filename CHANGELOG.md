@@ -101,6 +101,16 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **The temperature rows stay put.** They were ordered hottest first, so the
+  moment the drive passed the processor the two swapped places and "the second
+  row" meant something different from one minute to the next. They now read down
+  the machine in a fixed order — the chip, then graphics, then the drive, then
+  the battery — whatever the numbers are doing. Which rows you get still depends
+  on your Mac, and that part is not a fault: sensor names are model-specific, so
+  a Mac with no separate graphics or drive sensor simply has no such row, and a
+  Mac with no on-die sensors at all shows the coarse pressure word instead of an
+  empty section.
+
 - **The graphs no longer turn into a slab when a reading sits high.** The wash
   under a graph's line used to be as tall as the reading is high, so memory —
   which on most Macs sits around three quarters and barely moves — filled three

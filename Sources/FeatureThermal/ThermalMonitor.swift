@@ -78,7 +78,22 @@ public final class ThermalMonitor: ObservableObject {
     }
 
     /// Group cryptic sensor names (e.g. "PMU tdie7") into friendly categories,
-    /// keeping the hottest reading in each, hottest category first.
+    /// keeping the hottest reading in each, in a FIXED order.
+    ///
+    /// The order used to be by temperature, hottest first, and that is a list
+    /// that rearranges itself while somebody is reading it. This Mac reports
+    /// thirty-five raw sensors that fold into three rows, and the moment the
+    /// drive passed the processor the two swapped places — so a glance at "the
+    /// second row" meant something different from one minute to the next. A
+    /// panel's rows should be where they were last time.
+    ///
+    /// Which rows exist still depends on the machine, and that part is not a
+    /// bug: sensor names are model-specific, so a Mac with no separate graphics
+    /// or drive sensor simply has no such row, and one whose sensors match
+    /// nothing here reports them all as System. On a Mac with no on-die sensors
+    /// at all — every Intel one, since this reads an Apple Silicon interface —
+    /// there are no rows and the panel shows the coarse pressure word instead,
+    /// which is the honest answer rather than an empty section.
     ///
     /// Pure and static so it runs on the reading queue rather than the main
     /// thread, and so the checks can pin the grouping without any hardware.
@@ -100,8 +115,22 @@ public final class ThermalMonitor: ObservableObject {
         }
         return byCategory
             .map { TempSensor(name: $0.key, celsius: $0.value) }
-            .sorted { $0.celsius > $1.celsius }
+            .sorted { left, right in
+                let l = categoryOrder.firstIndex(of: left.name) ?? categoryOrder.count
+                let r = categoryOrder.firstIndex(of: right.name) ?? categoryOrder.count
+                return l == r ? left.name < right.name : l < r
+            }
     }
+
+    /// The order the categories are shown in, biggest thing first.
+    ///
+    /// Not alphabetical and not by temperature: it reads down the machine, from
+    /// the chip doing the work to the parts around it. Anything unrecognised
+    /// sorts to the end by name, so an unfamiliar Mac still produces the same
+    /// order twice running.
+    package nonisolated static let categoryOrder = [
+        "Processor", "Graphics", "Drive", "Battery", "System",
+    ]
 
     private func apply(_ newSensors: [TempSensor]) {
         // Publish only on change so steady temperatures cause no redraws.
@@ -131,15 +160,6 @@ public final class ThermalMonitor: ObservableObject {
         }
         if name.contains("air") || name.contains("ambient") || name.contains("prox") { return "System" }
         return "System"
-    }
-
-    /// Compact text: the hottest die temperature, or the pressure word if no
-    /// sensor reading is available.
-    public var compactText: String {
-        if let celsius = hottestCelsius {
-            return "\(Int(celsius.rounded()))°"
-        }
-        return pressureLabel
     }
 
     /// Coarse thermal-pressure word (also drives the tint colour).
