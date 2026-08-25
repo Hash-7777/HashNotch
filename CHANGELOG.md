@@ -102,13 +102,14 @@ All notable changes to HashNotch are recorded here.
 ### Changed
 
 - **The graphs no longer turn into a slab when a reading sits high.** The wash
-  under a graph's line is as tall as the reading is high, so memory — which on
-  most Macs sits around three quarters and barely moves — filled three quarters
-  of its box with solid colour. It was the heaviest thing in the panel, and all
-  it was saying was "high", which the figure beside it already said in words.
-  The wash is now a fixed depth below the line — the same shallow glow whatever
-  the reading — so memory gets a line with a glow under it and the processor,
-  which never had the room to slab, is untouched.
+  under a graph's line used to be as tall as the reading is high, so memory —
+  which on most Macs sits around three quarters and barely moves — filled three
+  quarters of its box with solid colour. It was the heaviest thing in the panel,
+  and all it was saying was "high", which the figure beside it already said in
+  words. It is now a glow that hugs the line: bright where the two meet, gone
+  nine points below, whatever the reading. Memory gets a line with a glow under
+  it instead of a filled box, and the processor, which never had the room to
+  slab, looks as it always did.
 
 - **Changing how often the AI tokens are counted no longer resets the panel.**
   It emptied every graph and ended any running timer. Changing that setting

@@ -59,7 +59,15 @@ public struct Sparkline: View {
 
     /// How deep the wash under the line is drawn, in points, whatever the
     /// reading.
-    package static let washDepth: CGFloat = 11
+    ///
+    /// Nine, and both numbers here have been wrong in opposite directions. At
+    /// full strength over the whole fill, memory drew a solid slab. Softened
+    /// and shallow, it disappeared — the panel is frosted glass rather than
+    /// black, and a wash faint enough to be safe on black is invisible on
+    /// glass. A glow that hugs the line is the thing that survives both: bright
+    /// where it meets the line, gone nine points later, so it reads as
+    /// belonging to the line rather than as the box being filled in.
+    package static let washDepth: CGFloat = 9
 
     /// Where the wash reaches nothing, as a fraction of the fill's own height.
     ///
@@ -139,7 +147,7 @@ public struct Sparkline: View {
                     .fill(
                         LinearGradient(
                             stops: [
-                                .init(color: tint.opacity(0.22), location: 0),
+                                .init(color: tint.opacity(0.34), location: 0),
                                 .init(color: tint.opacity(0), location: stop),
                             ],
                             startPoint: .top,
