@@ -6,6 +6,15 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
+- **The notice that says the hook is out of date now updates it.** It used to
+  copy a shell command to the clipboard and leave you to paste it into a
+  terminal — which told you your agent was running old code and then handed you
+  homework. There is an Update button on it. The old caution behind copying was
+  sound about the danger and wrong about the remedy: what it was protecting
+  against is a stray click on a panel that opens when a cursor passes the notch,
+  and the answer to that is a small labelled button rather than a whole clickable
+  row. Hover it to see the exact command it runs.
+
 - **The agent side sets itself up, from Settings.** Connecting an AI tool to the
   notch used to mean finding a shell script inside the app and running it in a
   terminal, and choosing which tools should stop and ask you meant creating a

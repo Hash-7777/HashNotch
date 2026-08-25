@@ -155,7 +155,12 @@ struct ActivitiesDetailView: View {
 
     /// Set once the command has been put on the clipboard, so the row can say
     /// so. Not persisted anywhere: it is about the last two seconds.
-    @State private var copied = false
+    /// The state of updating the hook from here: in progress, done, or what
+    /// went wrong. Kept on the view because it is about this panel being open,
+    /// not about the app.
+    @State private var updatingHook = false
+    @State private var updatedHook = false
+    @State private var hookProblem: String?
 
     var body: some View {
         if !monitor.activities.isEmpty || monitor.hookState.needsAttention {
@@ -171,53 +176,88 @@ struct ActivitiesDetailView: View {
         }
     }
 
-    /// The one line that says the hook on disk is older than the app.
+    /// The one line that says the hook on disk is older than the app, and the
+    /// button that fixes it.
     ///
     /// It sits under the activities rather than above them: something that just
     /// happened outranks a piece of housekeeping, and this can wait for as long
     /// as it takes to read what is above it.
     ///
-    /// Clicking COPIES the command; it does not run it. Running it would edit
-    /// `~/.claude/settings.json` — another program's configuration, in somebody
-    /// else's home folder, from a single click on a panel that opens when a
-    /// cursor passes the notch. The whole argument this app makes is that it
-    /// does nothing you did not ask for, and quietly rewriting another tool's
-    /// settings because a mouse went by is the exact shape of the thing it says
-    /// it will not do. Copying removes the only real friction — finding the
-    /// path — and leaves the decision where it belongs.
+    /// **It used to copy a command instead of running one**, on the argument
+    /// that running it edits `~/.claude/settings.json` — another program's
+    /// configuration, from a click on a panel that opens when a cursor passes
+    /// the notch — and that quietly rewriting another tool's settings because a
+    /// mouse went by is exactly the shape of the thing this app says it does
+    /// not do.
+    ///
+    /// The argument was right about the danger and wrong about the remedy. What
+    /// it produced was a notice that told somebody their agent was running old
+    /// code and then handed them a shell command, which for most people is the
+    /// same as telling them nothing. And the panel already carries buttons that
+    /// grant an agent permission to run a command on this Mac; beside those,
+    /// bringing a script up to date is not the consequential one.
+    ///
+    /// So it does the work, and the danger is answered where it actually lives:
+    /// the target is a small labelled button rather than the whole row, so a
+    /// passing cursor cannot press it, and it says what it did.
     private func staleHookRow(installed: Int, available: Int) -> some View {
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(HookInstallation.updateCommand, forType: .string)
-            copied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 9, weight: .bold))
+        HStack(spacing: 7) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(theme.subtitleColor)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Notch hook is v\(installed), this app ships v\(available)")
+                    .foregroundStyle(theme.textColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(hookUpdateDetail)
+                    .font(.system(size: 8))
                     .foregroundStyle(theme.subtitleColor)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Notch hook is v\(installed), this app ships v\(available)")
-                        .foregroundStyle(theme.textColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Text(copied
-                         ? "Copied — paste it in Terminal"
-                         : "Click to copy the command that updates it")
-                        .font(.system(size: 8))
-                        .foregroundStyle(theme.subtitleColor)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .font(.system(size: 10, weight: .medium, design: .rounded))
-            .frame(width: Panel.rowWidth)
-            .contentShape(Rectangle())
+            Spacer(minLength: 4)
+            if !updatedHook {
+                Button(updatingHook ? "Updating…" : "Update") { updateHook() }
+                    .buttonStyle(.plain)
+                    .disabled(updatingHook)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule().fill(theme.accent.opacity(0.14))
+                            .overlay(Capsule().strokeBorder(theme.accent.opacity(0.22), lineWidth: 0.6))
+                    )
+                    .contentShape(Capsule())
+            }
         }
-        .buttonStyle(.plain)
-        // The command itself, for anybody who would rather read it than trust a
-        // clipboard they cannot see.
-        .help(HookInstallation.updateCommand)
+        .font(.system(size: 10, weight: .medium, design: .rounded))
+        .frame(width: Panel.rowWidth)
+        // The command it runs, for anybody who would rather see what is about
+        // to happen than take a button's word for it.
+        .help("Runs \(HookInstallation.updateCommand)")
+    }
+
+    private var hookUpdateDetail: String {
+        if updatingHook { return "Bringing it up to date…" }
+        if updatedHook { return "Updated — Claude uses it from its next session" }
+        if let hookProblem { return hookProblem }
+        return "Update it so the notch says what this app now says"
+    }
+
+    private func updateHook() {
+        updatingHook = true
+        hookProblem = nil
+        HookInstallation.install { ok, output in
+            updatingHook = false
+            if ok {
+                updatedHook = true
+                monitor.refreshHookState()
+            } else {
+                hookProblem = output.isEmpty ? "It did not finish. Nothing was changed." : "Could not update it"
+            }
+        }
     }
 
     @ViewBuilder
