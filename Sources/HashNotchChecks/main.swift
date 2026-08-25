@@ -1915,6 +1915,31 @@ MainActor.assumeIsolated {
     check("the ask checks leave nothing behind",
           !FileManager.default.fileExists(atPath: askRoot.path))
 
+    // ── AN ANSWERED QUESTION GOES AWAY AT ONCE ───────────────────────────────
+    //
+    // It used to stay until the asker took it down, and for ever if the asker
+    // had already given up and exited.
+    let standingQuestion = LiveActivity(
+        id: "claude-ask", icon: "hand.raised.fill", title: "Allow Bash?",
+        subtitle: nil, progress: nil, endsAt: nil, dismissAfter: nil, asks: "ask-abc")
+    let plainNotice = LiveActivity(
+        id: "claude-code", icon: "bell", title: "Claude needs you",
+        subtitle: nil, progress: nil, endsAt: nil, dismissAfter: nil)
+    check("an answered question is hidden straight away",
+          AnsweredQuestions.isHidden(standingQuestion, answered: ["ask-abc"]))
+    check("one that has not been answered is not",
+          !AnsweredQuestions.isHidden(standingQuestion, answered: ["ask-other"]))
+    check("something that is not a question is never hidden by this",
+          !AnsweredQuestions.isHidden(plainNotice, answered: ["ask-abc"]))
+    // Kept while the question is still in the feed, so it cannot flicker back
+    // during the round trip.
+    check("an answer is remembered while its question stands",
+          AnsweredQuestions.retained(["ask-abc"], in: [standingQuestion]) == ["ask-abc"])
+    // Forgotten the moment it goes, so this never becomes a record of what was
+    // allowed.
+    check("and forgotten the moment the question goes",
+          AnsweredQuestions.retained(["ask-abc"], in: [plainNotice]).isEmpty)
+
 
     // Activities feed: other processes write it, so every field is bounded
     // before it reaches the UI.

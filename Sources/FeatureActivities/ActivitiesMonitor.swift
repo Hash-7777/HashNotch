@@ -17,6 +17,7 @@ public final class ActivitiesMonitor: ObservableObject {
     /// before anything is known.
     @Published public private(set) var hookState: HookState = .unknown
 
+
     private let hookQueue = DispatchQueue(label: "com.hashnotch.hookcheck", qos: .utility)
     private var hookCheckedAt: Date = .distantPast
 
@@ -45,6 +46,28 @@ public final class ActivitiesMonitor: ObservableObject {
     /// When this activity first arrived, for anything that wants to say how
     /// long it has been standing there rather than how long it has left.
     package func arrived(_ activity: LiveActivity) -> Date? { firstSeen[activity.id]?.at }
+
+    /// Answer a question from the panel: file it where the asker is looking,
+    /// and take it off the screen now.
+    package func answer(_ activity: LiveActivity, _ decision: PermissionAnswers.Decision) {
+        guard let token = activity.asks else { return }
+        PermissionAnswers.record(token: token, decision: decision)
+        answered.insert(token)
+        apply(ActivitiesReader.read())
+    }
+
+    /// Questions answered from the panel, hidden the moment they are answered
+    /// rather than when the asker gets round to taking them down.
+    ///
+    /// The app files an answer and the ASKER removes its own question, which is
+    /// correct — it owns the feed — but it means the box stayed on screen for
+    /// as long as the round trip took, and stayed there for ever if the asker
+    /// had already given up waiting and exited. Pressing a button and watching
+    /// nothing happen is how somebody presses it again.
+    ///
+    /// A token is forgotten as soon as its question leaves the feed, so this
+    /// never grows and never becomes a record of what was allowed.
+    private var answered: Set<String> = []
 
     private var dismissalWork: DispatchWorkItem?
 
@@ -196,8 +219,14 @@ public final class ActivitiesMonitor: ObservableObject {
             firstSeen[activity.id] = (activity, moment)
         }
 
+        // Forget answers whose questions have gone; keep the ones still in the
+        // feed, so an answered box does not flicker back while the asker is
+        // still on its way to removing it.
+        answered = AnsweredQuestions.retained(answered, in: fresh)
+
         let preferred = settings?.alerts.noticeSeconds
         let showing = fresh.filter { activity in
+            if AnsweredQuestions.isHidden(activity, answered: answered) { return false }
             guard !activity.isExpired else { return false }
             guard let seen = firstSeen[activity.id]?.at,
                   let dismissal = activity.dismissalDate(firstSeen: seen, preferring: preferred)

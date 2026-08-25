@@ -34,6 +34,23 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **A question on the notch is its own box now, and it goes away when you answer
+  it.** It was a line of text with two small buttons after it, the same size as
+  a temperature reading — the only thing in the panel that stops and waits for a
+  decision, drawn like something you glance at. It now has a border, the command
+  it is asking about on two lines instead of one, and two targets big enough to
+  hit without aiming. Deny is drawn no louder than Allow: a pair where one is
+  styled as the obvious answer is a pair that gets clicked without reading, and
+  the point of being asked is the reading. Clicking anywhere else in the box
+  does nothing at all, where before the whole row was a button that jumped to
+  the agent's window.
+
+  Answering also takes it off the screen immediately. The app files the answer
+  and the agent removes its own question, which is the right way round and meant
+  a gap between pressing a button and anything happening — a gap that never
+  closed at all if the agent had already stopped waiting. Pressing a button and
+  seeing nothing happen is how somebody presses it again.
+
 - **The notch stops asking about tool calls the agent was never going to ask
   about.** A tool you tick under Agents is intercepted before it runs — and the
   event that makes that possible fires before the permission decision, so the

@@ -280,11 +280,18 @@ struct ActivitiesDetailView: View {
 
     @ViewBuilder
     private func row(_ activity: LiveActivity) -> some View {
+        // A question is its own box and is never wrapped in the jump-to-the-app
+        // button below: on a thing whose whole job is to take a deliberate
+        // decision, a click that lands anywhere but the two answers must do
+        // nothing at all.
+        if let token = activity.asks {
+            questionBox(activity, token: token)
+        }
         // An activity that named the app it belongs to becomes a way back to
         // it. "Claude needs you" that you can only read is a notification; one
         // click from it to the window that is waiting is the whole difference
         // between being told and being able to do something about it.
-        if activity.appPath != nil {
+        else if activity.appPath != nil {
             Button { activate(activity) } label: {
                 rowBody(activity, showsJump: true)
             }
@@ -331,44 +338,94 @@ struct ActivitiesDetailView: View {
             .help("A tool you tick there stops and asks here instead of in its own window. Tick nothing and nothing is intercepted at all.")
     }
 
-    /// Answer a question from here, rather than going to find the window that
-    /// asked it.
+    /// A question, drawn as its own box rather than as a line with two small
+    /// buttons after it.
     ///
-    /// Deny is drawn no louder than allow. A pair of buttons where one is
-    /// styled as the obvious answer is a pair that gets clicked without
-    /// reading, and the whole point of being asked is the reading.
+    /// It is the only thing on this panel that stops and waits for a decision,
+    /// and it was the same size as a temperature reading. A question you have
+    /// to find is a question answered by habit, and the whole point of being
+    /// asked is the reading — so it gets a border, the command it is asking
+    /// about on two lines instead of one, and two targets big enough to hit
+    /// without aiming.
+    ///
+    /// Deny is drawn no louder than allow. A pair where one is styled as the
+    /// obvious answer is a pair that gets clicked without reading.
     ///
     /// Only in the panel, never on the strip. The strip is glanceable and
     /// cannot be clicked; something that grants permission should cost a
     /// deliberate movement — hovering the notch to open the panel — rather than
     /// sitting under a cursor that happens to be passing the top of the screen.
-    private func answerButtons(token: String) -> some View {
-        HStack(spacing: 8) {
-            answerButton("Allow", token: token, decision: .allow, tint: theme.accent)
-            answerButton("Deny", token: token, decision: .deny, tint: theme.subtitleColor)
-            Spacer(minLength: 0)
+    private func questionBox(_ activity: LiveActivity, token: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 8) {
+                ActivityMark(activity: activity, theme: theme, size: 22)
+                Text(activity.title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(theme.textColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 6)
+                if let text = Formatters2.waitedText(activity, monitor: monitor, now: monitor.now) {
+                    Text(text)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(theme.subtitleColor)
+                        .monospacedDigit()
+                }
+            }
+
+            // What is actually about to run. Two lines, because one line of a
+            // shell command is a prefix, and approving a prefix is approving
+            // something you have not read.
+            if let subtitle = activity.displaySubtitle {
+                Text(subtitle)
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(theme.subtitleColor)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack(spacing: 8) {
+                answerButton("Allow", activity, .allow, tint: theme.accent)
+                answerButton("Deny", activity, .deny, tint: theme.subtitleColor)
+            }
         }
-        .padding(.top, 2)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 10)
+        .frame(width: Panel.rowWidth, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(theme.accent.opacity(0.09))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .strokeBorder(theme.accent.opacity(0.30), lineWidth: 0.8)
+                )
+        )
     }
 
     private func answerButton(
         _ label: String,
-        token: String,
-        decision: PermissionAnswers.Decision,
+        _ activity: LiveActivity,
+        _ decision: PermissionAnswers.Decision,
         tint: Color
     ) -> some View {
         Button {
-            PermissionAnswers.record(token: token, decision: decision)
+            monitor.answer(activity, decision)
         } label: {
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(tint)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
                 .background(
-                    Capsule().fill(tint.opacity(0.14))
-                        .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 0.6))
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(tint.opacity(0.16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .strokeBorder(tint.opacity(0.28), lineWidth: 0.6)
+                        )
                 )
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -405,9 +462,7 @@ struct ActivitiesDetailView: View {
                     .tint(theme.accent)
                     .scaleEffect(x: 1, y: 0.7)
             }
-            if let token = activity.asks {
-                answerButtons(token: token)
-            } else if activity.showsCountdown {
+            if activity.showsCountdown {
                 unanswerableNotice
             }
         }
