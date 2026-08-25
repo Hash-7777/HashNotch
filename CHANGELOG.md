@@ -11,8 +11,9 @@ All notable changes to HashNotch are recorded here.
   the most — three of them — how much each used, and each row drawn as the
   length it used, against the biggest, so the largest is obvious without reading
   a figure at all. The exact split between what a program sent and what it
-  received is one hover away. Shut, it costs a single line and still names the
-  biggest. It says "while running", and
+  received is one hover away. It starts shut, costing a single line that still
+  names the biggest, and once you open or shut it that is remembered — the app
+  does not re-decide it every time you look. It says "while running", and
   means it: your Mac keeps no history of which program used what, because those
   counters live inside the running programs and go when they do. Anything that
   went past while the app was closed is in the total above but belongs to no

@@ -306,15 +306,23 @@ public final class SettingsStore: ObservableObject {
     /// which program sent what, and this asks a question that does.
     public nonisolated static let defaultNetworkShowsApps: Bool = true
 
-    /// Whether the by-app list starts open.
+    /// Whether the by-app list starts open on a Mac that has never been asked.
     ///
-    /// Open, because the list is the answer and a breakdown nobody has opened
-    /// has told nobody anything. It is remembered rather than reset each time
-    /// the panel opens: which page you are looking at is not a preference, but
-    /// whether you want this list open every time you look is exactly one, and
-    /// a disclosure that springs shut on every glance is a disclosure being
-    /// re-decided by the app rather than by you.
-    public nonisolated static let defaultNetworkAppsExpanded: Bool = true
+    /// Shut. It was open, on the argument that a breakdown nobody has opened
+    /// has told nobody anything — and that argument is about the SECOND time
+    /// somebody looks, not the first. A panel that greets a new user with three
+    /// extra rows of programs they did not ask about is a panel that opens
+    /// taller than it needs to, to answer a question nobody put. Shut, it still
+    /// names the biggest on its one line, which is the answer most people want
+    /// and the whole reason that line says anything at all.
+    ///
+    /// What is NOT reset is the choice once made. Which page you are looking at
+    /// is not a preference; whether you want this list open every time you look
+    /// is exactly one, and a disclosure that springs shut on every glance is a
+    /// disclosure being re-decided by the app rather than by you. So this value
+    /// is only ever the starting point, and the moment somebody opens or shuts
+    /// the list it becomes theirs.
+    public nonisolated static let defaultNetworkAppsExpanded: Bool = false
 
     /// Bumped whenever the stored feature configuration changes.
     ///

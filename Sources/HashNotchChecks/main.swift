@@ -4397,6 +4397,24 @@ MainActor.assumeIsolated {
     settings.canPressMediaKeys = true
     settings.tokenScanInterval = .never
     settings.networkShowsApps = false
+    // A Mac that has never been asked gets the list shut, and the moment
+    // somebody opens it that becomes their answer rather than a suggestion the
+    // app makes again next time.
+    check(
+        "the by-app list starts shut on a Mac that has never been asked",
+        SettingsStore.defaultNetworkAppsExpanded == false
+    )
+    check(
+        "and a choice to open it is what is remembered, not the default",
+        {
+            let store = InMemoryDefaults()
+            let first = checkStore(defaults: store)
+            first.networkAppsExpanded = true
+            first.flush()
+            return checkStore(defaults: store).networkAppsExpanded == true
+        }()
+    )
+
     settings.networkAppsExpanded = false
     var nudged = IslandAdjustment()
     nudged.horizontal = 9
@@ -4435,7 +4453,7 @@ MainActor.assumeIsolated {
         settings.networkShowsApps == SettingsStore.defaultNetworkShowsApps
     )
     check(
-        "resetting everything reopens the by-app list",
+        "resetting everything puts the by-app list back to its starting state",
         settings.networkAppsExpanded == SettingsStore.defaultNetworkAppsExpanded
     )
     check("resetting everything forgets every position correction", settings.adjustments.isEmpty)
