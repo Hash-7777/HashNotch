@@ -196,6 +196,13 @@ public final class ActivitiesMonitor: ObservableObject {
                 // A countdown reaching its end is the one thing the file watch
                 // will never announce, so re-evaluate as it ticks.
                 self.apply(ActivitiesReader.read())
+                // And how hard a standing request presses is worked out from
+                // this clock, by the island, while it draws. The island is not
+                // watching this clock — it watches which features are live, and
+                // this one has been live the whole time it has been waiting —
+                // so without this the line it traces would keep the urgency it
+                // had at the moment the request arrived, which is none.
+                self.presence?.changed("activities")
             }
             self.clock = clock
             clock.start()

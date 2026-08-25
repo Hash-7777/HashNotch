@@ -190,12 +190,28 @@ public final class TimerEngine: ObservableObject {
         }
     }
 
+    /// Reach zero now, for the checks.
+    ///
+    /// The alternative is a check that waits a real minute, which is not a
+    /// check anybody runs. What it exercises is the same method the clock
+    /// calls, so it cannot drift away from what really happens.
+    package func finishNowForChecks() {
+        guard case .running(let endsAt, _) = phase else { return }
+        announceFinish(endedAt: endsAt, chiming: false)
+    }
+
     /// Say it is up, once, and take the deadline off the books.
     private func announceFinish(endedAt: Date, chiming: Bool) {
         suspend()
         phase = .finished
         TimerDeadlineStore.clear(from: defaults)
         presence?.setActive("timer", true)
+        // Already live from the countdown, so the line above changes nothing
+        // and announces nothing. This is what tells the island that the same
+        // feature now wants a different thing drawn — an orange edge, and the
+        // strip itself, which a running countdown does not ask for and a
+        // finished one does.
+        presence?.changed("timer")
 
         // Only when the system is not doing it. When a banner is coming, it has
         // already sounded — on time, which the app cannot promise — and a chime

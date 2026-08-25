@@ -4702,6 +4702,76 @@ func restartKeepsTheTimerChecks() {
 MainActor.assumeIsolated { restartKeepsTheTimerChecks() }
 
 @MainActor
+func liveChangeChecks() {
+    // The island reads a feature's colour, its urgency and its claim on the
+    // strip while it draws, and it only draws again when the presence it
+    // watches changes. A feature that stays live while those three change had
+    // no way to say so — which is why a timer going off lit nothing, and a
+    // request left waiting never pressed harder.
+    let presence = LivePresence()
+    let before = presence.revision
+    presence.changed("timer")
+    check(
+        "a feature that is not live has nothing to announce",
+        presence.revision == before
+    )
+    presence.setActive("timer", true)
+    let live = presence.revision
+    presence.changed("timer")
+    check(
+        "a live feature can say that what it wants drawn has changed",
+        presence.revision == live + 1
+    )
+    // The guard in setActive is what stops a feature that reports the same
+    // state every second from redrawing the island every second, and it has to
+    // stay: this is the deliberate signal, not a side effect of reporting.
+    presence.setActive("timer", true)
+    check(
+        "and saying nothing new still announces nothing",
+        presence.revision == live + 1
+    )
+    presence.setActive("timer", false)
+    presence.changed("timer")
+    check(
+        "a feature that has gone quiet cannot announce either",
+        presence.revision == live + 1
+    )
+}
+MainActor.assumeIsolated { liveChangeChecks() }
+
+@MainActor
+func timerAnnouncesItsFinishChecks() {
+    // The reported failure: the timer runs out and the island's edge stays
+    // dark, where every other announcement lights it.
+    let timer = TimerFeature(defaults: InMemoryDefaults())
+    let presence = LivePresence()
+    let settings = checkStore(defaults: InMemoryDefaults())
+    let registry = FeatureRegistry()
+    registry.register([timer])
+    settings.seed(features: registry.features)
+    let context = FeatureContext(settings: settings, presence: presence)
+    registry.syncRunning(context: context)
+
+    timer.countdown.begin(minutes: 1)
+    check("a running countdown holds the strip", presence.activeIDs.contains("timer"))
+    check("and asks for no colour", timer.outlineTint == nil)
+    let whileRunning = presence.revision
+
+    // Reaching zero, without waiting a minute for it.
+    timer.countdown.finishNowForChecks()
+    check("a finished timer asks for a colour", timer.outlineTint != nil)
+    check(
+        "and says so, even though it was already live",
+        presence.revision > whileRunning
+    )
+    check(
+        "and now outranks anything merely ongoing",
+        timer.livePriority > LivePriority.ongoing
+    )
+}
+MainActor.assumeIsolated { timerAnnouncesItsFinishChecks() }
+
+@MainActor
 func timerFinishTakesTheStripChecks() {
     // A timer going off while music plays used to be invisible: both sat at the
     // same standing and the media feature is registered first, so it kept the

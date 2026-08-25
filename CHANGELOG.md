@@ -364,6 +364,22 @@ All notable changes to HashNotch are recorded here.
   before, a cancelled timer's alert had an unrepeatable name and nothing could
   ever have cancelled it.
 
+- **A timer going off lights the island's edge, like every other
+  announcement.** It never did. The island reads the colour of its edge, how
+  hard that colour pulses, and which feature has the strongest claim on the
+  strip, all while it draws — and it only draws again when the set of live
+  features changes. A countdown is already live while it counts, so reaching
+  zero changed nothing the island was watching: the strip's own words changed,
+  because those watch the countdown directly, but the edge stayed dark and the
+  finish never took the strip from whatever else was live. A feature can now say
+  that what it wants drawn has changed without having to stop and start.
+
+  The same silence was hiding a second thing: a request left waiting was
+  supposed to pulse harder the longer it stood, and the figure behind that
+  climbs with every second — but nothing was asking for it again, so the line
+  kept the urgency it had at the moment the request arrived, which is none.
+  Both now speak up.
+
 - **A timer going off while music plays is now visible.** The strip shows one
   thing at a time and the media indicator is registered first, so at equal
   standing it kept the strip through the exact moment the timer had something to
