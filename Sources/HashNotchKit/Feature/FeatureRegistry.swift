@@ -162,6 +162,31 @@ public final class FeatureRegistry {
         suspended.removeAll()
     }
 
+    /// Start one feature over, because something it was told at startup has
+    /// changed — how often it samples, most often.
+    ///
+    /// A sampler's interval is fixed when it starts, so the only way to change
+    /// it is to start the feature again. What matters is that ONLY that feature
+    /// is disturbed: this used to be done by stopping every feature and
+    /// starting them all again, which meant changing how often the AI token
+    /// count runs emptied every graph in the panel — each monitor drops its
+    /// history when it stops, deliberately, so that it never draws a line
+    /// across a gap it did not measure — and destroyed a running timer, because
+    /// stopping a feature is what the user switching it off means.
+    ///
+    /// It is put down and picked up rather than stopped and started, for the
+    /// same reason the screen going dark is: nobody has asked for anything to
+    /// end.
+    public func restart(id: String, context: FeatureContext) {
+        guard context.settings.hasAcceptedReading,
+              context.settings.isEnabled(id),
+              running.contains(id),
+              let feature = features.first(where: { $0.id == id })
+        else { return }
+        feature.suspend()
+        feature.resume(context: context)
+    }
+
     /// Put down everything that is running because nobody can see it.
     ///
     /// Which features were up is remembered, so coming back does not depend on

@@ -4584,6 +4584,100 @@ func timerSwitchedOffWhileAwayChecks() {
 MainActor.assumeIsolated { timerSwitchedOffWhileAwayChecks() }
 
 @MainActor
+func restartOneFeatureChecks() {
+    // Changing how often ONE feature samples must start that feature over and
+    // touch nothing else. It used to stop every feature and start them all
+    // again, which emptied every graph in the panel — a monitor drops its
+    // history when it stops, on purpose — and ended any running timer.
+    let settings = checkStore(defaults: InMemoryDefaults())
+    let counted = CountingFeature(id: "counted")
+    let untouched = CountingFeature(id: "untouched")
+    let registry = FeatureRegistry()
+    registry.register([counted, untouched])
+    settings.seed(features: registry.features)
+    let context = FeatureContext(settings: settings)
+    registry.syncRunning(context: context)
+    let before = untouched.starts
+
+    registry.restart(id: "counted", context: context)
+    check("restarting one feature starts that one again", counted.starts == 2)
+    check("and does not disturb any other", untouched.starts == before)
+    check("and leaves both of them running", registry.runningIDs == ["counted", "untouched"])
+
+    // A feature that is switched off has nothing to restart, and must not be
+    // started by the attempt.
+    settings.update("untouched") { $0.enabled = false }
+    registry.syncRunning(context: context)
+    let whileOff = untouched.starts
+    registry.restart(id: "untouched", context: context)
+    check(
+        "restarting a switched-off feature does nothing at all",
+        untouched.starts == whileOff && untouched.isRunning == false
+    )
+}
+MainActor.assumeIsolated { restartOneFeatureChecks() }
+
+@MainActor
+func restartKeepsTheTimerChecks() {
+    // The reported failure: changing the AI token interval in Settings reset
+    // the whole panel, the running timer included.
+    let defaults = InMemoryDefaults()
+    let settings = checkStore(defaults: InMemoryDefaults())
+    let timer = TimerFeature(defaults: defaults)
+    let tokens = CountingFeature(id: "tokens")
+    let registry = FeatureRegistry()
+    registry.register([timer, tokens])
+    settings.seed(features: registry.features)
+    let context = FeatureContext(settings: settings)
+    registry.syncRunning(context: context)
+
+    timer.countdown.begin(minutes: 25)
+    guard case .running(let endsAt, let total) = timer.countdown.phase else {
+        check("a timer can be started alongside another feature", false)
+        return
+    }
+    check("a timer can be started alongside another feature", true)
+
+    registry.restart(id: "tokens", context: context)
+    check(
+        "changing how often one feature samples leaves a running timer alone",
+        timer.countdown.phase == .running(endsAt: endsAt, total: total)
+    )
+    check(
+        "and leaves its deadline on the books",
+        TimerDeadlineStore.load(from: defaults)?.endsAt == endsAt
+    )
+
+    // And the invariant itself, rather than an instance of it that happens to
+    // hold: restarting the TIMER must not end the timer.
+    //
+    // This check exists because the two above do not earn their keep on their
+    // own. They restart a different feature, so they pass whether a restart is
+    // careful or brutal — which a mutation test found by making `restart` stop
+    // and start rather than put down and pick up, and watching every check
+    // still pass. A check that passes for the wrong reason is worse than no
+    // check at all: it reports safety it never tested.
+    registry.restart(id: "timer", context: context)
+    check(
+        "restarting the timer itself does not end the countdown",
+        timer.countdown.phase == .running(endsAt: endsAt, total: total)
+            && TimerDeadlineStore.load(from: defaults)?.endsAt == endsAt
+    )
+
+    // Battery saver is the one setting that genuinely reaches every feature.
+    // Even that must not end a countdown nobody asked to end.
+    registry.suspendAll()
+    registry.resumeAll(context: context)
+    check(
+        "and a setting that restarts every feature does not end it either",
+        timer.countdown.phase == .running(endsAt: endsAt, total: total)
+            && TimerDeadlineStore.load(from: defaults)?.endsAt == endsAt
+    )
+    check("with the other feature running again too", registry.runningIDs.contains("tokens"))
+}
+MainActor.assumeIsolated { restartKeepsTheTimerChecks() }
+
+@MainActor
 func timerFinishTakesTheStripChecks() {
     // A timer going off while music plays used to be invisible: both sat at the
     // same standing and the media feature is registered first, so it kept the

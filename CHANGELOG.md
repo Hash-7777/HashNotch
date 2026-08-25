@@ -110,6 +110,17 @@ All notable changes to HashNotch are recorded here.
   the reading — so memory gets a line with a glow under it and the processor,
   which never had the room to slab, is untouched.
 
+- **Changing how often the AI tokens are counted no longer resets the panel.**
+  It emptied every graph and ended any running timer. Changing that setting
+  means starting the token count over — a sampler's interval is fixed when it
+  starts — but it was starting *every* feature over, and stopping a feature is
+  what switching it off means: each monitor drops its history when it stops, on
+  purpose, so it never draws a line across a stretch it did not measure, and the
+  timer gives up its countdown. Only the feature whose setting changed is
+  restarted now. Battery saver is the one setting that genuinely reaches all of
+  them, and even that now puts them down and picks them up rather than stopping
+  them, so a countdown you set survives it.
+
 - **The timer's wheel turns as one thing now.** Letting go of a drag made it
   lurch — for an instant it snapped back to where the drag had started before
   flying to where it was released — and pressing a number made every other

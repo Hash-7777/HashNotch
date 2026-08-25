@@ -149,9 +149,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { self?.scheduleOverlayRebuild() }
         }
 
-        // Battery saver changes how often everything samples, and a running
-        // sampler's interval is fixed — so the features are restarted, which is
-        // exactly what already happens on screen sleep and wake.
+        // Battery saver changes how often EVERY feature samples, so this is the
+        // one setting that genuinely has to reach all of them.
+        //
+        // It puts them down and picks them up rather than stopping and
+        // starting them. Stopping is what the user switching a feature off
+        // means, and it takes a running countdown with it — the person did not
+        // ask for their timer to end, they asked the app to sample less often.
         settings.$batterySaver
             .removeDuplicates()
             .dropFirst()
@@ -162,16 +166,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // How often the token count runs is fixed when its sampler starts, for
-        // the same reason battery saver is: an interval cannot be changed under
-        // a running timer. Restarting is what already happens on screen sleep
-        // and wake, so it is a path the features are built to survive.
+        // How often the token count runs is fixed when its sampler starts, so
+        // changing it means starting that feature again — and ONLY that
+        // feature.
+        //
+        // It used to restart all of them, on the reasoning that a restart is a
+        // path they all survive. They do survive it; the panel does not. Every
+        // monitor drops its history when it stops, deliberately, so that it
+        // never draws a line across a stretch it did not measure — so changing
+        // how often the tokens are counted emptied the internet, processor and
+        // memory graphs, none of which had been asked about. It also ended any
+        // running timer, since stopping a feature is what switching it off
+        // means.
         settings.$tokenScanInterval
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
-                    MainActor.assumeIsolated { self?.restartFeatures() }
+                    MainActor.assumeIsolated { self?.restartFeature("tokens") }
                 }
             }
             .store(in: &cancellables)
@@ -352,10 +364,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.removePersistentDomain(forName: domain)
     }
 
+    /// Every feature over again, for the one setting that reaches all of them.
     private func restartFeatures() {
         guard let registry, let context else { return }
-        registry.stopAll()
-        registry.syncRunning(context: context)
+        registry.suspendAll()
+        registry.resumeAll(context: context)
+    }
+
+    /// One feature over again, for a setting that only that feature was told.
+    private func restartFeature(_ id: String) {
+        guard let registry, let context else { return }
+        registry.restart(id: id, context: context)
     }
 
     private func toggleSettings() {
