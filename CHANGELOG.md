@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.3.0 — the timer survives a locked Mac, and every Mac gets temperatures
 
 ### Added
 

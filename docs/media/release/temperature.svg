@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 132" width="44" height="44" role="img" aria-label="temperature">
+  <rect x="0.5" y="0.5" width="131" height="131" rx="30" fill="#0F1117" stroke="#1E2230"/>
+    <path d="M61 57 L61 79 C61 83.97 56.97 88 52 88 L52 88 C47.03 88 43 83.97 43 79 L43 35 C43 30.03 47.03 26 52 26 L52 26 C56.97 26 61 30.03 61 35 Z M71 87 C71 97.49 62.49 106 52 106 C41.51 106 33 97.49 33 87 C33 76.51 41.51 68 52 68 C62.49 68 71 76.51 71 87 Z" fill="#8FBAFF"/>
+    <path d="M74 42 L96 42 M74 58 L96 58" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

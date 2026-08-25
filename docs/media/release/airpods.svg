@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 132" width="44" height="44" role="img" aria-label="airpods">
+  <rect x="0.5" y="0.5" width="131" height="131" rx="30" fill="#0F1117" stroke="#1E2230"/>
+    <path d="M60 46 C60 54.84 52.84 62 44 62 C35.16 62 28 54.84 28 46 C28 37.16 35.16 30 44 30 C52.84 30 60 37.16 60 46 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M44 62 L44 100" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M104 46 C104 54.84 96.84 62 88 62 C79.16 62 72 54.84 72 46 C72 37.16 79.16 30 88 30 C96.84 30 104 37.16 104 46 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M88 62 L88 100" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

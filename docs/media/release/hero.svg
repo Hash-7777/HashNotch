@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="HashNotch 1.3.0 — See the unseen.">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12151C"/>
+      <stop offset="1" stop-color="#0B0C10"/>
+    </linearGradient>
+    <linearGradient id="lit" gradientUnits="userSpaceOnUse" x1="484" y1="0" x2="716" y2="0">
+      <stop offset="0" stop-color="#408CFF" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#8FBAFF" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#BFD8FF" stop-opacity="1"/>
+      <stop offset="0.75" stop-color="#8FBAFF" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#408CFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="rule" gradientUnits="userSpaceOnUse" x1="300" y1="0" x2="900" y2="0">
+      <stop offset="0" stop-color="#12151C"/>
+      <stop offset="0.5" stop-color="#2A3040"/>
+      <stop offset="1" stop-color="#12151C"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="1199" height="319" rx="24" fill="url(#plate)" stroke="#1E2230"/>
+
+  <!-- The island as the app draws it: black exactly to the hardware, with the
+       lit line traced just outside it. -->
+  <path d="M508 44 L692 44 L692 68 Q692 82 678 82 L522 82 Q508 82 508 68 Z" fill="#000000"/>
+  <path d="M484 86 L716 86" stroke="url(#lit)" stroke-width="14" stroke-linecap="round" opacity="0.16"/>
+  <path d="M486 86 L714 86" stroke="url(#lit)" stroke-width="7" stroke-linecap="round" opacity="0.34"/>
+  <path d="M488 86 L712 86" stroke="url(#lit)" stroke-width="3" stroke-linecap="round"/>
+
+  <text x="600" y="176" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Helvetica, Arial, sans-serif" font-size="60" font-weight="700" fill="#F2F5FA" letter-spacing="-1.2">HashNotch</text>
+
+  <g transform="translate(600 200)">
+    <rect x="-49" y="0" width="98" height="32" rx="16" fill="#101C33" stroke="#2A4A80"/>
+    <text x="0" y="22" text-anchor="middle" font-family="'SF Mono', SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600" fill="#8FBAFF" letter-spacing="0.6">1.3.0</text>
+  </g>
+
+  <text x="600" y="264" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="20" fill="#9AA4B2">See the unseen.</text>
+
+  <path d="M300 288 L900 288" stroke="url(#rule)" stroke-width="1"/>
+
+  <text x="600" y="306" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="13" fill="#6E7681" letter-spacing="0.4">68 commits &#183; 897 checks &#183; nothing leaves your Mac</text>
+</svg>
