@@ -2,7 +2,17 @@
 
 | File | What it shows |
 | --- | --- |
-| `banner.png` | The banner the README opens on — the live strip beside the notch and the whole panel dropped below it, on a Mac. 2360 × 1592, which is 2x for a Retina display. |
+| `panel.png` | The image the README opens on — the whole panel dropped below the notch, on a Mac. 2000 × 1318, which is comfortably 2x for the column GitHub renders it in. |
+
+It replaced `banner.png`, which showed a panel several rows out of date. The old
+one is in the history if it is ever wanted; there is no reason to carry four
+megabytes of a picture of an app that no longer looks like that.
+
+**It is not only ours.** The wallpaper, the Dock, its icons and the Mac around
+the panel are Apple's, and the README says so directly underneath. Anything that
+replaces this image needs the same line, and needs checking for the same thing:
+a marketing picture is the easiest place in a repository to publish somebody
+else's property without noticing.
 
 Keep the banner at 2x: the README renders it at `width="100%"`, and GitHub serves
 it at up to twice the column width on a Retina screen. A 1x banner is visibly

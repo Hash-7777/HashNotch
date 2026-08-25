@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="docs/media/banner.png" alt="HashNotch on a MacBook: a live strip beside the notch showing what is playing, and the panel dropped below it with artwork, a progress bar and transport controls, a volume slider, internet speed with a graph, battery held at 80%, AI tokens counted today, processor, drive and battery temperatures, memory, CPU, a timer and storage." width="100%">
+<img src="docs/media/panel.png" alt="The HashNotch panel open below the notch on a MacBook: internet speed with a graph, how much data has gone through today and which programs used it, battery with time remaining, AI tokens counted today, processor, drive and battery temperatures, memory, CPU, a timer set with a wheel, and how full the disk is." width="100%">
+
+<sub>The panel above is a real screenshot, placed on a picture of a MacBook. Everything on screen other than HashNotch itself — the wallpaper, the Dock and its icons, the menu bar, and the Mac — belongs to Apple Inc. and appears only to show where the app sits. HashNotch is an independent project: it is not affiliated with, endorsed by, or sponsored by Apple, and Apple, macOS, MacBook and the Apple logo are trademarks of Apple Inc. “Claude” appears in the by-app list because a program of that name used data on the day this was taken — Claude is a trademark of Anthropic PBC, and naming it is a readout of what your own Mac reports rather than an endorsement or a partnership by either side. The figures are one Mac at one moment; yours will show its own.</sub>
 
 # HashNotch
 
