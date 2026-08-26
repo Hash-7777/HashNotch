@@ -21,6 +21,13 @@ All notable changes to HashNotch are recorded here.
   name across the top, the full width up to the close button, which is what a
   title bar is. Everything else on the panel belongs to whatever is drawn there.
 
+- **The title of a settings page is no longer pressed against the tabs.** There
+  were eleven points between the row of tabs and the heading of the page they
+  open, so the two read as one block and the page title looked like a caption
+  belonging to the tab above it rather than the title of everything below it.
+  There is proper room now. Nothing else moved: the pages that fit in the window
+  without scrolling still fit.
+
 ## 1.3.0 — temperatures on every Mac, your data by program, and a timer that survives a locked lid
 
 ### Added

@@ -61,12 +61,16 @@ public final class SettingsWindowController {
     /// window — it was giving the controls the 146 points the column was
     /// spending on six words.
     ///
-    /// The height was 580, which fitted most pages and left Appearance and
-    /// Indicators a little short — so those two scrolled, and a settings window
-    /// that scrolls on some tabs and not others makes the reader wonder each
-    /// time whether they have seen everything. 760 clears the longest page with
-    /// room to spare; the frame below still shrinks it to fit a small display,
-    /// so this is a ceiling rather than a demand.
+    /// The height was 580, which left even the middling pages short. 760 is
+    /// what the pages that can be finished need; the frame below still shrinks
+    /// it to fit a small display, so this is a ceiling rather than a demand.
+    ///
+    /// It does not clear every page, and the note here once said it did.
+    /// Measured at this height, the panel gives its pages 660 points, and four
+    /// of the six ask for more than that — General 1363, Privacy 2138,
+    /// Indicators 844, Appearance 748 — because three of them are pages of
+    /// prose and one grows a row per feature. Those scroll, and no window that
+    /// fits on a laptop screen was ever going to stop them.
     private static let size = CGSize(width: 460, height: 760)
     /// The gap between the island's edge and this one.
     private static let gap: CGFloat = 12

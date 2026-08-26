@@ -135,6 +135,13 @@ public struct SettingsView: View {
             ScrollView {
                 page
                     .padding(.horizontal, 22)
+                    // Room between the row of tabs and the heading of the page
+                    // they opened. There were 11 points — the strip's own
+                    // padding and the hairline — so the heading sat against the
+                    // tab above it and the two read as one block, which made
+                    // the page title look like a caption belonging to the tabs
+                    // rather than the title of everything below it.
+                    .padding(.top, 20)
                     .padding(.bottom, 24)
                     // Belt and braces after the picker fix: the page takes
                     // the width it is given rather than asking for more,
