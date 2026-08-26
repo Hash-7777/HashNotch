@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 #
 # Posts a HashNotch live activity when Claude Code finishes a reply or is
-# waiting for your permission. Wired into ~/.claude/settings.json as a Stop +
-# Notification hook by scripts/install-claude-hooks.sh. Reads the hook payload
-# Claude Code sends on stdin (JSON) and writes ONLY the local activities feed
+# waiting for you. Wired into ~/.claude/settings.json by
+# scripts/install-claude-hooks.sh. Reads the hook payload Claude Code sends on
+# stdin (JSON) and writes ONLY the local activities feed
 # (~/.hashnotch/activities.json) — nothing else, nowhere else.
+#
+# It only ever TELLS you something. It never holds a tool call up, never asks
+# the agent to allow or refuse anything, and returns nothing the agent acts on:
+# when a tool stops for a permission or a question, the notch says so and you
+# answer it where it asked.
 #
 #   claude-code-hook.sh stop           # "Claude finished"
 #   claude-code-hook.sh notification   # "Claude needs you" (+ the reason)
+#   claude-code-hook.sh clear          # take a standing request back down
 #
 set -euo pipefail
 
@@ -30,32 +36,15 @@ set -euo pipefail
 # hook has no way of knowing its own registration is out of date, so the version
 # is the only thing that can carry the message.
 #
-# 12 and 13 tried to predict, from the session's permission mode, whether the
-# agent was going to ask anything — and both were wrong, in opposite directions.
-# THE PREDICTION CANNOT BE MADE. PreToolUse fires BEFORE the permission decision;
-# that is precisely what lets a hook block a call, and it means the payload
-# cannot say which way a decision that has not happened yet will go. `auto` was
-# read as "approves everything" and does not: it approves most calls and still
-# stops for what it judges risky, with nothing in the payload marking which.
-# Predicting silence there took the answers off the notch in the sessions most
-# people run, leaving a notice with nothing to press.
-#
-# 14 stops predicting. A tool listed in ask-tools.txt is intercepted in every
-# mode, from every agent, for every call — which is what the setting says on the
-# tin. The cost is honest and bounded: a question nobody answers holds that one
-# call for ASK_SECONDS and then hands it straight back, exactly as if this hook
-# had never run.
-#
-# 15: and the reason nobody had ever actually SEEN a question. The test for "a
-# request is already standing, so do not ask again" matched anything posted
-# under our id, including the "Claude finished" notice that lands at the end of
-# every turn — so every tool call took the do-not-ask branch instead.
-#
-# 16: only PreToolUse may become a question. PostToolUse shares the same `clear`
-# wiring and was raising a second one, asking whether to allow a call that had
-# already finished, and waiting all over again for an answer that could not
-# change anything.
-HOOK_VERSION=16
+# 12 to 16 built, and then repaired and repaired, a way of ANSWERING a
+# permission question on the notch: the hook stopped the call, put Allow and
+# Deny on the screen and waited for a decision. 17 removes all of it. Every
+# version of that idea cost a wait on tool calls that were never in doubt, and
+# what was actually wanted is the plain notice that is already here — the notch
+# says a tool is waiting on you, and you answer it wherever it asked. This
+# script no longer intercepts anything, reads no tool list, waits for nothing,
+# and returns no permission decision.
+HOOK_VERSION=17
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -82,75 +71,18 @@ mkdir -p "$(dirname "$FEED")"
 # one name per line — Bash, Write, Edit, WebFetch. No file, no interception:
 # the whole feature is inert until you write it, and it stays inert for every
 # tool you leave out of it.
-ASK_LIST="$HOME/.hashnotch/ask-tools.txt"
-ASK_SECONDS="${HASHNOTCH_ASK_SECONDS:-20}"
 
-# What the tool is called, out of the payload PreToolUse hands us. Read with a
-# plain match rather than a JSON parser because this runs before every single
-# tool call, and the answer is only used to decide whether to do any real work.
-tool_name() {
-  printf '%s' "$PAYLOAD" | sed -n 's/.*"tool_name" *: *"\([^"]*\)".*/\1/p' | head -1
-}
-
-# Which event the agent actually fired, out of the payload.
-#
-# The installer registers UserPromptSubmit, PreToolUse and PostToolUse under the
-# same `clear` argument, because all three mean "the session moved, take a
-# standing request down". Only ONE of them can also become a question:
-# PreToolUse, which runs before the call and whose answer can still decide it.
-#
-# PostToolUse was becoming one too, and asking whether to allow something that
-# had already finished — a question with no meaning attached to it, and a second
-# twenty-second wait on top of the first. Measured at 43 seconds across one
-# command before this.
-hook_event() {
-  printf '%s' "$PAYLOAD" | sed -n 's/.*"hook_event_name" *: *"\([^"]*\)".*/\1/p' | head -1
-}
-
-# Whether this is a tool the owner asked to be consulted about.
-wants_asking() {
-  [ -f "$ASK_LIST" ] || return 1
-  local name="$1"
-  [ -n "$name" ] || return 1
-  grep -qxF "$name" "$ASK_LIST" 2>/dev/null
-}
-
-TOKEN=""
-TOOL=""
 if [ "$EVENT" = "clear" ]; then
-  # Is one of OUR REQUESTS standing — not merely anything we have ever posted.
+  # `clear` fires the moment the session moves again — a prompt submitted, or a
+  # tool about to run — and its whole job is to take down a request that is
+  # still standing on the notch.
   #
-  # This asked whether the feed mentioned `claude-code` at all, and that is the
-  # bug that stopped anybody ever seeing a question. "Claude finished" is posted
-  # under the same id at the end of every turn, so for as long as that notice
-  # sat in the file — and it sits there until it expires — every tool call took
-  # the branch below that means "already approved, do not ask", and no question
-  # was ever raised. The feature looked switched off while being entirely on.
-  #
-  # A request is the kind that waits, and now says so in the file, so this is
-  # still one grep and no JSON parsing before every tool call.
-  HAS_OURS=no
-  if [ -f "$FEED" ] && grep -q '"standing"' "$FEED" 2>/dev/null; then
-    HAS_OURS=yes
-  fi
-  TOOL="$(tool_name)"
-  if [ "$HAS_OURS" = "yes" ]; then
-    # A request was standing and this tool call is the session moving again —
-    # take it down, and do not turn round and ask about the very thing that was
-    # just approved.
-    :
-  elif wants_asking "$TOOL" && [ "$(hook_event)" != "PostToolUse" ]; then
-    # Nobody can answer a question if the app is not up. Asking anyway would
-    # stall the tool call for the whole waiting period and then fall back to
-    # the ordinary prompt — slower than never having asked.
-    if pgrep -x HashNotch >/dev/null 2>&1; then
-      EVENT="ask"
-      TOKEN="ask-$(od -An -N8 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')"
-      [ -n "$TOKEN" ] || exit 0
-    else
-      exit 0
-    fi
-  else
+  # A REQUEST is the kind that waits, and says so in the file. A NOTICE like
+  # "Claude finished" does not: it keeps its few seconds and leaves on its own,
+  # and cutting it short would mean the answer you just gave erased the news
+  # that the last one had finished. One grep, and no JSON parsed before every
+  # single tool call.
+  if [ ! -f "$FEED" ] || ! grep -q '"standing"' "$FEED" 2>/dev/null; then
     exit 0
   fi
 fi
@@ -184,15 +116,13 @@ APP="$(owning_app || true)"
 
 # All JSON handling in JavaScript-for-Automation (always present on macOS —
 # no jq or python needed). Arguments pass as argv, so payload quoting is safe.
-osascript -l JavaScript - "$FEED" "$EVENT" "$PAYLOAD" "$LOGO" "$APP" "$TOKEN" "$TOOL" >/dev/null <<'JXA'
+osascript -l JavaScript - "$FEED" "$EVENT" "$PAYLOAD" "$LOGO" "$APP" >/dev/null <<'JXA'
 function run(argv) {
   ObjC.import('Foundation');
   const feedPath = argv[0];
   const event = argv[1];
   const logoPath = argv[3] || '';
   const appPath = argv[4] || '';
-  const token = argv[5] || '';
-  const toolName = argv[6] || '';
   let payload = {};
   try { payload = JSON.parse(argv[2] || '{}'); } catch (e) {}
 
@@ -200,45 +130,6 @@ function run(argv) {
   // and leaves, with no timer counting down beside it. "Needs you" is a
   // standing request — it waits, because dismissing it after a few seconds
   // would hide the very thing it is asking you to deal with.
-  // A question the notch can answer. Posted with a token; the app files the
-  // answer against that token and the shell below collects it.
-  if (event === 'ask' || event === 'clear-ask') {
-    let items = [];
-    const existing = $.NSString.stringWithContentsOfFileEncodingError(
-      feedPath, $.NSUTF8StringEncoding, null);
-    if (existing && !existing.isNil()) {
-      try { items = JSON.parse(ObjC.unwrap(existing)); } catch (e) { items = []; }
-    }
-    if (!Array.isArray(items)) items = [];
-    items = items.filter(function (a) { return a && a.id && a.id !== 'claude-ask'; });
-
-    if (event === 'ask') {
-      // What is actually about to happen, in as few words as carry the
-      // decision. A permission question you cannot see the substance of is
-      // one you answer by habit, which is the same as not being asked.
-      let detail = '';
-      try {
-        const input = (payload && payload.tool_input) || {};
-        detail = String(input.command || input.file_path || input.url || input.path || '');
-      } catch (e) {}
-      if (detail.length > 90) detail = detail.slice(0, 89) + '…';
-      const activity = {
-        id: 'claude-ask',
-        icon: 'hand.raised.fill',
-        title: 'Allow ' + (toolName || 'this') + '?',
-        asks: token,
-        endsAt: stamp(Date.now() + 120000),
-      };
-      if (detail) activity.subtitle = detail;
-      if (appPath) activity.app = appPath;
-      items.push(activity);
-    }
-
-    $.NSString.alloc.initWithUTF8String(JSON.stringify(items, null, 2))
-      .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
-    return;
-  }
-
   // Take down a standing request, and only that. A notice that has finished
   // keeps its few seconds — it is already leaving on its own, and cutting it
   // short would mean the answer you just gave erased the news that the last
@@ -351,70 +242,3 @@ function run(argv) {
     .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
 }
 JXA
-
-# ── Waiting for the answer ───────────────────────────────────────────────────
-#
-# Only ever reached for a tool the owner listed. The question is now on the
-# notch; this waits for it to be answered and tells Claude Code what was said.
-#
-# Every way out of here is safe:
-#   answered      -> allow or deny, exactly as clicked
-#   not answered  -> "escalate", which is Claude's own prompt, exactly as if
-#                    this hook had never run
-#   anything else -> nothing printed at all, which is also the ordinary flow
-#
-# The answer is left in this app's own preferences rather than in a file — the
-# app promises it writes none — and a read costs about five milliseconds, so
-# looking four times a second for twenty seconds is cheaper than the osascript
-# call that posted the question.
-if [ "$EVENT" = "ask" ] && [ -n "$TOKEN" ]; then
-  DECISION=""
-  DEADLINE=$(( $(date +%s) + ASK_SECONDS ))
-  while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-    # `|| true` matters: there is no answers key until the first answer is ever
-    # given, `defaults read` fails when it is missing, and this script runs
-    # under `pipefail` — without it the very first question kills the hook
-    # before it can wait for anything.
-    ANSWER="$({ defaults read com.hashnotch.app hashnotch.answers.v1 2>/dev/null || true; } \
-      | sed -n "s/^ *\"*${TOKEN}\"* *= *\"*\([a-z][a-z]*\).*/\1/p")"
-    case "$ANSWER" in
-      allow|deny) DECISION="$ANSWER"; break ;;
-    esac
-    sleep 0.25
-  done
-
-  # Take the question down whichever way it went — it has been answered, or it
-  # is about to be asked again in the window, and either way it is stale.
-  osascript -l JavaScript - "$FEED" "clear-ask" "" "" "" "" "" >/dev/null 2>&1 <<'JXA2'
-function run(argv) {
-  ObjC.import('Foundation');
-  const feedPath = argv[0];
-  let items = [];
-  const existing = $.NSString.stringWithContentsOfFileEncodingError(
-    feedPath, $.NSUTF8StringEncoding, null);
-  if (existing && !existing.isNil()) {
-    try { items = JSON.parse(ObjC.unwrap(existing)); } catch (e) { items = []; }
-  }
-  if (!Array.isArray(items)) items = [];
-  const kept = items.filter(function (a) { return a && a.id && a.id !== 'claude-ask'; });
-  if (kept.length !== items.length) {
-    $.NSString.alloc.initWithUTF8String(JSON.stringify(kept, null, 2))
-      .writeToFileAtomicallyEncodingError(feedPath, true, $.NSUTF8StringEncoding, null);
-  }
-}
-JXA2
-
-  case "$DECISION" in
-    allow)
-      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Allowed from the notch"}}\n'
-      ;;
-    deny)
-      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Denied from the notch"}}\n'
-      ;;
-    *)
-      # Nobody answered. Hand it back to Claude Code to ask in its own window,
-      # which is what would have happened without any of this.
-      printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"escalate","permissionDecisionReason":"No answer on the notch"}}\n'
-      ;;
-  esac
-fi

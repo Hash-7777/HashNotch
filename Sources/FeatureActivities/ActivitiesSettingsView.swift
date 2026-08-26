@@ -19,7 +19,6 @@ struct ActivitiesSettingsView: View {
     @State private var installing = false
     @State private var result: String?
     @State private var failed = false
-    @State private var tools: [String] = AskTools.read()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -46,22 +45,6 @@ struct ActivitiesSettingsView: View {
                         .font(.system(size: 10))
                         .foregroundStyle(theme.subtitleColor)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            SettingCard {
-                SettingGroupLabel("Ask me before")
-                Text("A tool you tick here stops and asks on the notch instead of in its own window. Tick nothing and nothing is intercepted at all.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(theme.subtitleColor)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 2)
-
-                ForEach(Array(AskTools.offered.enumerated()), id: \.element.name) { index, tool in
-                    if index > 0 { SettingDivider() }
-                    SettingRow(tool.name, detail: tool.detail) {
-                        Toggle("", isOn: binding(for: tool.name)).labelsHidden()
-                    }
                 }
             }
 
@@ -106,20 +89,5 @@ struct ActivitiesSettingsView: View {
                 : (output.isEmpty ? "It did not finish. Nothing was changed." : output)
             monitor.refreshHookState()
         }
-    }
-
-    // MARK: Choosing
-
-    /// Each switch edits only its own line, so a tool somebody added by hand
-    /// that this page does not offer is left exactly where it is.
-    private func binding(for name: String) -> Binding<Bool> {
-        Binding(
-            get: { tools.contains(name) },
-            set: { on in
-                let updated = AskTools.setting(name, on: on, in: tools)
-                AskTools.write(updated)
-                tools = updated
-            }
-        )
     }
 }

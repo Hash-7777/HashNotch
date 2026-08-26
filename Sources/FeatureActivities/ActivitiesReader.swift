@@ -28,7 +28,6 @@ public struct LiveActivity: Identifiable, Equatable {
     /// Deny, and records the answer against this token where the poster can
     /// read it back. Nil for everything else, which is almost everything: an
     /// activity is a statement unless it says otherwise.
-    public let asks: String?
 
     /// An image file to show instead of the SF Symbol — a tool's own logo.
     ///
@@ -55,8 +54,7 @@ public struct LiveActivity: Identifiable, Equatable {
         endsAt: Date?,
         dismissAfter: TimeInterval?,
         imagePath: String? = nil,
-        appPath: String? = nil,
-        asks: String? = nil
+        appPath: String? = nil
     ) {
         self.id = id
         self.icon = icon
@@ -67,7 +65,6 @@ public struct LiveActivity: Identifiable, Equatable {
         self.dismissAfter = dismissAfter
         self.imagePath = imagePath
         self.appPath = appPath
-        self.asks = asks
     }
 
     /// True when this counts down to something, rather than announcing
@@ -187,7 +184,6 @@ package enum ActivitiesReader {
         let dismissAfter: Double?
         let image: String?
         let app: String?
-        let asks: String?
     }
 
     static func read() -> [LiveActivity] {
@@ -227,8 +223,7 @@ package enum ActivitiesReader {
                     min(max($0, minDismissAfter), maxDismissAfter)
                 },
                 imagePath: dto.image.flatMap(safeImagePath),
-                appPath: dto.app.flatMap { safeAppPath($0, roots: appRoots) },
-                asks: dto.asks.flatMap(safeToken)
+                appPath: dto.app.flatMap { safeAppPath($0, roots: appRoots) }
             )
             if !activity.isExpired { result.append(activity) }
         }
@@ -259,23 +254,6 @@ package enum ActivitiesReader {
     /// an unbounded file named by a feed anyone can write is the one field in
     /// it that could cost the island its smoothness rather than just look wrong.
     package static let maxImageBytes = 4_000_000
-
-    /// A token the answer will be filed under.
-    ///
-    /// Bounded like every other field in the feed, and more tightly than most:
-    /// it becomes a key in this app's own preferences, so it is held to
-    /// letters, digits and the three punctuation marks that cannot be mistaken
-    /// for structure. Anything else is refused outright rather than trimmed —
-    /// a half-accepted token would file an answer where nobody looks for it,
-    /// and the asker would sit waiting for a reply that had already been given.
-    package static let maxTokenLength = 64
-
-    package static func safeToken(_ raw: String) -> String? {
-        guard !raw.isEmpty, raw.count <= maxTokenLength else { return nil }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
-        guard raw.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return nil }
-        return raw
-    }
 
     private static func safeImagePath(_ raw: String) -> String? {
         let trimmed = String(raw.prefix(1024))

@@ -17,13 +17,10 @@ All notable changes to HashNotch are recorded here.
 
 - **The agent side sets itself up, from Settings.** Connecting an AI tool to the
   notch used to mean finding a shell script inside the app and running it in a
-  terminal, and choosing which tools should stop and ask you meant creating a
-  text file by hand and typing tool names into it. Both were documented, which
-  is not the same as being usable. There is a page in Settings now with a button
-  that connects Claude Code, and four switches — commands run on your Mac,
-  creating a file, changing a file, fetching a page from the web — for what you
-  want to be stopped for. The file is still written, and a tool you added to it
-  yourself is left alone.
+  terminal. It was documented, which is not the same as being usable. There is a
+  page in Settings now with a button that connects Claude Code, says whether it
+  is already connected, and tells you when the copy it installed has fallen
+  behind the app.
 
 ### Changed
 
@@ -33,71 +30,6 @@ All notable changes to HashNotch are recorded here.
   one thing it could not have been anything else.
 
 ### Fixed
-
-- **A tool call is asked about once, not twice.** The event that runs *after* a
-  tool has finished shares the same wiring as the one that runs before it, and
-  was raising its own question — asking whether to allow something that had
-  already happened, and waiting all over again for an answer that could not
-  change it. Measured at 43 seconds of waiting across one command. Only the
-  event that runs before a call can ask about it now.
-
-- **The reason a question never actually appeared on the notch.** Everything
-  about answering on the notch was switched on and working, and it could not
-  produce a single question. The hook has a rule that stops it asking twice: if
-  a request is already standing, the tool call about to run is the one that was
-  just approved, so it lets it through. But the test for "a request is standing"
-  matched anything the hook had ever posted under its own name — including
-  "Claude finished", which lands at the end of every turn and sits in the file
-  until it expires. So the finished notice from the last turn silently answered
-  for you, on every tool call, and the box was never drawn. A request now says
-  in the file that it is one, so the two can be told apart.
-
-- **The notch no longer says answering is switched off while it is switched on.**
-  Every "Claude needs you" carried the line "Answering here is off. Turn it on
-  in Settings, under Agents" underneath it — with all four tools ticked and the
-  file behind them exactly right. The rule behind it was that a request with no
-  answer token must mean the feature is off, and a notice never has a token: it
-  is telling you something, not asking which tool to run. So the one kind of
-  request that can never be answered was the one thing always being told it
-  could have been. That line is now read from the feature it describes, appears
-  only when nothing is actually ticked, and offers to turn it on rather than
-  reporting it broken.
-
-- **A question on the notch is its own box now, and it goes away when you answer
-  it.** It was a line of text with two small buttons after it, the same size as
-  a temperature reading — the only thing in the panel that stops and waits for a
-  decision, drawn like something you glance at. It now has a border, the command
-  it is asking about on two lines instead of one, and two targets big enough to
-  hit without aiming. Deny is drawn no louder than Allow: a pair where one is
-  styled as the obvious answer is a pair that gets clicked without reading, and
-  the point of being asked is the reading. Clicking anywhere else in the box
-  does nothing at all, where before the whole row was a button that jumped to
-  the agent's window.
-
-  Answering also takes it off the screen immediately. The app files the answer
-  and the agent removes its own question, which is the right way round and meant
-  a gap between pressing a button and anything happening — a gap that never
-  closed at all if the agent had already stopped waiting. Pressing a button and
-  seeing nothing happen is how somebody presses it again.
-
-- **A tool you tick under Agents is now asked about in every mode, from every
-  agent.** An earlier attempt at this tried to work out, from the permission
-  mode the session was in, whether the agent was going to ask anything — and got
-  it wrong twice in opposite directions. It cannot be worked out: the event that
-  lets a hook intercept a call fires *before* the permission decision, so
-  nothing it is handed can say which way a decision that has not happened yet
-  will go. `auto` in particular is not a mode that approves everything — it
-  approves most calls and still stops for what it judges risky — so predicting
-  silence there took the answers off the notch in the sessions most people run,
-  leaving a notice with nothing to press on it.
-
-  It no longer predicts. A tool on your list is intercepted every time, which is
-  what the setting says it does. The cost is bounded and honest: a question
-  nobody answers holds that one call until it gives up, then hands it back
-  exactly as if the notch had never been involved.
-
-  **This one needs you to act:** the hook's version has moved, so the notch will
-  say it is out of date. Press Update on the notice.
 
 - **The button that connects Claude Code now works — it never has.** The
   installer it runs, the same script the README has always told people to run by
@@ -139,12 +71,6 @@ All notable changes to HashNotch are recorded here.
   reported that instead. The same refusal is why the line around the notch never
   pressed harder the longer a request stood, which was written and had never
   once worked: it had no arrival time to measure from.
-
-- **The notch says why a question has no Allow and no Deny on it.** Answering
-  from the notch is off until you name the tools you want intercepted, one per
-  line in `~/.hashnotch/ask-tools.txt`. Until now the panel showed the question
-  with nothing to do about it and said nothing about why, which reads as a
-  broken button rather than a feature waiting to be turned on.
 
 - **A request comes down when you answer it, not when Claude next does
   something.** The hook was registered on an event chosen in the belief that it

@@ -1748,282 +1748,107 @@ MainActor.assumeIsolated {
           TokenFreshness.text(countedAt: countNow.addingTimeInterval(300),
                               isCounting: false, now: countNow) == "just now")
 
-    // ── THE ASK ACTION, END TO END ───────────────────────────────────────────
+    // ── THE HOOK, END TO END ─────────────────────────────────────────────────
     //
     // Everything above tests a Swift function. This drives the actual hook
     // script the way Claude Code drives it — a payload on stdin, an event name
-    // as the argument — and reads what it does. That is the only way to test
-    // this feature, because the whole of it lives in the shell: which calls get
-    // intercepted, what lands in the feed, how an answer is read back, and what
-    // is printed for the agent to obey.
+    // as the argument — and reads what it writes. That is the only way to test
+    // it, because the whole of it lives in the shell.
     //
-    // Hermetic, and it has to be. The hook asks the system two questions —
-    // whether the app is running, and what answers are on file — and both are
-    // asked by running a command. So both commands are replaced by stubs found
-    // first on PATH: `pgrep` says the app is up, and `defaults` stands in for a
-    // person answering on the notch. Nothing here reads or writes the real
-    // preference domain, which matters more than convenience: a throwaway
-    // domain cannot be cleaned up afterwards (see the note on `cfprefsd` above),
-    // so the only safe test is one that never creates one.
+    // What it must do is TELL you something and nothing else. It once stopped
+    // tool calls to put Allow and Deny on the notch and waited for an answer;
+    // all of that is gone, and the checks below hold the line that matters most
+    // now: whatever it is handed, it never writes anything to standard output,
+    // because standard output is the channel an agent obeys.
     //
-    // HOME points at a scratch folder, so the feed, the tool list and the logos
-    // are all the test's own. `osascript` is deliberately NOT stubbed: writing
-    // the feed is the part most likely to break, and a test that faked it would
-    // be testing itself.
-    let askRoot = FileManager.default.temporaryDirectory
-        .appendingPathComponent("hashnotch-ask-\(UUID().uuidString)")
-    let askHome = askRoot.appendingPathComponent("home")
-    let askBin = askRoot.appendingPathComponent("bin")
+    // Hermetic: HOME points at a scratch folder, so the feed is the test's own.
+    // `osascript` is deliberately NOT stubbed — writing the feed is the part
+    // most likely to break, and a test that faked it would be testing itself.
+    let hookRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent("hashnotch-hook-\(UUID().uuidString)")
+    let hookHome = hookRoot.appendingPathComponent("home")
     let hookScript = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("scripts/claude-code-hook.sh")
 
-    func writeExecutable(_ url: URL, _ body: String) {
-        try? body.write(to: url, atomically: true, encoding: .utf8)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
-    }
-
-    /// Run the hook as Claude Code runs it. `answer` is what the imaginary
-    /// person on the notch says: nil means nobody touches it.
-    func runHook(
-        _ event: String,
-        payload: String,
-        tools: [String],
-        answer: String? = nil,
-        seconds: String = "1",
-        seedFeed: String? = nil
-    ) -> (out: String, feed: String, seen: String) {
-        try? FileManager.default.removeItem(at: askHome)
+    /// Run the hook as Claude Code runs it, against a feed seeded beforehand.
+    func runHook(_ event: String, payload: String = "{}", seedFeed: String? = nil)
+    -> (out: String, feed: String) {
+        try? FileManager.default.removeItem(at: hookHome)
         try? FileManager.default.createDirectory(
-            at: askHome.appendingPathComponent(".hashnotch"), withIntermediateDirectories: true)
-        if !tools.isEmpty {
-            try? (tools.joined(separator: "\n") + "\n").write(
-                to: askHome.appendingPathComponent(".hashnotch/ask-tools.txt"),
-                atomically: true, encoding: .utf8)
-        }
+            at: hookHome.appendingPathComponent(".hashnotch"), withIntermediateDirectories: true)
         if let seedFeed {
             try? seedFeed.write(
-                to: askHome.appendingPathComponent(".hashnotch/activities.json"),
+                to: hookHome.appendingPathComponent(".hashnotch/activities.json"),
                 atomically: true, encoding: .utf8)
         }
-
         let task = Process()
         task.executableURL = hookScript
         task.arguments = [event]
-        var env = ["HOME": askHome.path,
-                   "PATH": "\(askBin.path):/usr/bin:/bin:/usr/sbin:/sbin",
-                   "HASHNOTCH_ASK_SECONDS": seconds]
-        if let answer { env["HN_TEST_ANSWER"] = answer }
-        task.environment = env
-
+        task.environment = ["HOME": hookHome.path,
+                            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]
         let input = Pipe(), output = Pipe()
         task.standardInput = input
         task.standardOutput = output
         task.standardError = Pipe()
-        guard (try? task.run()) != nil else { return ("<hook would not run>", "", "") }
+        guard (try? task.run()) != nil else { return ("<hook would not run>", "") }
         input.fileHandleForWriting.write(Data(payload.utf8))
         try? input.fileHandleForWriting.close()
         let data = output.fileHandleForReading.readDataToEndOfFile()
         task.waitUntilExit()
-
         let feed = (try? String(
-            contentsOf: askHome.appendingPathComponent(".hashnotch/activities.json"),
+            contentsOf: hookHome.appendingPathComponent(".hashnotch/activities.json"),
             encoding: .utf8)) ?? ""
-        let seen = (try? String(
-            contentsOf: askHome.appendingPathComponent(".seen.json"),
-            encoding: .utf8)) ?? ""
-        return (String(decoding: data, as: UTF8.self), feed, seen)
+        return (String(decoding: data, as: UTF8.self), feed)
     }
 
-    try? FileManager.default.createDirectory(at: askBin, withIntermediateDirectories: true)
-    // The app is up. Without this the hook correctly declines to ask at all,
-    // since nobody can answer a question nobody can see.
-    writeExecutable(askBin.appendingPathComponent("pgrep"), "#!/bin/sh\nexit 0\n")
-    // A person at the notch. Reads the question the hook has just posted and
-    // answers it, which is what makes the answered path testable at all: the
-    // token is random and only exists once the question is on screen.
-    writeExecutable(askBin.appendingPathComponent("defaults"), """
-    #!/bin/sh
-    # Keep a copy of what was on the notch at the moment somebody looked at it.
-    # The hook takes its own question down before it exits, so the feed is empty
-    # by the time the test can read it — this snapshot is the only place the
-    # question can be examined, and it is taken from exactly where a person
-    # would have been looking.
-    cp "$HOME/.hashnotch/activities.json" "$HOME/.seen.json" 2>/dev/null || true
-    [ -n "$HN_TEST_ANSWER" ] || exit 1
-    tok=$(sed -n 's/.*"asks" *: *"\\([^"]*\\)".*/\\1/p' "$HOME/.hashnotch/activities.json" 2>/dev/null | head -1)
-    [ -n "$tok" ] || exit 1
-    printf '{\\n    "%s" = "%s 1700000000";\\n}\\n' "$tok" "$HN_TEST_ANSWER"
-    """)
+    // A tool waiting on you is a REQUEST: it stands until it is dealt with, and
+    // says so in the feed, which is what tells a notice apart from a request.
+    let needsYou = runHook("notification", payload: #"{"message":"Claude needs your permission to use Bash"}"#)
+    check("a tool waiting on you says so on the notch", needsYou.feed.contains("Claude needs you"))
+    check("and stands rather than dismissing itself", needsYou.feed.contains("\"standing\""))
 
-    let bashCall = #"{"tool_name":"Bash","permission_mode":"default","tool_input":{"command":"rm -rf /tmp/x"}}"#
+    // A finished reply is a NOTICE: it leaves on its own.
+    let finished = runHook("stop")
+    check("a finished reply is a notice", finished.feed.contains("Claude finished"))
+    check("and carries its own dismissal", finished.feed.contains("dismissAfter"))
+    check("and does not stand", !finished.feed.contains("\"standing\""))
 
-    // A tool nobody listed is not intercepted, and costs nothing.
-    let unlisted = runHook("clear", payload: bashCall, tools: ["Write"])
-    check("a tool that was not chosen is never asked about", unlisted.out.isEmpty)
-    check("and no question is posted for it", !unlisted.feed.contains("claude-ask"))
-
-    // A chosen tool, in a session that does ask, becomes a question.
-    let askPosted = runHook("clear", payload: bashCall, tools: ["Bash"])
-    check("a chosen tool puts a question on the notch", askPosted.seen.contains("\"id\": \"claude-ask\""))
-    check("the question names the tool", askPosted.seen.contains("Allow Bash?"))
-    check("the question carries a token to answer under", askPosted.seen.contains("\"asks\""))
-    check("the question shows what is about to run", askPosted.seen.contains("rm -rf /tmp/x"))
-    // Nobody answered, so it hands the decision back exactly as if the hook had
-    // never run. This is the path that must never deny something by accident.
-    check("an unanswered question escalates rather than denying",
-          askPosted.out.contains("\"permissionDecision\":\"escalate\""))
-
-    // Answered on the notch: the decision reaches the agent, and the question
-    // is taken back down.
-    let allowed = runHook("clear", payload: bashCall, tools: ["Bash"], answer: "allow", seconds: "5")
-    check("allow on the notch allows the call",
-          allowed.out.contains("\"permissionDecision\":\"allow\""))
-    check("and the question is taken down after it", !allowed.feed.contains("claude-ask"))
-
-    let denied = runHook("clear", payload: bashCall, tools: ["Bash"], answer: "deny", seconds: "5")
-    check("deny on the notch denies the call",
-          denied.out.contains("\"permissionDecision\":\"deny\""))
-    check("and that question is taken down too", !denied.feed.contains("claude-ask"))
-
-    // EVERY MODE, EVERY AGENT. Two versions of this hook tried to predict from
-    // the session's permission mode whether the agent was going to ask, and
-    // both were wrong in opposite directions — the prediction cannot be made,
-    // because this event fires before the decision it is trying to read. A
-    // listed tool is now intercepted in every mode, which is what the setting
-    // says. These pin that, so no future cleverness can quietly narrow it.
-    for mode in ["auto", "default", "bypassPermissions", "acceptEdits", "plan"] {
-        let any = runHook(
-            "clear",
-            payload: #"{"tool_name":"Bash","permission_mode":"\#(mode)"}"#,
-            tools: ["Bash"],
-            answer: "allow",
-            seconds: "5")
-        check("a listed tool is asked about in \(mode)", any.seen.contains("Allow Bash?"))
-        check("and answering it in \(mode) reaches the agent",
-              any.out.contains("\"permissionDecision\":\"allow\""))
-    }
-
-    // Any tool name at all, not a list this app knows: the notch asks about
-    // whatever the owner wrote down, from whichever agent posted it.
-    let ownTool = runHook(
-        "clear",
-        payload: #"{"tool_name":"SomeOtherAgentTool","permission_mode":"default"}"#,
-        tools: ["SomeOtherAgentTool"],
-        answer: "deny",
-        seconds: "5")
-    check("a tool this app has never heard of is asked about too",
-          ownTool.seen.contains("Allow SomeOtherAgentTool?"))
-    check("and can be denied from the notch",
-          ownTool.out.contains("\"permissionDecision\":\"deny\""))
-
-    // THE REASON NOBODY EVER SAW A QUESTION.
-    //
-    // "Claude finished" is posted under the same id as a standing request at the
-    // end of every turn. The hook's test for "a request is already waiting, so
-    // do not ask again" matched anything under that id, so for as long as a
-    // finished notice sat in the feed — which is until it expires — every tool
-    // call took the do-not-ask branch. The feature was entirely switched on and
-    // could not produce a single question.
-    let askFinishedNotice = """
-    [{"id": "claude-code", "icon": "checkmark", "title": "Claude finished",
-      "dismissAfter": 3, "endsAt": "2099-01-01T00:00:00Z"}]
-    """
-    let afterFinish = runHook(
-        "clear", payload: bashCall, tools: ["Bash"],
-        answer: "allow", seconds: "5", seedFeed: askFinishedNotice)
-    check("a finished notice does not swallow the next question",
-          afterFinish.seen.contains("Allow Bash?"))
-    check("and that question can still be answered",
-          afterFinish.out.contains("\"permissionDecision\":\"allow\""))
-
-    // The suppression itself is still right: a REQUEST that is genuinely
-    // standing means this call is the one that was just approved, so asking
-    // about it again would be asking twice.
-    let askStandingRequest = """
+    // The session moving again takes a standing request down — that is the
+    // whole job of `clear`.
+    let standingSeed = """
     [{"id": "claude-code", "icon": "hand.raised.fill", "title": "Claude needs you",
       "standing": true, "endsAt": "2099-01-01T00:00:00Z"}]
     """
-    let afterRequest = runHook(
-        "clear", payload: bashCall, tools: ["Bash"], seedFeed: askStandingRequest)
-    check("a request that is genuinely standing still suppresses a second question",
-          !afterRequest.seen.contains("Allow Bash?"))
-    check("and that standing request is taken down instead",
-          !afterRequest.feed.contains("Claude needs you"))
+    let cleared = runHook("clear", payload: #"{"tool_name":"Bash"}"#, seedFeed: standingSeed)
+    check("answering it elsewhere takes it off the notch",
+          !cleared.feed.contains("Claude needs you"))
 
-    // ONLY THE EVENT THAT RUNS BEFORE THE CALL MAY ASK.
-    //
-    // All three of UserPromptSubmit, PreToolUse and PostToolUse are wired to
-    // the same `clear` argument, because all three mean "the session moved".
-    // Only PreToolUse runs before the call, so only its answer can decide
-    // anything. PostToolUse was raising a question too — asking whether to
-    // allow something that had already finished, and waiting all over again for
-    // an answer that could not change it. Measured at 43 seconds across a single
-    // command.
-    let afterTheFact = runHook(
-        "clear",
-        payload: #"{"tool_name":"Bash","hook_event_name":"PostToolUse","permission_mode":"default"}"#,
-        tools: ["Bash"])
-    check("a call that has already run is not asked about", afterTheFact.out.isEmpty)
-    check("and nothing is posted for it", !afterTheFact.seen.contains("Allow Bash?"))
+    // But a finished notice is left alone. Cutting it short would mean the
+    // answer you just gave erased the news that the last reply had landed.
+    let noticeSeed = """
+    [{"id": "claude-code", "icon": "checkmark", "title": "Claude finished",
+      "dismissAfter": 3, "endsAt": "2099-01-01T00:00:00Z"}]
+    """
+    let noticeKept = runHook("clear", payload: #"{"tool_name":"Bash"}"#, seedFeed: noticeSeed)
+    check("a finished notice keeps its few seconds", noticeKept.feed.contains("Claude finished"))
 
-    let beforeTheCall = runHook(
-        "clear",
-        payload: #"{"tool_name":"Bash","hook_event_name":"PreToolUse","permission_mode":"default"}"#,
-        tools: ["Bash"], answer: "allow", seconds: "5")
-    check("but the one that runs before it still is",
-          beforeTheCall.seen.contains("Allow Bash?"))
-    check("and its answer reaches the agent",
-          beforeTheCall.out.contains("\"permissionDecision\":\"allow\""))
+    // THE LINE THAT MATTERS MOST. Standard output is the channel the agent
+    // obeys — anything written there can allow or refuse a tool call. This hook
+    // tells you things; it decides nothing. Whatever it is handed, it says
+    // nothing back.
+    for event in ["clear", "stop", "notification"] {
+        for seed in [nil, standingSeed, noticeSeed] {
+            let quiet = runHook(
+                event, payload: #"{"tool_name":"Bash","hook_event_name":"PreToolUse"}"#, seedFeed: seed)
+            check("\(event) never answers back to the agent", quiet.out.isEmpty)
+        }
+    }
 
-    // A payload with no mode in it at all — an older agent, or one that never
-    // sent it — is asked about like everything else.
-    check("a payload with no mode at all still asks",
-          runHook("clear", payload: #"{"tool_name":"Bash"}"#, tools: ["Bash"]).out
-              .contains("permissionDecision"))
+    try? FileManager.default.removeItem(at: hookRoot)
+    check("the hook checks leave nothing behind",
+          !FileManager.default.fileExists(atPath: hookRoot.path))
 
-    try? FileManager.default.removeItem(at: askRoot)
-    check("the ask checks leave nothing behind",
-          !FileManager.default.fileExists(atPath: askRoot.path))
-
-    // ── WHAT GOES UNDER A STANDING REQUEST ───────────────────────────────────
-    check("a question offers its answers",
-          RequestFooter.under(token: "ask-1", standing: true, toolsChosen: 2) == .answer(token: "ask-1"))
-    // The bug: a notice is not a question, and every one of them said answering
-    // was switched off while all four switches were on.
-    check("a notice with tools already chosen says nothing about being off",
-          RequestFooter.under(token: nil, standing: true, toolsChosen: 4) == .nothing)
-    check("a notice with nothing chosen offers to turn it on",
-          RequestFooter.under(token: nil, standing: true, toolsChosen: 0) == .offerToTurnItOn)
-    check("something that is only passing through is owed nothing",
-          RequestFooter.under(token: nil, standing: false, toolsChosen: 0) == .nothing)
-    check("a question is answerable whether or not anything is chosen",
-          RequestFooter.under(token: "ask-2", standing: true, toolsChosen: 0) == .answer(token: "ask-2"))
-
-    // ── AN ANSWERED QUESTION GOES AWAY AT ONCE ───────────────────────────────
-    //
-    // It used to stay until the asker took it down, and for ever if the asker
-    // had already given up and exited.
-    let standingQuestion = LiveActivity(
-        id: "claude-ask", icon: "hand.raised.fill", title: "Allow Bash?",
-        subtitle: nil, progress: nil, endsAt: nil, dismissAfter: nil, asks: "ask-abc")
-    let plainNotice = LiveActivity(
-        id: "claude-code", icon: "bell", title: "Claude needs you",
-        subtitle: nil, progress: nil, endsAt: nil, dismissAfter: nil)
-    check("an answered question is hidden straight away",
-          AnsweredQuestions.isHidden(standingQuestion, answered: ["ask-abc"]))
-    check("one that has not been answered is not",
-          !AnsweredQuestions.isHidden(standingQuestion, answered: ["ask-other"]))
-    check("something that is not a question is never hidden by this",
-          !AnsweredQuestions.isHidden(plainNotice, answered: ["ask-abc"]))
-    // Kept while the question is still in the feed, so it cannot flicker back
-    // during the round trip.
-    check("an answer is remembered while its question stands",
-          AnsweredQuestions.retained(["ask-abc"], in: [standingQuestion]) == ["ask-abc"])
-    // Forgotten the moment it goes, so this never becomes a record of what was
-    // allowed.
-    check("and forgotten the moment the question goes",
-          AnsweredQuestions.retained(["ask-abc"], in: [plainNotice]).isEmpty)
 
 
     // Activities feed: other processes write it, so every field is bounded
@@ -2322,58 +2147,6 @@ MainActor.assumeIsolated {
     check("and dims further than an urgent one", IslandPulse.floor(urgency: 0) < IslandPulse.floor(urgency: 1))
     check("it never becomes a flash", IslandPulse.period(urgency: 1) >= 0.7)
 
-    // A question the notch can answer, and the token the answer is filed
-    // under. It becomes a key in this app's own preferences, so it is held to
-    // letters, digits and three punctuation marks, and anything else is refused
-    // outright rather than trimmed — a half-accepted token would file an answer
-    // where the asker is not looking, leaving it waiting for a reply already
-    // given.
-    check("a plain token is accepted", ActivitiesReader.safeToken("ask-9f2b7c") == "ask-9f2b7c")
-    check("an empty one is not", ActivitiesReader.safeToken("") == nil)
-    check("nor one with a space", ActivitiesReader.safeToken("ask 1") == nil)
-    check("nor one that could be read as structure", ActivitiesReader.safeToken("a\"b") == nil)
-    check("nor a path", ActivitiesReader.safeToken("../../etc/passwd") == nil)
-    check(
-        "nor one longer than the cap",
-        ActivitiesReader.safeToken(String(repeating: "a", count: ActivitiesReader.maxTokenLength + 1)) == nil
-    )
-    check(
-        "and one exactly at the cap is fine",
-        ActivitiesReader.safeToken(String(repeating: "a", count: ActivitiesReader.maxTokenLength)) != nil
-    )
-
-    let asked = tempFile("""
-    [
-      {"id": "q", "title": "Allow Bash?", "asks": "ask-9f2b7c"},
-      {"id": "r", "title": "Allow Bash?", "asks": "../nope"},
-      {"id": "s", "title": "Just telling you"}
-    ]
-    """)
-    let askedFeed = ActivitiesReader.read(from: asked)
-    check("a question carries its token through the feed", askedFeed.first?.asks == "ask-9f2b7c")
-    check("a bad token is dropped, the activity is not", askedFeed.dropFirst().first?.asks == nil)
-    check("and an ordinary activity asks nothing", askedFeed.last?.asks == nil)
-
-    // The letterbox the answer is left in. Preferences rather than a file,
-    // deliberately — the app promises it writes none.
-    let answers = InMemoryDefaults()
-    check("nothing is answered to begin with", PermissionAnswers.decision(for: "ask-1", in: answers) == nil)
-    PermissionAnswers.record(token: "ask-1", decision: .allow, to: answers)
-    check("an answer can be collected", PermissionAnswers.decision(for: "ask-1", in: answers) == .allow)
-    PermissionAnswers.record(token: "ask-2", decision: .deny, to: answers)
-    check("and does not disturb another", PermissionAnswers.decision(for: "ask-1", in: answers) == .allow)
-    check("the second stands on its own", PermissionAnswers.decision(for: "ask-2", in: answers) == .deny)
-    check("an answer nobody gave is nothing", PermissionAnswers.decision(for: "ask-3", in: answers) == nil)
-
-    // A letterbox, not a record of what you have allowed — that would be a log
-    // of your decisions, which this app has no business keeping.
-    var manyAnswers: [String: String] = [:]
-    for index in 0..<40 { manyAnswers["ask-\(index)"] = "allow \(1_700_000_000 + index)" }
-    let keptAnswers = PermissionAnswers.pruned(manyAnswers, limit: PermissionAnswers.limit)
-    check("only the newest few answers are kept", keptAnswers.count == PermissionAnswers.limit)
-    check("and it is the newest that are kept", keptAnswers["ask-39"] != nil && keptAnswers["ask-0"] == nil)
-    PermissionAnswers.clear(in: answers)
-    check("and they can all be cleared", PermissionAnswers.decision(for: "ask-1", in: answers) == nil)
     check("and never stops breathing altogether", IslandPulse.floor(urgency: 1) < 1)
 
     // A logo is drawn larger than a symbol — it has no disc around it, so the
@@ -5494,64 +5267,6 @@ check(
         guard let loaded = NetworkUsageStore.load(from: defaults) else { return false }
         return loaded.days.count == 1 && loaded.days.first?.received == 900
     }()
-)
-
-// MARK: - Setting up an agent without a terminal
-//
-// The list of tools to be asked about is a plain text file, because the thing
-// that reads it is a shell script inside somebody else's agent. What it must
-// not be is the only way to turn the feature on. These are the rules the
-// settings page writes it by.
-
-check(
-    "a file nobody has written names no tools",
-    AskTools.parse("") == [] && AskTools.parse("\n\n  \n") == []
-)
-check(
-    "one name per line, exactly as written",
-    AskTools.parse("Bash\nWebFetch\n") == ["Bash", "WebFetch"]
-)
-// The file explains itself to whoever opens it, so the reader has to skip that.
-check(
-    "the header the app writes is not read back as a tool",
-    AskTools.parse(AskTools.text(for: ["Bash"])) == ["Bash"]
-)
-check(
-    "and a comment somebody adds themselves is skipped too",
-    AskTools.parse("# mine\nBash\n  # spaced\nEdit") == ["Bash", "Edit"]
-)
-// A name is matched exactly by the script that reads it, so a name this app has
-// tidied is a name that silently stops matching.
-check(
-    "surrounding space is trimmed but the name itself is untouched",
-    AskTools.parse("  WebFetch  \n") == ["WebFetch"]
-)
-
-// Each switch edits its own line and leaves the rest alone. Somebody may have
-// added a tool this page does not offer, and a toggle must not delete it.
-check(
-    "turning one on adds only that one",
-    AskTools.setting("Edit", on: true, in: ["Bash"]) == ["Bash", "Edit"]
-)
-check(
-    "turning one off removes only that one",
-    AskTools.setting("Bash", on: false, in: ["Bash", "Edit"]) == ["Edit"]
-)
-check(
-    "a tool the app does not offer survives every switch",
-    AskTools.setting("Bash", on: true, in: ["SomeToolOfMine"]) == ["SomeToolOfMine", "Bash"]
-        && AskTools.setting("Bash", on: false, in: ["SomeToolOfMine", "Bash"]) == ["SomeToolOfMine"]
-)
-check(
-    "turning on something already on does not list it twice",
-    AskTools.setting("Bash", on: true, in: ["Bash"]) == ["Bash"]
-)
-// Every tool the page offers has to be a name, and a plain-English line saying
-// what it means — the name alone is what the old text file offered, and it is
-// the part nobody could act on.
-check(
-    "every tool offered says what it means in words",
-    AskTools.offered.allSatisfy { !$0.name.isEmpty && $0.detail.count > 8 }
 )
 
 // MARK: - Temperatures

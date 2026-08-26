@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-971%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="971 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-917%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="917 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -81,7 +81,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 971 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 917 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
@@ -204,9 +204,9 @@ Let the notch tell you the moment a tool is done — a checkmark landing on the 
 ./scripts/install-claude-hooks.sh
 ```
 
-The island lights up when **Claude Code** finishes a reply — a green hairline traces the notch for a moment — or is **waiting for your permission**, which holds that line amber until you answer; click that one and the waiting window comes to the front. **HashCortX** and **HashCerebrum** are built in.
+The island lights up when **Claude Code** finishes a reply — a green hairline traces the notch for a moment — or is **waiting on you**, which holds that line amber until it is dealt with; click that one and the waiting window comes to the front. **HashCortX** and **HashCerebrum** are built in.
 
-**Answer permission without leaving what you are doing.** When an agent stops to ask, the panel can show what it wants to do with **Allow** and **Deny** on it. Off until you name the tools you want to be asked about; if the app is not running, or nobody answers, the tool asks in its own window exactly as before.
+**It tells you; it never intercepts.** Nothing here can allow or refuse a tool call. The hook writes a local file and returns nothing your agent acts on, so no tool call is ever held open waiting for the notch — you are told something is waiting, and you answer it where it asked.
 
 **Every other tool too.** Codex, Aider, Gemini CLI, your own scripts — anything that can run a command when it finishes can light the notch, with or without a hook system of its own. One line in your shell profile and a `;` after the command you already run.
 

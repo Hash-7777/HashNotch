@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 #
 # Wires Claude Code to your notch: after this, HashNotch shows a live activity
-# the moment Claude finishes a reply or is waiting for your permission.
+# the moment Claude finishes a reply or is waiting on you.
+#
+# It only ever tells you things. Nothing here can allow or refuse a tool call:
+# the hook writes the local activities feed and returns nothing the agent acts
+# on, so a permission question is still answered where it was asked.
 #
 # What it does — nothing more:
 #   1. Copies claude-code-hook.sh to ~/.hashnotch/ (the hook writes only the
@@ -187,8 +191,8 @@ function run(argv) {
   //
   // PostToolUse is here because of a wrong assumption in the line it replaces.
   // The comment used to say PreToolUse fires "because permission was granted";
-  // it does not. PreToolUse runs BEFORE the user is asked, which is what lets
-  // it block a call — so it can never be the thing that notices an answer.
+  // it does not. PreToolUse runs BEFORE the user is asked, which is what lets a
+  // hook block a call — so it can never be the thing that notices an answer.
   // Answering in Claude's own window therefore took the request down only when
   // the NEXT tool call or prompt came along, and until then the notch went on
   // saying somebody was waiting for you when nobody was.
@@ -198,7 +202,7 @@ function run(argv) {
   // the others fire.
   //
   // These fire constantly, several times a turn, so the hook is written to
-  // check for a feed entry of its own and exit before starting any subprocess
+  // check for a request of its own and exit before starting any subprocess
   // when there is nothing to take down.
   const pairs = [
     ['Stop', 'stop'],
@@ -226,14 +230,11 @@ function run(argv) {
     const kept = existing.filter(function (entry) { return !isOurs(entry); });
     removed += existing.length - kept.length;
 
-    // A timeout, because one of these can WAIT. The PreToolUse hook offers a
-    // permission question on the notch and waits for it to be answered, and
-    // Claude Code's own default for a command hook is ten minutes — far too
-    // long to hold a turn if anything here ever goes wrong. Thirty seconds is
-    // comfortably more than the hook's own twenty-second wait, so the hook
-    // always finishes first and hands back an ordinary prompt.
+    // No timeout is set, and none is needed: nothing here waits. The hook reads
+    // a file, sometimes writes one, and exits. It used to hold a tool call open
+    // while a permission question stood on the notch, which is why this once
+    // carried a thirty-second cap; that whole idea is gone.
     const entry = { type: 'command', command: command };
-    if (name === 'PreToolUse') entry.timeout = 30;
     kept.push({ hooks: [entry] });
     added++;
     settings.hooks[name] = kept;
@@ -255,5 +256,5 @@ echo "$RESULT"
 case "$RESULT" in
   ERROR*) exit 1 ;;
 esac
-echo "Claude Code will now post to your notch when it finishes or needs permission."
+echo "Claude Code will now post to your notch when it finishes or needs you."
 echo "(Restart any running Claude Code session so it picks up the new hooks.)"

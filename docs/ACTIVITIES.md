@@ -37,7 +37,6 @@ anything about the tool posting to it.
 | `dismissAfter` | Seconds, from 1 to 30 — anything longer is brought back to 30. For something that **already happened**: no timer is drawn and the notice leaves by itself. |
 | `image` | Path to a logo shown instead of the symbol. |
 | `app` | Path to an installed `.app` — the row becomes clickable and brings it forward. |
-| `asks` | A token, when this is a QUESTION rather than a report. The panel offers **Allow** and **Deny**, and files the answer under this token for whoever asked. Letters, digits, `._-`, up to 64 characters. |
 
 ### Two kinds
 
@@ -111,38 +110,24 @@ installed.
 
 ---
 
-## Answering permission from the notch
+## When a tool is waiting on you
 
-An agent that needs permission normally stops and asks in its own window, which
-means finding that window. It can ask on the notch instead: hover the island and
-the panel shows what it wants to do, with **Allow** and **Deny**.
+An agent that needs permission stops and asks in its own window, and the notch
+tells you that it has: **"Claude needs you"**, with the reason underneath, and a
+line around the notch held amber until it is dealt with. Click it and the window
+that is waiting comes to the front.
 
-Off until you turn it on, one tool at a time. Write the tool names you want to
-be asked about into `~/.hashnotch/ask-tools.txt`, one per line:
+That is the whole of it. The notch reports; it never intercepts. The hook writes
+the activities feed and returns nothing the agent acts on, so no tool call is
+ever held open waiting for the notch, and a permission question is answered
+exactly where it was asked.
 
-```
-Bash
-Write
-WebFetch
-```
-
-Then re-run `./scripts/install-claude-hooks.sh`. No file, or a tool not in it,
-and nothing is intercepted at all — the behaviour is exactly what it was.
-
-**Every way this can go wrong ends in the ordinary prompt.** If the app is not
-running, the question is never asked. If nobody answers within twenty seconds,
-Claude Code asks in its own window as it always did. If the hook fails for any
-reason, it prints nothing, which is the same as not being installed. The hook is
-registered with a thirty-second ceiling so it can never hold a turn open.
-
-What appears on screen is the tool's name and what it is about to act on — the
-command, the file, the address. That is the point: a permission question you
-cannot see the substance of is one you answer out of habit, which is the same as
-not being asked.
-
-The answer is left in the app's own preferences under `hashnotch.answers.v1`,
-where the hook collects it. Answers are a letterbox, not a record: only the last
-few are kept, and they are not a log of what you have allowed.
+There was once an **Allow** and **Deny** pair here, with the hook stopping the
+call and waiting for a decision. It is gone. Every version of it charged a wait
+to tool calls that were never in doubt — the event a hook can intercept on runs
+*before* the permission decision, so nothing it is handed can say whether
+anybody was going to be asked at all — and being told, then answering where the
+question actually is, turned out to be what was wanted.
 
 ---
 

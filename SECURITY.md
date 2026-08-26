@@ -63,11 +63,7 @@ received. Program names and byte counts, nothing else — not what any of them
 connected to, which this app cannot see. Switching the setting off deletes it
 rather than leaving it in place unread.
 
-If you switch on answering permission questions from the notch (see
-[docs/ACTIVITIES.md](docs/ACTIVITIES.md)), your answer to one is left in the same
-place under `hashnotch.answers.v1`, where the tool that asked collects it. It is
-a letterbox rather than a record: only the last handful are kept, they say
-nothing about what was asked, and the app keeps no log of what you have allowed. It never writes to the files it reads, and artwork
+It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.
 
 The one folder that carries HashNotch's name, `~/.hashnotch`, is written by
