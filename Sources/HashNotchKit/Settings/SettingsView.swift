@@ -195,14 +195,21 @@ public struct SettingsView: View {
     /// stutter.
     private var header: some View {
         HStack(spacing: 8) {
-            Text("HashNotch")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.92))
-                // Drag the window by its name, the way a title bar works. Only
-                // the name — the close button after the spacer must stay a
-                // button rather than become somewhere the window moves from.
-                .overlay(WindowDragArea())
-            Spacer(minLength: 8)
+            // Drag the window by this strip, the way a title bar works — the
+            // name and the empty room after it, the full width of the window
+            // up to the close button. It has to be the strip rather than the
+            // name alone: this is now the only place the window moves from, so
+            // a handle the width of one word would be a window that is hard to
+            // move. The button stays outside it, because a view the window can
+            // be dragged by never receives a click.
+            HStack(spacing: 8) {
+                Text("HashNotch")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
+                Spacer(minLength: 8)
+            }
+            .frame(height: 22)
+            .overlay(WindowDragArea())
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .bold))

@@ -4,7 +4,22 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- **Indicators can be dragged into the order you want again.** Pressing a row in
+  Settings and dragging it moved the whole window instead of the row, so the
+  order could not be changed at all. The window is borderless — it has no title
+  bar — so it was told it could be moved by its background, and then every view
+  in it was allowed to answer whether a press should move it. Nearly every kind
+  of view says yes unless it is told not to, including the two that fill this
+  one: the frosted glass behind everything, and the surface the controls are
+  drawn on. Between them they made the entire window a place to pick it up, and
+  a window that moves on a press takes that press with it, so the drag never
+  reached the list.
+
+  Those two surfaces now decline, and the window moves from its header — the
+  name across the top, the full width up to the close button, which is what a
+  title bar is. Everything else on the panel belongs to whatever is drawn there.
 
 ## 1.3.0 — temperatures on every Mac, your data by program, and a timer that survives a locked lid
 

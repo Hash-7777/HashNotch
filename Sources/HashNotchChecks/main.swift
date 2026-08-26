@@ -5520,6 +5520,51 @@ check(
     }()
 )
 
+// MARK: - Where the settings window may be dragged from
+//
+// A borderless panel has no title bar, so it is told it may be moved by its
+// background — and then every view in it gets a say, through
+// `mouseDownCanMoveWindow`. Nearly everything says yes by default: measured on
+// macOS 26, a plain `NSView`, an `NSVisualEffectView` and an `NSHostingView`
+// all do. So the two views that fill the window were both offering to move it,
+// the whole surface became a handle, and a press meant for a row inside the
+// panel — dragging an indicator into a different order — moved the window
+// instead and never reached the list.
+//
+// Nothing about that fails loudly, and the two big surfaces are exactly the
+// ones nobody thinks of as views. These checks hold the arrangement in place:
+// the surfaces decline, the header accepts, and the header really does catch a
+// pointer.
+
+check(
+    "the frosted background never offers to move the window",
+    SteadyVisualEffectView().mouseDownCanMoveWindow == false
+)
+check(
+    "nor does the surface the settings are drawn on",
+    PanelHostingView(rootView: Text("")).mouseDownCanMoveWindow == false
+)
+check(
+    "the header strip is the one place the window moves from",
+    WindowDragArea.DragView().mouseDownCanMoveWindow == true
+)
+
+// And it is a real handle rather than a declaration: AppKit only asks a view
+// whether the window may move once the pointer has been hit-tested to it, so a
+// region that never answers a hit test would leave the window immovable with
+// every check above still passing.
+let dragHost = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 50))
+let dragHandle = WindowDragArea.DragView(frame: NSRect(x: 0, y: 0, width: 120, height: 22))
+dragHost.addSubview(dragHandle)
+check(
+    "the handle catches a pointer that lands on it",
+    dragHandle.hitTest(NSPoint(x: 60, y: 10)) === dragHandle
+)
+check(
+    "and lets go of one that lands anywhere else",
+    dragHandle.hitTest(NSPoint(x: 180, y: 40)) == nil
+)
+
 // Nothing here creates a preference domain any more, so there is nothing of
 // this run's to clean up. See `InMemoryDefaults` for why: no amount of tidying
 // from inside the process survives the exit, because `cfprefsd` writes an empty
