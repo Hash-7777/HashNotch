@@ -62,22 +62,24 @@ All notable changes to HashNotch are recorded here.
   closed at all if the agent had already stopped waiting. Pressing a button and
   seeing nothing happen is how somebody presses it again.
 
-- **The notch stops asking about tool calls the agent was never going to ask
-  about.** A tool you tick under Agents is intercepted before it runs — and the
-  event that makes that possible fires before the permission decision, so the
-  hook had no way of knowing whether anybody was ever going to be asked. In a
-  session that approves its own tool calls, every single command therefore put
-  "Allow Bash?" on the notch, held the call for the full twenty seconds, and
-  then handed it back so the agent ran it anyway. Twenty seconds, on every
-  command, for a question nobody had asked. The agent says which permission
-  mode it is in, so the hook now reads it: nothing is intercepted in a session
-  that approves everything, or in plan mode, and when only edits are being
-  accepted automatically it still asks about commands. An older agent that
-  sends no mode at all is treated as one that asks, because a question that did
-  not need asking costs a moment and a missing one costs the whole feature.
+- **A tool you tick under Agents is now asked about in every mode, from every
+  agent.** An earlier attempt at this tried to work out, from the permission
+  mode the session was in, whether the agent was going to ask anything — and got
+  it wrong twice in opposite directions. It cannot be worked out: the event that
+  lets a hook intercept a call fires *before* the permission decision, so
+  nothing it is handed can say which way a decision that has not happened yet
+  will go. `auto` in particular is not a mode that approves everything — it
+  approves most calls and still stops for what it judges risky — so predicting
+  silence there took the answers off the notch in the sessions most people run,
+  leaving a notice with nothing to press on it.
 
-  **This one needs you to act:** the hook's version has moved to 12, so the
-  notch will tell you it is out of date. Press Update on the notice.
+  It no longer predicts. A tool on your list is intercepted every time, which is
+  what the setting says it does. The cost is bounded and honest: a question
+  nobody answers holds that one call until it gives up, then hands it back
+  exactly as if the notch had never been involved.
+
+  **This one needs you to act:** the hook's version has moved, so the notch will
+  say it is out of date. Press Update on the notice.
 
 - **The button that connects Claude Code now works — it never has.** The
   installer it runs, the same script the README has always told people to run by

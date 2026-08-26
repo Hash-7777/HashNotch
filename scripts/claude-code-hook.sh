@@ -30,9 +30,22 @@ set -euo pipefail
 # hook has no way of knowing its own registration is out of date, so the version
 # is the only thing that can carry the message.
 #
-# 12: stop asking about tool calls the agent was never going to ask about. See
-# `session_asks` below.
-HOOK_VERSION=12
+# 12 and 13 tried to predict, from the session's permission mode, whether the
+# agent was going to ask anything — and both were wrong, in opposite directions.
+# THE PREDICTION CANNOT BE MADE. PreToolUse fires BEFORE the permission decision;
+# that is precisely what lets a hook block a call, and it means the payload
+# cannot say which way a decision that has not happened yet will go. `auto` was
+# read as "approves everything" and does not: it approves most calls and still
+# stops for what it judges risky, with nothing in the payload marking which.
+# Predicting silence there took the answers off the notch in the sessions most
+# people run, leaving a notice with nothing to press.
+#
+# 14 stops predicting. A tool listed in ask-tools.txt is intercepted in every
+# mode, from every agent, for every call — which is what the setting says on the
+# tin. The cost is honest and bounded: a question nobody answers holds that one
+# call for ASK_SECONDS and then hands it straight back, exactly as if this hook
+# had never run.
+HOOK_VERSION=14
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -77,50 +90,6 @@ wants_asking() {
   grep -qxF "$name" "$ASK_LIST" 2>/dev/null
 }
 
-# Which permission mode the session is in, out of the same payload.
-permission_mode() {
-  printf '%s' "$PAYLOAD" | sed -n 's/.*"permission_mode" *: *"\([^"]*\)".*/\1/p' | head -1
-}
-
-# Whether the agent was going to ask about this call at all.
-#
-# THIS IS THE DIFFERENCE BETWEEN A FEATURE AND A TAX. PreToolUse fires before
-# every single tool call and BEFORE the permission decision — that is what lets
-# a hook block one — so it cannot tell, by existing, whether anybody was ever
-# going to be asked. Without this the notch stopped a session that approves its
-# own tool calls, put "Allow Bash?" on the screen, held the call for the full
-# twenty seconds, and then handed back "escalate" so the agent ran it anyway.
-# Twenty seconds, on every command, for a question nobody had asked.
-#
-# The payload says which mode the session is in, so it does not have to be
-# guessed:
-#   bypassPermissions, auto  nothing is ever asked
-#   plan                     nothing is run to be asked about
-#   acceptEdits              edits and writes go through; commands still ask
-#   default                  asked, unless the owner allow-listed it
-#
-# An unknown or missing mode is treated as "asks". A hook that guesses wrong in
-# that direction costs a question that did not need asking; the other direction
-# silently drops one that did, and this feature exists to be asked.
-#
-# What it still cannot see is the session's own allow-list — a tool listed in
-# permissions.allow is never asked about, and nothing in the payload says so. A
-# question that could have been skipped is the residual, and it is the harmless
-# half.
-session_asks() {
-  local mode="$1" tool="$2"
-  case "$mode" in
-    bypassPermissions|auto|plan) return 1 ;;
-    acceptEdits)
-      case "$tool" in
-        Edit|MultiEdit|Write|NotebookEdit) return 1 ;;
-      esac
-      return 0
-      ;;
-    *) return 0 ;;
-  esac
-}
-
 TOKEN=""
 TOOL=""
 if [ "$EVENT" = "clear" ]; then
@@ -134,7 +103,7 @@ if [ "$EVENT" = "clear" ]; then
     # take it down, and do not turn round and ask about the very thing that was
     # just approved.
     :
-  elif wants_asking "$TOOL" && session_asks "$(permission_mode)" "$TOOL"; then
+  elif wants_asking "$TOOL"; then
     # Nobody can answer a question if the app is not up. Asking anyway would
     # stall the tool call for the whole waiting period and then fall back to
     # the ordinary prompt — slower than never having asked.

@@ -1880,34 +1880,40 @@ MainActor.assumeIsolated {
           denied.out.contains("\"permissionDecision\":\"deny\""))
     check("and that question is taken down too", !denied.feed.contains("claude-ask"))
 
-    // THE 21-SECOND TAX. PreToolUse fires before the permission decision, so
-    // without reading the mode the hook stopped every single call in a session
-    // that approves its own — held it for the full wait, then escalated so the
-    // agent ran it anyway.
-    for mode in ["auto", "bypassPermissions", "plan"] {
-        let quiet = runHook(
+    // EVERY MODE, EVERY AGENT. Two versions of this hook tried to predict from
+    // the session's permission mode whether the agent was going to ask, and
+    // both were wrong in opposite directions — the prediction cannot be made,
+    // because this event fires before the decision it is trying to read. A
+    // listed tool is now intercepted in every mode, which is what the setting
+    // says. These pin that, so no future cleverness can quietly narrow it.
+    for mode in ["auto", "default", "bypassPermissions", "acceptEdits", "plan"] {
+        let any = runHook(
             "clear",
             payload: #"{"tool_name":"Bash","permission_mode":"\#(mode)"}"#,
-            tools: ["Bash"])
-        check("a session in \(mode) is never interrupted", quiet.out.isEmpty)
-        check("and nothing is posted in \(mode)", !quiet.feed.contains("claude-ask"))
+            tools: ["Bash"],
+            answer: "allow",
+            seconds: "5")
+        check("a listed tool is asked about in \(mode)", any.seen.contains("Allow Bash?"))
+        check("and answering it in \(mode) reaches the agent",
+              any.out.contains("\"permissionDecision\":\"allow\""))
     }
 
-    // acceptEdits is the one that is not all-or-nothing: edits go through
-    // without asking, commands still ask.
-    let editsMode = #"{"tool_name":"Write","permission_mode":"acceptEdits"}"#
-    check("an edit is not queried when edits are already accepted",
-          runHook("clear", payload: editsMode, tools: ["Write", "Bash"]).out.isEmpty)
-    let bashInEdits = #"{"tool_name":"Bash","permission_mode":"acceptEdits"}"#
-    check("but a command still is",
-          runHook("clear", payload: bashInEdits, tools: ["Write", "Bash"]).out
-              .contains("permissionDecision"))
+    // Any tool name at all, not a list this app knows: the notch asks about
+    // whatever the owner wrote down, from whichever agent posted it.
+    let ownTool = runHook(
+        "clear",
+        payload: #"{"tool_name":"SomeOtherAgentTool","permission_mode":"default"}"#,
+        tools: ["SomeOtherAgentTool"],
+        answer: "deny",
+        seconds: "5")
+    check("a tool this app has never heard of is asked about too",
+          ownTool.seen.contains("Allow SomeOtherAgentTool?"))
+    check("and can be denied from the notch",
+          ownTool.out.contains("\"permissionDecision\":\"deny\""))
 
-    // A payload with no mode at all is an older agent, or one that stopped
-    // sending it. Asking a question that did not need asking costs a moment;
-    // silently skipping one that did is the failure this feature exists to
-    // prevent, so the unknown case asks.
-    check("an unknown mode still asks",
+    // A payload with no mode in it at all — an older agent, or one that never
+    // sent it — is asked about like everything else.
+    check("a payload with no mode at all still asks",
           runHook("clear", payload: #"{"tool_name":"Bash"}"#, tools: ["Bash"]).out
               .contains("permissionDecision"))
 
