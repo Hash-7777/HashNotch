@@ -4,6 +4,10 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.3.0 — temperatures on every Mac, your data by program, and a timer that survives a locked lid
+
 ### Added
 
 - **The notice that says the hook is out of date now updates it.** It used to
@@ -21,72 +25,6 @@ All notable changes to HashNotch are recorded here.
   page in Settings now with a button that connects Claude Code, says whether it
   is already connected, and tells you when the copy it installed has fallen
   behind the app.
-
-### Changed
-
-- **The AI tokens row drops a word it did not need.** It said "counted 5 min
-  ago"; it says "5 min ago". The row already carries its own name, its mark, the
-  figure itself and the button that counts again — "counted" was a label on the
-  one thing it could not have been anything else.
-
-### Fixed
-
-- **The button that connects Claude Code now works — it never has.** The
-  installer it runs, the same script the README has always told people to run by
-  hand, could not be parsed by the only bash macOS ships. Not a bad path and not
-  a permission: the file died at parse time, on every Mac, from the day it was
-  written. The cause was an apostrophe. macOS is on bash 3.2, which tracks
-  quotes *through* a here-document while it looks for the end of a `$( ... )`,
-  so "Claude's own window" in a JavaScript comment opened a quote that never
-  closed, and bash gave up at the bottom of the file naming a line that had
-  nothing wrong with it. The script now keeps that block in a small function
-  where the here-document is read the way it is written, so the prose in it can
-  say whatever it likes.
-
-  Half of it did run before dying, which is why this looked like a mystery
-  rather than a failure: the hook itself was copied into place, and only the
-  registration that comes after — the part that tells Claude Code the hook
-  exists — was never reached. Anybody who ran the installer and saw an error
-  they could not read has a hook installed and unregistered; running it once
-  more finishes the job.
-
-  Every shell script this repository ships is now parsed by `/bin/bash`
-  specifically, on this machine and again on GitHub, before anything can be
-  pushed. `/bin/bash` and not `bash`: a developer with a newer bash first on
-  their PATH runs the broken file successfully from a terminal and concludes it
-  is fine, while the app — which launches it from the environment Finder gives —
-  can only ever find the 3.2 that fails.
-
-- **When the update fails, the notch says what failed.** It used to answer
-  "Could not update it" and drop what the installer had written, which in this
-  case was the entire diagnosis. It now shows the line the script actually
-  refused on, and the whole output on hover.
-
-- **A question that has just been asked no longer claims to have been waiting
-  seven minutes.** The notch tells you how long an answer has been owed, and it
-  was reading the wrong clock. A poster reuses one name for everything it sends
-  — every notice and every request from Claude Code arrives under the same one —
-  and the app deliberately started a clock only for the self-dismissing notices.
-  So a request inherited the clock of whatever notice had come before it, and
-  reported that instead. The same refusal is why the line around the notch never
-  pressed harder the longer a request stood, which was written and had never
-  once worked: it had no arrival time to measure from.
-
-- **A request comes down when you answer it, not when Claude next does
-  something.** The hook was registered on an event chosen in the belief that it
-  fires "because permission was granted". It does not — it fires *before* you
-  are asked, which is what lets it block a call — so answering in Claude's own
-  window left "Claude needs you" on the notch until the next tool call or
-  prompt, and up to half an hour if neither came. It now also listens for a tool
-  having actually run, which is unambiguously after any answer.
-
-  **This one needs you to act:** re-run `scripts/install-claude-hooks.sh`. The
-  hook's version has moved, so the panel will tell you so and hand you the
-  command.
-
-## 1.3.0 — the timer survives a locked Mac, and every Mac gets temperatures
-
-### Added
 
 - **Which programs used your data, not just how much.** Under the data-used
   figure the panel now carries a list you can open and shut: which programs used
@@ -120,16 +58,6 @@ All notable changes to HashNotch are recorded here.
   opens when a cursor passes the notch should do that. It compares version
   numbers rather than file contents, so editing your own copy never produces a
   warning you cannot clear.
-
-- **Allow or deny from the notch.** An agent that needs permission stops and
-  asks in its own window, which means finding that window. It can ask here
-  instead: hover the island and the panel shows what it wants to do, with Allow
-  and Deny on it. Off until you name the tools you want to be asked about, one
-  per line in `~/.hashnotch/ask-tools.txt`, and every way it can go wrong ends
-  in the ordinary prompt — the app not running, nobody answering within twenty
-  seconds, or the hook failing at all. Deny is drawn no louder than Allow: a
-  pair of buttons where one is styled as the obvious answer is a pair that gets
-  clicked without reading, and the reading is the point.
 
 - **How much you have used, not just how fast it is going.** The panel now says
   how many gigabytes have gone down and up — today by default, or this month, or
@@ -183,6 +111,11 @@ All notable changes to HashNotch are recorded here.
   updates.
 
 ### Changed
+
+- **The AI tokens row drops a word it did not need.** It said "counted 5 min
+  ago"; it says "5 min ago". The row already carries its own name, its mark, the
+  figure itself and the button that counts again — "counted" was a label on the
+  one thing it could not have been anything else.
 
 - **Temperatures now work on every Mac, not only Apple Silicon ones.** The
   reader asked the HID event system, which gives sensors with proper names — and
@@ -341,27 +274,6 @@ All notable changes to HashNotch are recorded here.
   the space between them, since the two directions sit at opposite ends of the
   row rather than side by side. They are two answers, not one pair.
 
-- **The by-app list is now a picture as well as a list.** It was a name, two
-  figures and a hairline bar under each row — which put four bars in one block
-  once the total's own is counted, stacked one under another. Each row is now
-  the length it used, so the comparison is the shape of the list itself, in one
-  quiet colour rather than two: which way a program's traffic went is what the
-  bar above already answers, and a two-colour fill at this size ran its own
-  boundary straight underneath the figure on the right.
-
-- **How much you have used no longer looks like how fast you are going.** The
-  total sat directly under the speed row and was drawn exactly like it — same
-  label, same pair of arrows and figures, same colours, same size — so two
-  readings that answer completely different questions looked like one reading
-  given twice. A speed is true for an instant and moves both ways; a total only
-  grows, and you look at it once a day. It is now a block rather than a row: one
-  figure large enough to be the answer, a bar underneath showing how much of it
-  came down and how much went up, and those two figures named quietly beneath
-  that. The bar divides the total rather than filling towards anything — there
-  is no allowance, no plan and no limit here, and a bar that fills would invent
-  one. It is drawn a little heavier than the per-program bars under it, because
-  it is the thing they are a breakdown of.
-
 - **Every heading in the panel now has its own mark.** A small drawn picture in
   front of each one — a chip for the processor, a memory chip, a stack of
   platters for the disk, a globe for the internet, a thermometer, a stopwatch, a
@@ -419,6 +331,58 @@ All notable changes to HashNotch are recorded here.
   can now be moved by its heading, the way a title bar works.
 
 ### Fixed
+
+- **The button that connects Claude Code now works — it never has.** The
+  installer it runs, the same script the README has always told people to run by
+  hand, could not be parsed by the only bash macOS ships. Not a bad path and not
+  a permission: the file died at parse time, on every Mac, from the day it was
+  written. The cause was an apostrophe. macOS is on bash 3.2, which tracks
+  quotes *through* a here-document while it looks for the end of a `$( ... )`,
+  so "Claude's own window" in a JavaScript comment opened a quote that never
+  closed, and bash gave up at the bottom of the file naming a line that had
+  nothing wrong with it. The script now keeps that block in a small function
+  where the here-document is read the way it is written, so the prose in it can
+  say whatever it likes.
+
+  Half of it did run before dying, which is why this looked like a mystery
+  rather than a failure: the hook itself was copied into place, and only the
+  registration that comes after — the part that tells Claude Code the hook
+  exists — was never reached. Anybody who ran the installer and saw an error
+  they could not read has a hook installed and unregistered; running it once
+  more finishes the job.
+
+  Every shell script this repository ships is now parsed by `/bin/bash`
+  specifically, on this machine and again on GitHub, before anything can be
+  pushed. `/bin/bash` and not `bash`: a developer with a newer bash first on
+  their PATH runs the broken file successfully from a terminal and concludes it
+  is fine, while the app — which launches it from the environment Finder gives —
+  can only ever find the 3.2 that fails.
+
+- **When the update fails, the notch says what failed.** It used to answer
+  "Could not update it" and drop what the installer had written, which in this
+  case was the entire diagnosis. It now shows the line the script actually
+  refused on, and the whole output on hover.
+
+- **A question that has just been asked no longer claims to have been waiting
+  seven minutes.** The notch tells you how long an answer has been owed, and it
+  was reading the wrong clock. A poster reuses one name for everything it sends
+  — every notice and every request from Claude Code arrives under the same one —
+  and the app deliberately started a clock only for the self-dismissing notices.
+  So a request inherited the clock of whatever notice had come before it, and
+  reported that instead. The same refusal is why the line around the notch never
+  pressed harder the longer a request stood, which was written and had never
+  once worked: it had no arrival time to measure from.
+
+- **A request comes down when you answer it, not when Claude next does
+  something.** The hook was registered on an event chosen in the belief that it
+  fires "because permission was granted". It does not — it fires *before* you
+  are asked, which is what lets it block a call — so answering in Claude's own
+  window left "Claude needs you" on the notch until the next tool call or
+  prompt, and up to half an hour if neither came. It now also listens for a tool
+  having actually run, which is unambiguously after any answer.
+
+  **This one needs you to act:** the hook's version has moved, so the panel will
+  tell you it is out of date and put an Update button on the notice. Press it.
 
 - **A program could be shown using more data than your Mac used in total.** The
   by-app list read "not in the last sample" as "started since the last sample",
