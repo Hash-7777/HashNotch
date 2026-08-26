@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.3.1 — the indicators can be put in the order you want
 
 ### Changed
 
