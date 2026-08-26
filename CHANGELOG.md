@@ -4,6 +4,26 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- **Moving an indicator now looks like moving something.** The order used to
+  change between one frame and the next: rows were in one arrangement, and then
+  they were in another, with nothing in between to tell you what had happened.
+  Every row that has to move now travels to its new place on one spring, so you
+  can watch the row you are carrying pass the ones it is overtaking. It runs at
+  whatever you have set under Motion, like everything else the app animates, and
+  a little slower on an older Mac that would otherwise drop frames through it.
+
+  What follows the pointer has changed too. macOS used to carry a picture of the
+  whole row — full width, with a working switch and a menu inside it — which
+  looked like a piece of the window had come loose. It is a small piece naming
+  the indicator you picked up, and the row you took it from stays behind as a
+  shallow well, so it is clear where it will land if you let go. Rows also light
+  faintly as the pointer crosses them, which is the part that says they can be
+  picked up at all. (The small carried piece needs macOS 13 or newer; on
+  Monterey the drag works exactly as before, just with the system's own picture
+  of the row.)
+
 ### Fixed
 
 - **Indicators can be dragged into the order you want again.** Pressing a row in

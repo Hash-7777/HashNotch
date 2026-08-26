@@ -4284,6 +4284,42 @@ check(
     check("calm motion is slower than lively",
           AppearanceSettings.Motion.calm.responseScale > AppearanceSettings.Motion.lively.responseScale)
 
+    // The reorder in Settings runs on the same two scales as the island's own
+    // animation, rather than a speed of its own. A window whose motion ignores
+    // the Motion setting is the one place in the app that does — and the person
+    // most likely to notice is the one who turned it down on purpose.
+    check(
+        "asking for calmer motion slows the reorder, and livelier quickens it",
+        ReorderMotion.response(for: .calm, on: .latest)
+            > ReorderMotion.response(for: .standard, on: .latest)
+            && ReorderMotion.response(for: .standard, on: .latest)
+            > ReorderMotion.response(for: .lively, on: .latest)
+    )
+    check(
+        "an older system is given longer to draw the same move",
+        ReorderMotion.response(for: .standard, on: .monterey)
+            > ReorderMotion.response(for: .standard, on: .latest)
+    )
+    // A spring nobody can see is as wrong as one nobody can sit through. These
+    // are the two edges either side of which the reorder stops being an
+    // animation at all: quicker than a fifth of a second and the rows swap
+    // between frames rather than travel, slower than three fifths and the list
+    // is something you wait for. Every combination of the two scales has to
+    // land inside them, which is what stops one of the six ends up outside
+    // while the middle still looks right.
+    check(
+        "the reorder stays between a fifth of a second and three fifths, whatever it is scaled by",
+        AppearanceSettings.Motion.allCases.allSatisfy { motion in
+            [SystemGeneration.monterey, .modern, .latest].allSatisfy { generation in
+                (0.2...0.6).contains(ReorderMotion.response(for: motion, on: generation))
+            }
+        }
+    )
+    check(
+        "a row settles into its place rather than bouncing past it",
+        ReorderMotion.damping >= 0.8 && ReorderMotion.damping < 1
+    )
+
     // The reader's chosen alert length overrides whatever the poster suggested.
     let posted = LiveActivity(
         id: "p", icon: "checkmark", title: "Done", subtitle: nil,

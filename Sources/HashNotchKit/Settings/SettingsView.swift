@@ -56,6 +56,10 @@ public struct SettingsView: View {
 
     @State private var section: Section = .general
     @State private var dragging: String?
+    /// The row the pointer is over, so a row can say it is grabbable before
+    /// anybody tries to grab it. Cleared while a drag is running: during one,
+    /// what matters is where the row is going, not where the pointer is.
+    @State private var hoveredRow: String?
 
     enum Section: String, CaseIterable, Identifiable {
         case general, indicators, appearance, alerts, position, privacy
@@ -176,11 +180,22 @@ public struct SettingsView: View {
         .onChange(of: route.requested) { _ in jumpIfRequested() }
     }
 
+    /// The one spring the reordering moves on. Built here rather than written
+    /// out at each call so a row that dims, a row that moves and a row that
+    /// settles are all the same movement — three curves doing one job is what
+    /// makes a list look busy.
+    private var reorderSpring: Animation {
+        .spring(
+            response: ReorderMotion.response(for: settings.appearance.motion),
+            dampingFraction: ReorderMotion.damping
+        )
+    }
+
     /// Move to a page the island asked for, once.
     private func jumpIfRequested() {
         guard let wanted = route.requested,
               let target = Section(rawValue: wanted) else { return }
-        dragging = nil
+        withAnimation(reorderSpring) { dragging = nil }
         section = target
         route.requested = nil
     }
@@ -504,7 +519,10 @@ public struct SettingsView: View {
             // Behind the rows, catching any drag let go between them or beside
             // them. Without it a drag that missed a row left its held id set
             // for the rest of the session — see `ReorderCancel`.
-            .onDrop(of: [UTType.text], delegate: ReorderCancel(dragging: $dragging))
+            .onDrop(
+                of: [UTType.text],
+                delegate: ReorderCancel(dragging: $dragging, settle: reorderSpring)
+            )
 
             Spacer(minLength: 0)
         }
@@ -524,11 +542,13 @@ public struct SettingsView: View {
 
     private func indicatorRow(_ feature: FeatureDescriptor) -> some View {
         let enabled = settings.isEnabled(feature.id)
+        let held = dragging == feature.id
+        let hovered = hoveredRow == feature.id && dragging == nil
         return VStack(alignment: .leading, spacing: 11) {
             HStack(spacing: 10) {
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(dragging == feature.id ? 0.7 : 0.28))
+                    .foregroundStyle(Color.white.opacity(held ? 0.75 : hovered ? 0.5 : 0.28))
                 Text(feature.title)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(enabled ? Color.white : Color.white.opacity(0.45))
@@ -561,11 +581,25 @@ public struct SettingsView: View {
             }
         }
         .padding(.vertical, 8)
-        .opacity(dragging == feature.id ? 0.45 : 1)
+        // The row being carried is left behind as the space it will drop into,
+        // rather than as a second copy of itself: dimmed nearly out, with a
+        // shallow well drawn where it sits. The solid one is the piece under
+        // the pointer, and one row should only look solid in one place.
+        .opacity(held ? 0.32 : 1)
+        .background(rowWell(held: held, hovered: hovered))
         .contentShape(Rectangle())
-        .onDrag {
-            dragging = feature.id
+        // Leaving one row for the next fires both events, in either order, so
+        // a row only ever clears the hover it still holds.
+        .onHover { inside in
+            hoveredRow = inside ? feature.id : (hoveredRow == feature.id ? nil : hoveredRow)
+        }
+        .animation(reorderSpring, value: held)
+        .animation(.easeOut(duration: 0.16), value: hovered)
+        .dragToReorder {
+            withAnimation(reorderSpring) { dragging = feature.id }
             return NSItemProvider(object: feature.id as NSString)
+        } preview: {
+            dragPreview(feature)
         }
         .onDrop(
             of: [UTType.text],
@@ -573,9 +607,68 @@ public struct SettingsView: View {
                 target: feature.id,
                 order: orderedDescriptors.map(\.id),
                 dragging: $dragging,
-                apply: { settings.setOrder($0) }
+                settle: reorderSpring,
+                apply: { order in
+                    // The list rearranging under the pointer is the whole
+                    // animation: every row that has to move travels to its new
+                    // place on one spring, instead of the order changing
+                    // between one frame and the next.
+                    withAnimation(reorderSpring) { settings.setOrder(order) }
+                }
             )
         )
+    }
+
+    /// The shallow well a row sits in: drawn where the row was picked up from,
+    /// and hinted at under the pointer so a row reads as something you can take
+    /// hold of before you try to.
+    ///
+    /// Wider than the row by the card's own padding, so it looks like a recess
+    /// in the card rather than a box floating inside one.
+    private func rowWell(held: Bool, hovered: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
+            .fill(Color.white.opacity(held ? 0.055 : hovered ? 0.03 : 0))
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(
+                        settings.accent.color.opacity(held ? 0.3 : 0),
+                        lineWidth: 1
+                    )
+            )
+            .padding(.horizontal, -8)
+            .padding(.vertical, 1)
+    }
+
+    /// What actually follows the pointer.
+    ///
+    /// Without this, macOS carries a snapshot of the whole row — full width,
+    /// with a live switch and a menu in it — which reads as the interface
+    /// having come loose. A small piece naming the indicator is what is being
+    /// moved, and it is the size of the thing rather than the size of the row.
+    ///
+    /// Its colours are stated outright rather than inherited: the preview is
+    /// drawn on its own, away from the panel that sets the dark scheme, so
+    /// anything left to the environment comes out light on light.
+    private func dragPreview(_ feature: FeatureDescriptor) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(settings.accent.color)
+            Text(feature.title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.white)
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(white: 0.13))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(settings.accent.color.opacity(0.45), lineWidth: 1)
+                )
+        )
+        .environment(\.colorScheme, .dark)
     }
 
     private var appearance: some View {
@@ -1157,6 +1250,9 @@ private struct ReorderDrop: DropDelegate {
     let target: String
     let order: [String]
     @Binding var dragging: String?
+    /// How the row put down comes back to itself. The same spring the move ran
+    /// on, so letting go is the end of one movement rather than a cut.
+    let settle: Animation
     let apply: ([String]) -> Void
 
     func dropEntered(info: DropInfo) {
@@ -1167,7 +1263,7 @@ private struct ReorderDrop: DropDelegate {
     func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
 
     func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
+        withAnimation(settle) { dragging = nil }
         return true
     }
 }
@@ -1184,13 +1280,43 @@ private struct ReorderDrop: DropDelegate {
 /// This sits behind the whole list and accepts whatever the rows did not.
 private struct ReorderCancel: DropDelegate {
     @Binding var dragging: String?
+    let settle: Animation
 
     func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
+        withAnimation(settle) { dragging = nil }
         return true
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .cancel) }
+}
+
+/// How the reordering moves, kept apart from the view so it can be checked.
+///
+/// One spring, scaled by the two things every other animation in this app is
+/// scaled by: what the person asked for under Motion, and what this macOS can
+/// draw in time. A settings window that ignored the Motion setting would be the
+/// one place in the app that does.
+public enum ReorderMotion {
+    /// Seconds the move takes at Standard motion on a current system. The
+    /// Motion setting moves it either side of this.
+    ///
+    /// Short enough that the list is never something you wait for, long enough
+    /// that the eye can follow one row past another. Rows that arrive too
+    /// quickly stop reading as having moved and start reading as having
+    /// swapped, which tells you the order changed but not how.
+    public static let baseResponse: Double = 0.34
+
+    /// Just short of critical damping: a row arrives with the smallest
+    /// suggestion of weight and does not bounce past its place. A list that
+    /// bounces looks like a toy, and this one is a list of settings.
+    public static let damping: Double = 0.86
+
+    public static func response(
+        for motion: AppearanceSettings.Motion,
+        on generation: SystemGeneration = .current
+    ) -> Double {
+        baseResponse * motion.responseScale * generation.motionScale
+    }
 }
 
 /// The reordering itself, kept apart from the view so it can be checked.
@@ -1472,6 +1598,22 @@ private extension View {
             self.scrollIndicators(.never)
         } else {
             self
+        }
+    }
+
+    /// Starts a reorder, carrying `preview` under the pointer where macOS can
+    /// be told what to carry, and the system's own snapshot of the row where it
+    /// cannot. Monterey has no `onDrag(_:preview:)`, and a drag that works
+    /// while looking plainer is the right thing to lose there.
+    @ViewBuilder
+    func dragToReorder<Preview: View>(
+        _ data: @escaping () -> NSItemProvider,
+        @ViewBuilder preview: () -> Preview
+    ) -> some View {
+        if #available(macOS 13, *) {
+            self.onDrag(data, preview: preview)
+        } else {
+            self.onDrag(data)
         }
     }
 }
