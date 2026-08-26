@@ -50,7 +50,12 @@ set -euo pipefail
 # request is already standing, so do not ask again" matched anything posted
 # under our id, including the "Claude finished" notice that lands at the end of
 # every turn — so every tool call took the do-not-ask branch instead.
-HOOK_VERSION=15
+#
+# 16: only PreToolUse may become a question. PostToolUse shares the same `clear`
+# wiring and was raising a second one, asking whether to allow a call that had
+# already finished, and waiting all over again for an answer that could not
+# change anything.
+HOOK_VERSION=16
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -87,6 +92,21 @@ tool_name() {
   printf '%s' "$PAYLOAD" | sed -n 's/.*"tool_name" *: *"\([^"]*\)".*/\1/p' | head -1
 }
 
+# Which event the agent actually fired, out of the payload.
+#
+# The installer registers UserPromptSubmit, PreToolUse and PostToolUse under the
+# same `clear` argument, because all three mean "the session moved, take a
+# standing request down". Only ONE of them can also become a question:
+# PreToolUse, which runs before the call and whose answer can still decide it.
+#
+# PostToolUse was becoming one too, and asking whether to allow something that
+# had already finished — a question with no meaning attached to it, and a second
+# twenty-second wait on top of the first. Measured at 43 seconds across one
+# command before this.
+hook_event() {
+  printf '%s' "$PAYLOAD" | sed -n 's/.*"hook_event_name" *: *"\([^"]*\)".*/\1/p' | head -1
+}
+
 # Whether this is a tool the owner asked to be consulted about.
 wants_asking() {
   [ -f "$ASK_LIST" ] || return 1
@@ -119,7 +139,7 @@ if [ "$EVENT" = "clear" ]; then
     # take it down, and do not turn round and ask about the very thing that was
     # just approved.
     :
-  elif wants_asking "$TOOL"; then
+  elif wants_asking "$TOOL" && [ "$(hook_event)" != "PostToolUse" ]; then
     # Nobody can answer a question if the app is not up. Asking anyway would
     # stall the tool call for the whole waiting period and then fall back to
     # the ordinary prompt — slower than never having asked.

@@ -1951,6 +1951,31 @@ MainActor.assumeIsolated {
     check("and that standing request is taken down instead",
           !afterRequest.feed.contains("Claude needs you"))
 
+    // ONLY THE EVENT THAT RUNS BEFORE THE CALL MAY ASK.
+    //
+    // All three of UserPromptSubmit, PreToolUse and PostToolUse are wired to
+    // the same `clear` argument, because all three mean "the session moved".
+    // Only PreToolUse runs before the call, so only its answer can decide
+    // anything. PostToolUse was raising a question too — asking whether to
+    // allow something that had already finished, and waiting all over again for
+    // an answer that could not change it. Measured at 43 seconds across a single
+    // command.
+    let afterTheFact = runHook(
+        "clear",
+        payload: #"{"tool_name":"Bash","hook_event_name":"PostToolUse","permission_mode":"default"}"#,
+        tools: ["Bash"])
+    check("a call that has already run is not asked about", afterTheFact.out.isEmpty)
+    check("and nothing is posted for it", !afterTheFact.seen.contains("Allow Bash?"))
+
+    let beforeTheCall = runHook(
+        "clear",
+        payload: #"{"tool_name":"Bash","hook_event_name":"PreToolUse","permission_mode":"default"}"#,
+        tools: ["Bash"], answer: "allow", seconds: "5")
+    check("but the one that runs before it still is",
+          beforeTheCall.seen.contains("Allow Bash?"))
+    check("and its answer reaches the agent",
+          beforeTheCall.out.contains("\"permissionDecision\":\"allow\""))
+
     // A payload with no mode in it at all — an older agent, or one that never
     // sent it — is asked about like everything else.
     check("a payload with no mode at all still asks",

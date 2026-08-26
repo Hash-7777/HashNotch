@@ -34,6 +34,13 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **A tool call is asked about once, not twice.** The event that runs *after* a
+  tool has finished shares the same wiring as the one that runs before it, and
+  was raising its own question — asking whether to allow something that had
+  already happened, and waiting all over again for an answer that could not
+  change it. Measured at 43 seconds of waiting across one command. Only the
+  event that runs before a call can ask about it now.
+
 - **The reason a question never actually appeared on the notch.** Everything
   about answering on the notch was switched on and working, and it could not
   produce a single question. The hook has a rule that stops it asking twice: if
