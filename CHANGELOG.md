@@ -34,6 +34,17 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The reason a question never actually appeared on the notch.** Everything
+  about answering on the notch was switched on and working, and it could not
+  produce a single question. The hook has a rule that stops it asking twice: if
+  a request is already standing, the tool call about to run is the one that was
+  just approved, so it lets it through. But the test for "a request is standing"
+  matched anything the hook had ever posted under its own name — including
+  "Claude finished", which lands at the end of every turn and sits in the file
+  until it expires. So the finished notice from the last turn silently answered
+  for you, on every tool call, and the box was never drawn. A request now says
+  in the file that it is one, so the two can be told apart.
+
 - **The notch no longer says answering is switched off while it is switched on.**
   Every "Claude needs you" carried the line "Answering here is off. Turn it on
   in Settings, under Agents" underneath it — with all four tools ticked and the

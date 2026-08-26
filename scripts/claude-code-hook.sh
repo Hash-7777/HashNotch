@@ -45,7 +45,12 @@ set -euo pipefail
 # tin. The cost is honest and bounded: a question nobody answers holds that one
 # call for ASK_SECONDS and then hands it straight back, exactly as if this hook
 # had never run.
-HOOK_VERSION=14
+#
+# 15: and the reason nobody had ever actually SEEN a question. The test for "a
+# request is already standing, so do not ask again" matched anything posted
+# under our id, including the "Claude finished" notice that lands at the end of
+# every turn — so every tool call took the do-not-ask branch instead.
+HOOK_VERSION=15
 
 EVENT="${1:-stop}"
 # A logo to show instead of the symbol, if one has been placed here. Claude's
@@ -93,8 +98,19 @@ wants_asking() {
 TOKEN=""
 TOOL=""
 if [ "$EVENT" = "clear" ]; then
+  # Is one of OUR REQUESTS standing — not merely anything we have ever posted.
+  #
+  # This asked whether the feed mentioned `claude-code` at all, and that is the
+  # bug that stopped anybody ever seeing a question. "Claude finished" is posted
+  # under the same id at the end of every turn, so for as long as that notice
+  # sat in the file — and it sits there until it expires — every tool call took
+  # the branch below that means "already approved, do not ask", and no question
+  # was ever raised. The feature looked switched off while being entirely on.
+  #
+  # A request is the kind that waits, and now says so in the file, so this is
+  # still one grep and no JSON parsing before every tool call.
   HAS_OURS=no
-  if [ -f "$FEED" ] && grep -q '"claude-code"' "$FEED" 2>/dev/null; then
+  if [ -f "$FEED" ] && grep -q '"standing"' "$FEED" 2>/dev/null; then
     HAS_OURS=yes
   fi
   TOOL="$(tool_name)"
@@ -296,6 +312,13 @@ function run(argv) {
     activity.endsAt = stamp(now + dismissAfter * 1000);
   } else {
     activity.endsAt = stamp(now + waitSeconds * 1000);
+    // Marked so the shell above can tell a REQUEST from a NOTICE with a plain
+    // grep, without parsing JSON before every single tool call. The rule is
+    // already written twice in this file as "a deadline and no dismissal";
+    // writing it down in the file itself is what makes it readable from a
+    // one-line test. The app decodes only the fields it knows, so an extra one
+    // costs nothing and older versions ignore it.
+    activity.standing = true;
   }
   if (subtitle) activity.subtitle = subtitle;
   items.push(activity);

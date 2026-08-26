@@ -1790,7 +1790,8 @@ MainActor.assumeIsolated {
         payload: String,
         tools: [String],
         answer: String? = nil,
-        seconds: String = "1"
+        seconds: String = "1",
+        seedFeed: String? = nil
     ) -> (out: String, feed: String, seen: String) {
         try? FileManager.default.removeItem(at: askHome)
         try? FileManager.default.createDirectory(
@@ -1798,6 +1799,11 @@ MainActor.assumeIsolated {
         if !tools.isEmpty {
             try? (tools.joined(separator: "\n") + "\n").write(
                 to: askHome.appendingPathComponent(".hashnotch/ask-tools.txt"),
+                atomically: true, encoding: .utf8)
+        }
+        if let seedFeed {
+            try? seedFeed.write(
+                to: askHome.appendingPathComponent(".hashnotch/activities.json"),
                 atomically: true, encoding: .utf8)
         }
 
@@ -1910,6 +1916,40 @@ MainActor.assumeIsolated {
           ownTool.seen.contains("Allow SomeOtherAgentTool?"))
     check("and can be denied from the notch",
           ownTool.out.contains("\"permissionDecision\":\"deny\""))
+
+    // THE REASON NOBODY EVER SAW A QUESTION.
+    //
+    // "Claude finished" is posted under the same id as a standing request at the
+    // end of every turn. The hook's test for "a request is already waiting, so
+    // do not ask again" matched anything under that id, so for as long as a
+    // finished notice sat in the feed — which is until it expires — every tool
+    // call took the do-not-ask branch. The feature was entirely switched on and
+    // could not produce a single question.
+    let askFinishedNotice = """
+    [{"id": "claude-code", "icon": "checkmark", "title": "Claude finished",
+      "dismissAfter": 3, "endsAt": "2099-01-01T00:00:00Z"}]
+    """
+    let afterFinish = runHook(
+        "clear", payload: bashCall, tools: ["Bash"],
+        answer: "allow", seconds: "5", seedFeed: askFinishedNotice)
+    check("a finished notice does not swallow the next question",
+          afterFinish.seen.contains("Allow Bash?"))
+    check("and that question can still be answered",
+          afterFinish.out.contains("\"permissionDecision\":\"allow\""))
+
+    // The suppression itself is still right: a REQUEST that is genuinely
+    // standing means this call is the one that was just approved, so asking
+    // about it again would be asking twice.
+    let askStandingRequest = """
+    [{"id": "claude-code", "icon": "hand.raised.fill", "title": "Claude needs you",
+      "standing": true, "endsAt": "2099-01-01T00:00:00Z"}]
+    """
+    let afterRequest = runHook(
+        "clear", payload: bashCall, tools: ["Bash"], seedFeed: askStandingRequest)
+    check("a request that is genuinely standing still suppresses a second question",
+          !afterRequest.seen.contains("Allow Bash?"))
+    check("and that standing request is taken down instead",
+          !afterRequest.feed.contains("Claude needs you"))
 
     // A payload with no mode in it at all — an older agent, or one that never
     // sent it — is asked about like everything else.
