@@ -153,8 +153,6 @@ struct ActivitiesDetailView: View {
     @ObservedObject var monitor: ActivitiesMonitor
     let theme: Theme
 
-    /// Set once the command has been put on the clipboard, so the row can say
-    /// so. Not persisted anywhere: it is about the last two seconds.
     /// The state of updating the hook from here: in progress, done, or what
     /// went wrong. Kept on the view because it is about this panel being open,
     /// not about the app.
