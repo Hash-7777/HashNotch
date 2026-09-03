@@ -4039,6 +4039,21 @@ check(
     check("it is exactly as tall as the menu bar", notchless.notchRect.height == 25)
     check("and centred on the screen", notchless.notchRect.midX == screen.midX)
     check("it still reports itself as having no notch", notchless.hasNotch == false)
+    // The sentence Settings shows about this used to be written out beside the
+    // page rather than taken from the measurement, and it went on saying the
+    // island sat "just below the menu bar instead of covering it" for a whole
+    // release after it was moved to the top edge. So a person on a Mac with no
+    // notch was told the opposite of what was on their screen, by the one page
+    // whose job is to explain it. These tie the words to the geometry.
+    check(
+        "a notchless island is not described as sitting below the menu bar, because it does not",
+        notchless.notchRect.maxY == screen.maxY
+            && !notchless.positionDescription.lowercased().contains("below the menu bar")
+    )
+    check(
+        "and the two shapes of display are not given the same description",
+        notchless.positionDescription != notched.positionDescription
+    )
     // A screen reporting something absurd must not produce a black slab across
     // the top or an invisible sliver.
     check(

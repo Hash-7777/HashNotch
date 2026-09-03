@@ -36,6 +36,14 @@ All notable changes to HashNotch are recorded here.
   the microphone at once now has something to compare — it was matching against
   helper process ids, which the frontmost app's id could never equal.
 
+- **A Mac with no notch is no longer told the opposite of what it can see.**
+  The Position page said the island "sits just below the menu bar instead of
+  covering it". It has not done that since it was moved up to meet the top edge
+  the way the hardware notch does — it fills the middle of the menu bar, the
+  part macOS leaves empty — but the sentence explaining it stayed behind and
+  shipped in a release. The page now asks the measurement where the island is
+  rather than repeating it from memory, so the two cannot disagree again.
+
 ## 1.3.1 — the indicators can be put in the order you want
 
 ### Changed

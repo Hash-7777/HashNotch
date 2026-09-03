@@ -833,9 +833,13 @@ public struct SettingsView: View {
         return VStack(alignment: .leading, spacing: 22) {
             PageHeader(
                 "Position",
-                detail: measured?.hasNotch == true
-                    ? "Your display has a notch, and the island is measured to match it exactly. Nudge it here if anything looks off."
-                    : "This display has no notch, so the island sits just below the menu bar instead of covering it. Nudge it here to taste."
+                // Asked of the measurement rather than repeated here. The two
+                // said different things for a whole release: see
+                // `NotchGeometry.positionDescription`.
+                detail: (measured ?? NotchGeometry.notchless(
+                    screenFrame: .zero,
+                    menuBarHeight: NotchGeometry.notchlessHeight
+                )).positionDescription
             )
 
             SettingCard {

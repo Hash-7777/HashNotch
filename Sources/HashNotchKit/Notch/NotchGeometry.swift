@@ -131,6 +131,23 @@ public struct NotchGeometry {
         return max(reported, min(unusable, 40), 24)
     }
 
+    /// How to describe, to somebody reading Settings, where the island sits on
+    /// a display of this shape.
+    ///
+    /// Here rather than in the settings window, beside the measurement it
+    /// describes, because it drifted once and nothing caught it. The island
+    /// used to hang BELOW the menu bar on a notchless display; it was moved to
+    /// the top edge — see `notchless` for why — and the sentence in Settings
+    /// went on saying it sat "just below the menu bar instead of covering it"
+    /// for long enough to reach a release. Somebody on a Mac with no notch was
+    /// therefore told the opposite of what was in front of them, by the one
+    /// page that exists to explain it.
+    public var positionDescription: String {
+        hasNotch
+            ? "Your display has a notch, and the island is measured to match it exactly. Nudge it here if anything looks off."
+            : "This display has no notch, so the island is drawn at the very top of the screen, filling the middle of the menu bar — the part macOS leaves empty. Nudge it here to taste."
+    }
+
     /// The screen most likely to have a notch, else the main screen.
     public static func preferredScreen() -> NSScreen? {
         NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main
