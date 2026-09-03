@@ -2,6 +2,40 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- **The microphone readout names the app you are actually in.** During a
+  meeting in Safari it said "Safari Graphics and Media", beside a blank
+  placeholder where the icon should be. That is a real process, and it is not
+  one anybody has heard of — which is the worst thing this particular readout
+  can do, because the whole point of it is to tell you at a glance who has your
+  microphone.
+
+  A browser does not open the microphone in the process you can see. Safari
+  opens it in a helper, and that helper's bundle lives inside WebKit's
+  framework rather than inside Safari, with `launchd` as its parent — so
+  neither where it sits on disk nor what started it leads back to the app. The
+  test that was supposed to catch helpers asked whether a process can be
+  brought to the front, which correctly excludes a background daemon and does
+  not exclude this: a browser helper looks exactly as ordinary as a menu-bar
+  app does.
+
+  Every holder is now resolved to the application it belongs to, by asking the
+  system the same question it asks itself when it decides what to name in the
+  menu bar. Safari says Safari, and shows Safari's icon. So does a meeting in
+  Word, in PowerPoint, or in any app that puts the web inside itself. When a
+  helper cannot be traced to any app, the readout says a microphone is in use
+  and names nothing — the same honest answer it already gave for a background
+  service, rather than a name that means nothing to the person reading it.
+
+  Two other things fall out of it. An app that holds the microphone in more
+  than one helper at once, which a browser in a meeting does, is one row rather
+  than several. And the rule about the frontmost app winning when two apps hold
+  the microphone at once now has something to compare — it was matching against
+  helper process ids, which the frontmost app's id could never equal.
+
 ## 1.3.1 — the indicators can be put in the order you want
 
 ### Changed

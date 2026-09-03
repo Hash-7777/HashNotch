@@ -1,5 +1,6 @@
 import AppKit
 import CoreAudio
+import Darwin
 import Foundation
 
 /// Which app, if any, currently has the microphone open.
@@ -30,6 +31,17 @@ import Foundation
 /// FaceTime, Zoom, Teams, Meet in a browser, a game, a voice recorder, or
 /// something released next year all work identically, and nothing has to be
 /// added to a list for a new one to be recognised.
+///
+/// The process holding the input is often not the one a person is looking at.
+/// A browser does not open the microphone in the process you can see: in a
+/// meeting in Safari the input belongs to `com.apple.WebKit.GPU`, which macOS
+/// names "Safari Graphics and Media" and which carries no icon of its own. Left
+/// alone, the readout said exactly that, beside an empty placeholder — a true
+/// statement about the machine, and one that reads to anybody looking at it as
+/// a program they have never heard of listening to their interview.
+///
+/// So every holder is resolved to the application it belongs to before anything
+/// is said about it. See `owningApplication(of:)`.
 package enum CallReader {
     /// One app with the microphone open.
     package struct Listener: Equatable {
@@ -88,10 +100,15 @@ package enum CallReader {
         let listeners = allListeners()
         guard !listeners.isEmpty else { return unattributedIfInputRunning() }
 
-        // An app somebody would recognise, if one of them is holding the
-        // microphone directly. This is the ordinary case — Zoom, Teams, a
-        // browser, a voice memo all hold their own input.
-        let apps = listeners.filter { isRecognisableApp($0.bundleIdentifier) }
+        // An app somebody would recognise, once each holder has been resolved
+        // to the application it belongs to. That resolution is what turns
+        // "Safari Graphics and Media" into Safari, and it also fixes the line
+        // below: the frontmost app's process id could never match a helper's,
+        // so the rule about two apps at once had nothing to compare.
+        //
+        // Several helpers of one app can hold input at the same time — a
+        // browser in a meeting easily has two — so an app is listed once.
+        let apps = distinct(listeners.compactMap(attributed))
         if !apps.isEmpty {
             if let front = NSWorkspace.shared.frontmostApplication?.processIdentifier,
                let match = apps.first(where: { $0.processID == front }) {
@@ -152,18 +169,115 @@ package enum CallReader {
         )
     }
 
-    /// Whether a bundle identifier belongs to something a person would call an
-    /// app, rather than to a background service.
+    /// Whether a process is an application in its own right, rather than a
+    /// piece of one.
     ///
-    /// macOS already draws this line: a daemon is `.prohibited` — it cannot be
-    /// brought to the front because there is nothing to bring. Regular apps and
-    /// menu-bar apps both count, since a menu-bar recorder using the microphone
-    /// is a real app doing a real thing.
-    private static func isRecognisableApp(_ bundleIdentifier: String) -> Bool {
-        guard let app = NSRunningApplication
-            .runningApplications(withBundleIdentifier: bundleIdentifier).first
-        else { return false }
-        return app.activationPolicy != .prohibited
+    /// Stated as a rule over two facts, apart from the live lookup, so it can
+    /// be checked: the cases that matter are helpers, and a helper cannot be
+    /// conjured on demand inside a check.
+    ///
+    /// Both halves are needed, and the second is the one that was missing.
+    /// `.prohibited` excludes a daemon — there is nothing to bring to the front
+    /// — but it does not exclude an XPC service, which is `.accessory` for the
+    /// same reason a menu-bar app is. What separates those two is where they
+    /// live. An application is a `.app` bundle; a piece of one is a `.xpc`
+    /// bundle inside a framework or inside an app, or has no bundle at all.
+    ///
+    /// Measured on macOS 15: `com.apple.WebKit.GPU` is `.accessory`, its bundle
+    /// is `…/WebKit.framework/…/XPCServices/com.apple.WebKit.GPU.xpc`, and
+    /// `com.apple.WebKit.WebContent` reports no bundle URL whatsoever.
+    package static func isApplication(bundleExtension: String?, isProhibited: Bool) -> Bool {
+        bundleExtension == "app" && !isProhibited
+    }
+
+    private static func isApplication(_ app: NSRunningApplication) -> Bool {
+        isApplication(
+            bundleExtension: app.bundleURL?.pathExtension,
+            isProhibited: app.activationPolicy == .prohibited
+        )
+    }
+
+    /// `responsibility_get_pid_responsible_for_pid`, if this macOS has it.
+    ///
+    /// This is the same question the system asks itself. When Safari's graphics
+    /// process opens the microphone, the orange dot in the menu bar says
+    /// Safari, because macOS attributes a helper to the application it was
+    /// started for — and it is the only thing that can, since the helper's
+    /// bundle sits in WebKit's framework rather than in Safari, and its parent
+    /// process is `launchd` rather than Safari. Neither the path nor the
+    /// process tree leads back to the app; this does.
+    ///
+    /// Nothing public exposes that answer, so the symbol is looked up by name
+    /// once, at runtime, and the app simply does without it if it is ever
+    /// withdrawn: an unattributable holder falls through to being reported as a
+    /// microphone in use with no name on it, which is less useful and still
+    /// true. That is the reason this is a lookup rather than a declaration —
+    /// a missing symbol must not be a launch failure.
+    ///
+    /// The handle is never closed because the symbol is wanted for as long as
+    /// the app runs.
+    private static let responsibleProcess: ((pid_t) -> pid_t)? = {
+        typealias Lookup = @convention(c) (pid_t) -> pid_t
+        guard let image = dlopen(nil, RTLD_LAZY),
+              let symbol = dlsym(image, "responsibility_get_pid_responsible_for_pid")
+        else { return nil }
+        let lookup = unsafeBitCast(symbol, to: Lookup.self)
+        return { lookup($0) }
+    }()
+
+    /// The application a process belongs to: itself when it is one, and the app
+    /// it was started for when it is a piece of one.
+    ///
+    /// The responsible process is consulted ONLY for something that is not an
+    /// application, and that restraint is the point. An app started from a
+    /// terminal can report that terminal as responsible for it, so asking this
+    /// about a real app would be a fresh way to name the wrong thing — trading
+    /// a helper's name for a shell's.
+    private static func owningApplication(of app: NSRunningApplication) -> NSRunningApplication? {
+        if isApplication(app) { return app }
+        guard let responsibleProcess else { return nil }
+        let owner = responsibleProcess(app.processIdentifier)
+        guard owner > 0,
+              owner != app.processIdentifier,
+              let application = NSRunningApplication(processIdentifier: owner),
+              isApplication(application)
+        else { return nil }
+        return application
+    }
+
+    /// One entry per application, in the order they were found.
+    ///
+    /// Resolving helpers to their apps makes duplicates the normal case rather
+    /// than a rarity: a browser in a meeting holds the input in more than one
+    /// process, and every one of them resolves to the browser. Kept apart from
+    /// the live lookup so the rule can be checked on listeners that are built
+    /// rather than staged.
+    package static func distinct(_ listeners: [Listener]) -> [Listener] {
+        var result: [Listener] = []
+        for listener in listeners
+        where !result.contains(where: { $0.processID == listener.processID }) {
+            result.append(listener)
+        }
+        return result
+    }
+
+    /// One microphone holder, named as the application it belongs to, or
+    /// nothing when it belongs to no application this can find.
+    ///
+    /// Package-visible so the checks can state the promise directly: whatever
+    /// this returns is an app, never a piece of one.
+    package static func attributed(_ listener: Listener) -> Listener? {
+        guard let process = NSRunningApplication(processIdentifier: listener.processID),
+              let owner = owningApplication(of: process),
+              let bundle = owner.bundleIdentifier,
+              !bundle.isEmpty,
+              let name = owner.localizedName
+        else { return nil }
+        return Listener(
+            bundleIdentifier: bundle,
+            name: name,
+            processID: owner.processIdentifier
+        )
     }
 
     /// Every real app with an input stream open. Package-visible so the checks

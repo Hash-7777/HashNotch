@@ -2916,6 +2916,80 @@ MainActor.assumeIsolated {
         }()
     )
 
+    // A browser does not open the microphone in the process you can see. In a
+    // meeting in Safari the input belongs to `com.apple.WebKit.GPU` — named
+    // "Safari Graphics and Media", carrying no icon — so the panel said that,
+    // beside an empty placeholder, while somebody was in an interview. The rule
+    // that let it through was `.prohibited`, which catches a daemon and does
+    // not catch an XPC service: measured on macOS 15, that helper is
+    // `.accessory`, exactly as a menu-bar app is.
+    //
+    // Where it lives is what tells them apart, and these state that rule
+    // directly rather than through a process that has to exist to be examined.
+    check(
+        "an app bundle is an application",
+        CallReader.isApplication(bundleExtension: "app", isProhibited: false)
+    )
+    check(
+        "an XPC service is not, however ordinary its activation policy looks",
+        !CallReader.isApplication(bundleExtension: "xpc", isProhibited: false)
+    )
+    check(
+        "nor is a process with no bundle at all, which is what WebKit's content process reports",
+        !CallReader.isApplication(bundleExtension: nil, isProhibited: false)
+    )
+    check(
+        "and a daemon is still excluded even if it were to live in an app bundle",
+        !CallReader.isApplication(bundleExtension: "app", isProhibited: true)
+    )
+    // The promise the readout makes, stated over whatever this machine happens
+    // to be running: anything the panel is willing to name is an application,
+    // never a piece of one. Vacuously true with nothing holding the microphone,
+    // which is the normal case during a checks run — the rule checks above are
+    // what carry the weight, and this is what would catch the rule being
+    // applied in the wrong place.
+    check(
+        "nothing the readout names is a piece of an app",
+        CallReader.allListeners().compactMap(CallReader.attributed).allSatisfy { named in
+            guard let app = NSRunningApplication(processIdentifier: named.processID) else { return false }
+            return app.bundleURL?.pathExtension == "app"
+                && app.bundleIdentifier == named.bundleIdentifier
+                && !named.name.isEmpty
+        }
+    )
+    check(
+        "one app holding the microphone in two helpers is one readout, not two",
+        {
+            // A browser in a meeting really does hold the input in more than
+            // one process, and every one of them resolves to the browser. Built
+            // rather than staged, because two helpers of one app cannot be
+            // summoned inside a check.
+            let safari = CallReader.Listener(
+                bundleIdentifier: "com.apple.Safari", name: "Safari", processID: 1_517
+            )
+            let alsoSafari = CallReader.Listener(
+                bundleIdentifier: "com.apple.Safari", name: "Safari", processID: 1_517
+            )
+            let zoom = CallReader.Listener(
+                bundleIdentifier: "us.zoom.xos", name: "zoom.us", processID: 900
+            )
+            let kept = CallReader.distinct([safari, alsoSafari, zoom])
+            return kept.count == 2 && kept[0].processID == 1_517 && kept[1].processID == 900
+        }()
+    )
+    check(
+        "and the one it keeps is the first it found, so the frontmost rule still decides",
+        {
+            let first = CallReader.Listener(
+                bundleIdentifier: "com.apple.Safari", name: "Safari", processID: 1_517
+            )
+            let second = CallReader.Listener(
+                bundleIdentifier: "com.apple.Safari", name: "Safari", processID: 1_517
+            )
+            return CallReader.distinct([first, second]).count == 1
+        }()
+    )
+
     // A locked Mac is the one moment none of this should be readable: what you
     // are listening to, which app has your microphone, what you have spent on
     // AI today. macOS puts the login window above ordinary windows, so the
