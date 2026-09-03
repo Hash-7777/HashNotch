@@ -36,6 +36,20 @@ All notable changes to HashNotch are recorded here.
   the microphone at once now has something to compare — it was matching against
   helper process ids, which the frontmost app's id could never equal.
 
+- **On a Mac with no notch, the island no longer hangs below the menu bar.**
+  The island is made exactly as tall as whatever it is matching — the notch on
+  hardware that has one, the menu bar on hardware that does not — so that the
+  black shape has nothing poking out beneath it. A minimum height of 28 points
+  was being applied to it regardless. Every notch is taller than that, so on a
+  notched Mac it never came into play and could not be seen; a menu bar is 24 or
+  25 points, so on a Mac without a notch it came into play every time and left
+  three or four points of black hanging over the wallpaper, the whole time the
+  app was running.
+
+  The minimum now applies only to the strip that has content in it, which is
+  what it was for: the artwork beside a track is 26 points and still has room.
+  The idle shape takes the measurement as it stands.
+
 - **A reading that is running high now looks different from one that is not.**
   Somebody changed the accent colour and the disk bar stayed orange, which read
   as a setting that does not work. It was not: the processor, memory and disk

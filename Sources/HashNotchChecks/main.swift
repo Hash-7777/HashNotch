@@ -3990,6 +3990,56 @@ check(
         notchlessState.controlClearance > 0
     )
 
+    // ── The idle shape must not hang below the band it fills ────────────────
+    //
+    // The island is made exactly as tall as whatever it is matching: the notch
+    // on hardware that has one, the menu bar on hardware that does not. A
+    // collapsed shape taller than that is a black lip over the wallpaper, which
+    // is the failure `NotchState.liveLip` exists to describe and refuse.
+    //
+    // It was real, and only on Macs with no notch. A floor of 28 points was
+    // applied to every height, content or not. Every notch measured is at least
+    // that tall so it never showed there; a menu bar is 24 or 25, so it showed
+    // on every notchless Mac, all the time. These check the promise on the
+    // sizes real hardware actually reports.
+    for bar in [22.0, 24.0, 25.0, 26.0, 27.0] {
+        let screen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let geometry = NotchGeometry.notchless(screenFrame: screen, menuBarHeight: bar)
+        let state = NotchState(geometry: geometry)
+        check(
+            "a menu bar of \(Int(bar)) points gets an idle island of exactly \(Int(bar))",
+            state.collapsedHeight == geometry.notchRect.height
+        )
+        check(
+            "so nothing black hangs below the menu bar at \(Int(bar)) points",
+            state.collapsedHeight <= bar
+        )
+    }
+    // The floor still does its job where it was meant to: the strip has to hold
+    // a 26-point piece of artwork whatever the display measures.
+    check(
+        "the live strip still has room for the artwork on the shortest menu bar",
+        NotchState(
+            geometry: NotchGeometry.notchless(
+                screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+                menuBarHeight: 22
+            )
+        ).liveHeight >= 26
+    )
+    // And a notched Mac is untouched by any of it — every notch is taller than
+    // the floor, so the floor never applied there and still does not.
+    for notch in [28.0, 32.0, 37.0] {
+        let state = NotchState(geometry: NotchGeometry(
+            screenFrame: CGRect(x: 0, y: 0, width: 1280, height: 832),
+            notchRect: CGRect(x: 562, y: 832 - notch, width: 156, height: notch),
+            hasNotch: true
+        ))
+        check(
+            "a \(Int(notch))-point notch is still matched exactly",
+            state.collapsedHeight == notch && state.notchHeight == notch
+        )
+    }
+
     // A shape that grows out of the notch has to converge ON the notch. The
     // live strip is lopsided on purpose, so its own centre is the wrong point:
     // anchoring there would collapse it beside the hardware rather than into it.

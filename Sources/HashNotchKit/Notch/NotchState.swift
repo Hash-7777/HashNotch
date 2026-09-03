@@ -33,14 +33,22 @@ public final class NotchState: ObservableObject {
     /// and on every tick of a size slider.
     public func apply(geometry: NotchGeometry) {
         let width = geometry.notchRect.width
-        let height = max(geometry.notchRect.height, 28)
+        let measured = geometry.notchRect.height
         notchWidth = width
-        notchHeight = height
 
-        // Collapsed: EXACTLY the physical notch, so the idle black shape is
+        // Collapsed: EXACTLY what was measured, so the idle black shape is
         // invisible against the hardware — no lip poking out below it.
+        //
+        // Taken as it stands, with no floor under it. There is nothing drawn in
+        // this shape to fit, so there is nothing for a floor to protect, and a
+        // floor here is the one thing that can break the promise this line is
+        // making. See `minimumContentHeight`.
         collapsedWidth = width
-        collapsedHeight = height
+        collapsedHeight = measured
+
+        // Everything below holds something, so it gets the floor.
+        let height = max(measured, Self.minimumContentHeight)
+        notchHeight = height
 
         // Expanded: width sized to the content; height is generous only for the
         // hover zone (the panel itself sizes to its content).
@@ -59,6 +67,32 @@ public final class NotchState: ObservableObject {
         liveWidth = width + liveLeadingWidth + liveTrailingWidth
         liveHeight = height + Self.liveLip
     }
+
+    /// The least height the live strip can be drawn at and still hold what goes
+    /// in it. The artwork beside a track is 26 points; this is that with a
+    /// point of air above and below.
+    ///
+    /// It used to be applied to the idle shape too, and on a notched Mac that
+    /// was invisible: every notch this app has measured is at least 28 points
+    /// tall, so the floor never once came into play. A display with NO notch is
+    /// a different size entirely. Its island is deliberately made exactly as
+    /// tall as the menu bar — 24 or 25 points on the machines measured — so
+    /// there the floor came into play every time, and made the idle shape three
+    /// or four points taller than the band it exists to fill.
+    ///
+    /// That is precisely the thing `liveLip` describes and rejects: a black lip
+    /// hanging below the bar onto the wallpaper, visible against anything that
+    /// is not black. On a notchless Mac it was on screen the entire time the
+    /// app was running, and it could not be reproduced on the hardware the app
+    /// was built on.
+    ///
+    /// So the floor applies only where there is content to fit. The trade is
+    /// that on a display whose menu bar is shorter than this, the strip is a
+    /// few points taller than the idle shape and dips just below the bar while
+    /// something is live. That is a pill with a picture and a title in it,
+    /// which reads as a thing that is happening; the idle silhouette had
+    /// nothing to justify it.
+    public static let minimumContentHeight: CGFloat = 28
 
     /// How much room is left below the notch for the coloured line — and it is
     /// room for the LINE, not black.
