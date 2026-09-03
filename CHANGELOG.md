@@ -36,6 +36,25 @@ All notable changes to HashNotch are recorded here.
   the microphone at once now has something to compare — it was matching against
   helper process ids, which the frontmost app's id could never equal.
 
+- **A reading that is running high now looks different from one that is not.**
+  Somebody changed the accent colour and the disk bar stayed orange, which read
+  as a setting that does not work. It was not: the processor, memory and disk
+  bars sit in your accent while nothing is wrong and take a warning colour when
+  something is, and that disk was full enough to have left the accent behind.
+
+  The trouble is that nothing said so, and the warning colour was almost exactly
+  the accent this app starts on. Measured, the old caution orange sat 6.7 ΔE
+  from the palette's own orange — one colour, on a four-point bar, at a glance.
+  So on a fresh install a disk at 74% and a disk at 76% looked identical, and
+  the whole idea of a bar that stays quiet until it matters did nothing at all.
+
+  The caution colour is now an amber at least 35 ΔE from every accent in the
+  palette, and the danger red at least 28. The Appearance page also says what it
+  had been leaving out: a reading running high keeps its warning colour instead
+  of the accent. The temperature and battery readouts are deliberately left
+  alone — they run green through yellow and orange to red without ever wearing
+  the accent, and this amber sits where their yellow does.
+
 - **A Mac with no notch is no longer told the opposite of what it can see.**
   The Position page said the island "sits just below the menu bar instead of
   covering it". It has not done that since it was moved up to meet the top edge

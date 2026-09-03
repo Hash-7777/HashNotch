@@ -79,12 +79,9 @@ struct StorageDetailView: View {
     }
 
     /// Quiet until it matters. A disk at 70% is simply a disk; one with almost
-    /// nothing left is the reason you opened the panel.
+    /// nothing left is the reason you opened the panel. In percent, which is
+    /// what this readout measures in.
     private var fill: Color {
-        switch monitor.usage?.percentUsed ?? 0 {
-        case 90...: return theme.upColor
-        case 75...: return .orange
-        default: return theme.accent
-        }
+        theme.color(for: .of(Double(monitor.usage?.percentUsed ?? 0), caution: 75, danger: 90))
     }
 }

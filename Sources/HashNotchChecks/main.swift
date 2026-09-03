@@ -4039,6 +4039,75 @@ check(
     check("it is exactly as tall as the menu bar", notchless.notchRect.height == 25)
     check("and centred on the screen", notchless.notchRect.midX == screen.midX)
     check("it still reports itself as having no notch", notchless.hasNotch == false)
+    // ── A reading that leaves the accent has to LOOK like it left ────────────
+    //
+    // The processor, memory and disk readouts sit in the accent while nothing
+    // is wrong and take a warning colour when something is. That warning was
+    // SwiftUI's `.orange`, and the palette's own orange — the DEFAULT accent —
+    // is 6.7 ΔE from it. Two colours that close are one colour on a
+    // four-point bar: on a default install a disk at 74% and a disk at 76%
+    // looked the same, so the warning never warned. It also read as a broken
+    // setting to anybody who picked another colour and found the bar ignoring
+    // it, which is how this was reported.
+    //
+    // The distance is measured rather than eyeballed, over CIE Lab, because
+    // component distance calls those two oranges far apart while the eye does
+    // not.
+    let warningSeparation = 20.0
+    check(
+        "the caution colour is clearly different from every accent somebody can pick",
+        AccentColor.all.allSatisfy {
+            Theme.perceptualDistance($0.color, Theme.caution) >= warningSeparation
+        }
+    )
+    check(
+        "and so is the danger colour",
+        AccentColor.all.allSatisfy {
+            Theme.perceptualDistance($0.color, Theme.danger) >= warningSeparation
+        }
+    )
+    check(
+        "including from the accent a fresh install starts on, which is where this went wrong",
+        Theme.perceptualDistance(AccentColor.default.color, Theme.caution) >= warningSeparation
+            && Theme.perceptualDistance(AccentColor.default.color, Theme.danger) >= warningSeparation
+    )
+    check(
+        "caution and danger are not each other either",
+        Theme.perceptualDistance(Theme.caution, Theme.danger) >= warningSeparation
+    )
+    check(
+        "and the old caution colour would have failed this",
+        Theme.perceptualDistance(AccentColor.named("orange").color, .orange) < warningSeparation
+    )
+
+    // The levels themselves. Each readout keeps its own thresholds — a
+    // processor at 60% is worth a glance and a disk at 60% is simply a disk —
+    // so what is shared is the rule, not the numbers.
+    let theme = Theme.default.tinted(AccentColor.default.color)
+    check("a quiet reading wears the accent", ReadingLevel.of(0.1, caution: 0.75, danger: 0.9) == .normal)
+    check("one at the caution mark exactly has crossed it", ReadingLevel.of(0.75, caution: 0.75, danger: 0.9) == .caution)
+    check("just under it has not", ReadingLevel.of(0.7499, caution: 0.75, danger: 0.9) == .normal)
+    check("at the danger mark it is danger, not caution", ReadingLevel.of(0.9, caution: 0.75, danger: 0.9) == .danger)
+    check("and past it, still danger", ReadingLevel.of(2.0, caution: 0.75, danger: 0.9) == .danger)
+    check(
+        "a normal reading is the accent itself, so changing the accent changes it",
+        theme.color(for: .normal) == AccentColor.default.color
+            && Theme.default.tinted(AccentColor.named("blue").color).color(for: .normal)
+                == AccentColor.named("blue").color
+    )
+    check(
+        "and a warning is NOT the accent, whichever accent is chosen",
+        AccentColor.all.allSatisfy { accent in
+            let tinted = Theme.default.tinted(accent.color)
+            return tinted.color(for: .caution) != accent.color
+                && tinted.color(for: .danger) != accent.color
+        }
+    )
+    check(
+        "the disk reads in percent, so 80 is a caution rather than a danger",
+        ReadingLevel.of(80, caution: 75, danger: 90) == .caution
+    )
+
     // The sentence Settings shows about this used to be written out beside the
     // page rather than taken from the measurement, and it went on saying the
     // island sat "just below the menu bar instead of covering it" for a whole

@@ -681,7 +681,11 @@ public struct SettingsView: View {
             SettingCard {
                 SettingRow(
                     "Accent colour",
-                    detail: "Tints icons, bars and highlights.",
+                    // The second sentence is here because its absence read as a
+                    // bug: a reading high enough to warn leaves the accent on
+                    // purpose, and somebody who picked a colour and then found
+                    // the disk bar ignoring it had nothing to tell them why.
+                    detail: "Tints icons, bars and highlights. A reading running high keeps its warning colour instead.",
                     stacked: true
                 ) {
                     HStack(spacing: 8) {

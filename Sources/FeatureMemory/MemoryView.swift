@@ -38,12 +38,10 @@ struct MemoryDetailView: View {
         }
     }
 
-    /// Quiet until it matters, on the same thresholds as the processor.
+    /// Quiet until it matters. Later than the processor, not "the same as" it
+    /// as this comment used to claim while the numbers said otherwise — memory
+    /// sitting at 60% is how a Mac is supposed to run.
     private var tint: Color {
-        switch monitor.snapshot?.fraction ?? 0 {
-        case 0.9...: return theme.upColor
-        case 0.75...: return .orange
-        default: return theme.accent
-        }
+        theme.color(for: .of(monitor.snapshot?.fraction ?? 0, caution: 0.75, danger: 0.9))
     }
 }
