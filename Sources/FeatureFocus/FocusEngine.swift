@@ -94,6 +94,11 @@ public final class FocusEngine: ObservableObject {
         let endsAt = started.addingTimeInterval(plan.seconds(for: next))
         let after = plan.next(after: next, finishedWorkBlocks: tally.finishedWork + (next.isWork ? 1 : 0))
 
+        let running = FocusSession(block: next, startedAt: started, endsAt: endsAt)
+        session = running
+        FocusStore.save(running, to: defaults)
+        updatePresence()
+
         // Asked every time a block starts rather than once, which is what
         // catches permission being taken away later. The deadline is handed
         // over inside the answer, because whether the system will show a banner
@@ -114,10 +119,6 @@ public final class FocusEngine: ObservableObject {
             FocusStore.save(stamped, to: self.defaults)
         }
 
-        let running = FocusSession(block: next, startedAt: started, endsAt: endsAt)
-        session = running
-        FocusStore.save(running, to: defaults)
-        updatePresence()
     }
 
     /// Stop what is running without finishing it. A piece of work ended this way

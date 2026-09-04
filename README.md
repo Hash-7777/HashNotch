@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-1045%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1045 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1055%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1055 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -47,7 +47,7 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Now playing** — anything that plays: Spotify, Apple Music, TV, Podcasts, Anghami, VLC, a browser tab. Title, artist, live position, a progress bar you can drag, and a volume slider. Album art comes from Spotify and Apple Music, and a video's thumbnail from your browser; anything else shows a placeholder tile.
 
-**Focus** — a stretch of work, a short rest, a longer one every few rounds, counted down in the notch with the edge lit while you are meant to be working. Underneath it, one sentence: *You focused 9 hr 20 min in the last 7 days. Keep it up.*
+**Focus** — a stretch of work, a short rest, a longer one every few rounds, counted down in the notch with the edge lit while you are meant to be working. Underneath it, one sentence: *You focused 9 hr 20 min in the last 7 days.*
 
 > It knows when your screen went away, so **a stretch you walked out of ends when you left and never counts as finished** — most timers of this kind are self-reported guesses. It keeps a week so the sentence has something to add up: a date and two numbers a day, never what you were working on. Delete it any time in Settings. Nothing about your day is ever sent anywhere.
 
@@ -89,7 +89,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 1045 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1055 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks

@@ -55,6 +55,8 @@ public struct SettingsView: View {
     let features: [FeatureDescriptor]
 
     @State private var section: Section = .general
+    /// Which feature-supplied page is showing, when a supplied tab is chosen.
+    @State private var suppliedIndex: Int = 0
     @State private var dragging: String?
     /// The row the pointer is over, so a row can say it is grabbable before
     /// anybody tries to grab it. Cleared while a drag is running: during one,
@@ -94,18 +96,41 @@ public struct SettingsView: View {
         }
     }
 
-    /// The page a feature has supplied, if any has. Only one is shown: no
-    /// feature but the activity feed has ever needed one, and a window that
-    /// grows a tab per feature stops being a window anybody can find anything
-    /// in.
-    private var suppliedPage: FeatureSettingsPage? {
-        features.compactMap(\.page).first
+    /// Every page a feature has supplied, in the order the features are in.
+    ///
+    /// It used to take the FIRST and drop the rest, on the reasoning that only
+    /// the activity feed had ever needed one and a window growing a tab per
+    /// feature stops being findable. The first half stopped being true the
+    /// moment a second feature supplied a page — and what it did then was the
+    /// worst answer available: the page did not appear, with nothing anywhere
+    /// saying why. A tab too many is a crowded window; a tab silently missing is
+    /// a feature somebody cannot find and has no way to look for.
+    private var suppliedPages: [FeatureSettingsPage] {
+        SettingsTabs.supplied(by: features)
     }
 
-    /// The tabs actually shown. The supplied one appears only when a feature
-    /// has supplied it, so a build without that feature has no empty tab.
-    private var sections: [Section] {
-        Section.allCases.filter { $0 != .supplied || suppliedPage != nil }
+    /// A supplied page by position, or nil. Never subscripted directly: the
+    /// feature list can change under an open window, and an index valid a moment
+    /// ago must not take the app down with it.
+    private func suppliedPage(at index: Int?) -> FeatureSettingsPage? {
+        guard let index, suppliedPages.indices.contains(index) else { return nil }
+        return suppliedPages[index]
+    }
+
+    /// One tab, whether it is a fixed page or one a feature brought.
+    private struct Tab: Identifiable, Equatable {
+        let section: Section
+        /// Which supplied page, for a tab that is one. Nil for the fixed pages.
+        let supplied: Int?
+
+        var id: String { supplied.map { "supplied.\($0)" } ?? section.rawValue }
+    }
+
+    /// The tabs actually shown: the fixed ones, then one per supplied page, so a
+    /// build without any has no empty tab and a build with two has two.
+    private var tabs: [Tab] {
+        Section.allCases.filter { $0 != .supplied }.map { Tab(section: $0, supplied: nil) }
+            + suppliedPages.indices.map { Tab(section: .supplied, supplied: $0) }
     }
 
     /// Closes the panel. Supplied by the window that owns it, because a
@@ -193,10 +218,21 @@ public struct SettingsView: View {
 
     /// Move to a page the island asked for, once.
     private func jumpIfRequested() {
-        guard let wanted = route.requested,
-              let target = Section(rawValue: wanted) else { return }
+        guard let wanted = route.requested else { return }
+        if let target = Section(rawValue: wanted) {
+            withAnimation(reorderSpring) { dragging = nil }
+            section = target
+            route.requested = nil
+            return
+        }
+        // A feature's own page, asked for by its title. Without this the only
+        // pages the island could send anybody to were the fixed ones.
+        guard let index = suppliedPages.firstIndex(where: {
+            $0.title.compare(wanted, options: .caseInsensitive) == .orderedSame
+        }) else { return }
         withAnimation(reorderSpring) { dragging = nil }
-        section = target
+        section = .supplied
+        suppliedIndex = index
         route.requested = nil
     }
 
@@ -265,7 +301,7 @@ public struct SettingsView: View {
     /// word.
     private var tabStrip: some View {
         HStack(spacing: 4) {
-            ForEach(sections) { item in
+            ForEach(tabs) { item in
                 tab(item)
             }
         }
@@ -274,24 +310,26 @@ public struct SettingsView: View {
         .padding(.bottom, 10)
     }
 
-    /// What a tab is called. Every tab but one answers for itself; the supplied
-    /// one is named by whichever feature supplied it.
-    private func title(for item: Section) -> String {
-        item == .supplied ? (suppliedPage?.title ?? "") : item.title
+    /// What a tab is called. Every fixed tab answers for itself; a supplied one
+    /// is named by whichever feature supplied it.
+    private func title(for item: Tab) -> String {
+        suppliedPage(at: item.supplied)?.title ?? item.section.title
     }
 
-    private func symbol(for item: Section) -> String {
-        item == .supplied ? (suppliedPage?.symbol ?? item.symbol) : item.symbol
+    private func symbol(for item: Tab) -> String {
+        suppliedPage(at: item.supplied)?.symbol ?? item.section.symbol
     }
 
-    private func tab(_ item: Section) -> some View {
-        let selected = section == item
+    private func tab(_ item: Tab) -> some View {
+        let selected = section == item.section
+            && (item.supplied == nil || item.supplied == suppliedIndex)
         return Button {
             // Leaving the page abandons any drag that was in progress. Without
             // this a half-finished reorder carried its held id across to
             // another page, where nothing could ever clear it.
             dragging = nil
-            section = item
+            section = item.section
+            if let supplied = item.supplied { suppliedIndex = supplied }
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: symbol(for: item))
@@ -332,7 +370,7 @@ public struct SettingsView: View {
         case .position: position
         case .privacy: privacy
         case .supplied:
-            if let page = suppliedPage { page.view } else { EmptyView() }
+            if let supplied = suppliedPage(at: suppliedIndex) { supplied.view } else { EmptyView() }
         }
     }
 
@@ -1692,5 +1730,22 @@ public struct SettingGroupLabel: View {
             .foregroundStyle(.white.opacity(0.4))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 2)
+    }
+}
+
+
+/// Which pages the features bring to the settings window.
+///
+/// A free function rather than a line inside the view, so the rule can be
+/// checked. It was `.first` for a long time, which meant a second feature's page
+/// vanished without a word — and nothing could have caught that, because the
+/// rule lived inside a `View` where no check can reach it.
+package enum SettingsTabs {
+    package static func supplied(by features: [FeatureDescriptor]) -> [FeatureSettingsPage] {
+        features.compactMap(\.page)
+    }
+
+    package static func suppliedTitles(_ features: [FeatureDescriptor]) -> [String] {
+        supplied(by: features).map(\.title)
     }
 }

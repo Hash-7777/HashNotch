@@ -12,8 +12,8 @@ All notable changes to HashNotch are recorded here.
   screen sleeping and the app quitting, because it is a deadline somebody set for
   themselves rather than a reading about the machine.
 
-  Underneath it, one sentence: "You focused 9 hr 20 min in the last 7 days. Keep
-  it up." A week rather than a day, because a single day has nothing to be
+  Underneath it, one sentence: "You focused 9 hr 20 min in the last 7 days."
+  It states the figure and stops. A week rather than a day, because a single day has nothing to be
   measured against, and a total rather than an average, because an average
   invites a comparison that flatters you at six in the evening and scolds you at
   ten in the morning with the same number.

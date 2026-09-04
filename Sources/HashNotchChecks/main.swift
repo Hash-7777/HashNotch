@@ -3506,16 +3506,86 @@ MainActor.assumeIsolated {
     check(
         "the line names what the figure counts, and over what stretch",
         FocusHistoryMath.weekText(FocusHistory(days: [dayOne, dayTwo]), today: FocusTally(day: today, workSeconds: 1_800))
-            == "You focused 3 hr 30 min in the last 7 days. Keep it up."
+            == "You focused 3 hr 30 min in the last 7 days."
     )
     check(
-        "a week with nothing in it invites rather than scolds",
+        "a week with nothing in it states the fact and stops",
         {
+            // It said "Keep it up", which is the app having an opinion about
+            // how somebody's week is going. A readout that congratulates you is
+            // one you stop believing when it congratulates you on a bad week.
             let line = FocusHistoryMath.weekText(FocusHistory(), today: FocusTally(day: today))
-            // An empty week must read as an invitation, not as a zero score.
-            return line.contains("Start when you are ready") && !line.contains("0 min")
+            return line == "No focus time in the last 7 days."
         }()
     )
+    check(
+        "and a week with something in it does not cheer either",
+        {
+            let line = FocusHistoryMath.weekText(FocusHistory(days: [dayOne]), today: FocusTally(day: today))
+            return !line.lowercased().contains("keep it up")
+                && !line.contains("!")
+        }()
+    )
+
+    // ── The seven days are seven, and they are the last seven ───────────────
+    check(
+        "six finished days plus today is the seven the sentence claims",
+        // Seven kept plus today was eight, every day, in the flattering
+        // direction — the worst one for a number somebody is meant to trust.
+        FocusHistory.keptDays + 1 == FocusHistory.daysCounted
+    )
+    check(
+        "a day inside the window counts",
+        {
+            let calendar = Calendar.current
+            let sixBack = calendar.date(byAdding: .day, value: -6, to: today)!
+            let history = FocusHistory(days: [FocusTally(day: sixBack, workSeconds: 600, finishedWork: 1)])
+            return FocusHistoryMath.weekSeconds(history, today: FocusTally(day: today), now: started) == 600
+        }()
+    )
+    check(
+        "a day older than the window does not, however long it sat on disk",
+        {
+            // Focus for a week, leave the Mac for a month, and it still had
+            // seven days stored — and went on calling them "the last 7 days".
+            let calendar = Calendar.current
+            let longAgo = calendar.date(byAdding: .day, value: -30, to: today)!
+            let history = FocusHistory(days: [FocusTally(day: longAgo, workSeconds: 9_000, finishedWork: 6)])
+            return FocusHistoryMath.weekSeconds(history, today: FocusTally(day: today), now: started) == 0
+        }()
+    )
+    check(
+        "the edge of the window is a day, not a number of seconds",
+        {
+            // Counted with the calendar so an hour lost to daylight saving
+            // cannot push a day out.
+            let calendar = Calendar.current
+            let sixBack = calendar.date(byAdding: .day, value: -6, to: today)!
+            let sevenBack = calendar.date(byAdding: .day, value: -7, to: today)!
+            let inside = FocusHistory(days: [FocusTally(day: sixBack, workSeconds: 600)])
+            let outside = FocusHistory(days: [FocusTally(day: sevenBack, workSeconds: 600)])
+            return FocusHistoryMath.weekSeconds(inside, today: FocusTally(day: today), now: started) == 600
+                && FocusHistoryMath.weekSeconds(outside, today: FocusTally(day: today), now: started) == 0
+        }()
+    )
+    check(
+        "today is never counted twice, even if it somehow reached the history",
+        {
+            let history = FocusHistory(days: [FocusTally(day: today, workSeconds: 1_200, finishedWork: 1)])
+            return FocusHistoryMath.weekSeconds(history, today: FocusTally(day: today, workSeconds: 1_200)) == 1_200
+        }()
+    )
+    check(
+        "a history that will not decode does not quietly become an empty one",
+        {
+            // An empty one would be written over the real thing on the next
+            // save, losing a week of somebody's days without a word.
+            let odd = #"{"days":[{"day":100.0,"workSeconds":600.0,"finishedWork":1,"somethingNew":42}]}"#
+            guard let decoded = try? JSONDecoder().decode(FocusHistory.self, from: Data(odd.utf8)) else { return false }
+            return decoded.days.count == 1 && decoded.days[0].workSeconds == 600
+        }()
+    )
+
     check(
         "no word in it has to be taught",
         {
@@ -3542,6 +3612,36 @@ MainActor.assumeIsolated {
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")
     check("and grows an hours field only when there are hours", FocusClock.text(3_725) == "1:02:05")
     check("a countdown cannot go negative", FocusClock.text(-30) == "0:00")
+
+    // ── Every feature that brings a settings page gets a tab ────────────────
+    //
+    // The window took the FIRST supplied page and dropped the rest. When a
+    // second feature brought one, its page simply did not appear — no tab, no
+    // error, nothing anywhere saying why. Nothing could have caught it either,
+    // because the rule lived inside a View where no check can reach.
+    check(
+        "one feature with a page gets one tab",
+        SettingsTabs.suppliedTitles([
+            FeatureDescriptor(id: "a", title: "A", options: [],
+                              page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
+        ]) == ["Agents"]
+    )
+    check(
+        "two features with pages get two tabs, not the first one only",
+        SettingsTabs.suppliedTitles([
+            FeatureDescriptor(id: "a", title: "A", options: [],
+                              page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
+            FeatureDescriptor(id: "b", title: "B", options: [], page: nil),
+            FeatureDescriptor(id: "c", title: "C", options: [],
+                              page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
+        ]) == ["Agents", "Focus"]
+    )
+    check(
+        "and a build where no feature brings one gets no tab at all",
+        SettingsTabs.suppliedTitles([
+            FeatureDescriptor(id: "a", title: "A", options: [], page: nil),
+        ]).isEmpty
+    )
 
     // The default order is a value in the core, and the manifest sorts itself
     // by it — so adding a feature to the manifest cannot silently rearrange

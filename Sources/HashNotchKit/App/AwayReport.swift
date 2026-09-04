@@ -54,6 +54,4 @@ public struct AwaySpell: Equatable, Sendable {
         self.leftAt = leftAt
         self.returnedAt = returnedAt
     }
-
-    public var seconds: TimeInterval { max(0, returnedAt.timeIntervalSince(leftAt)) }
 }
