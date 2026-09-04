@@ -8,10 +8,15 @@ All notable changes to HashNotch are recorded here.
 
 - **The island now says what happened while you were away.** Shut the lid, come
   back, and one line appears for a few seconds before folding away: how long you
-  were gone, how much data went through, whether the battery fell, whether a
-  download finished. Every other readout in this app answers what is true right
-  now; this is the only one that answers what was missed, and macOS answers it
-  nowhere.
+  were gone, how much data went through, whether the battery fell, what an agent
+  spent. Every other readout in this app answers what is true right now; this is
+  the only one that answers what was missed, and macOS answers it nowhere.
+
+  Only the indicators that can honestly answer across an absence take part.
+  Nothing is watched while the screen is away, so a readout that would have had
+  to keep watching to know — a finished download, say — is left out rather than
+  guessed at, and the digest waits a few seconds for the ones that count off the
+  main thread to come back before comparing anything.
 
   It reads nothing of its own. Every figure in the line was already being kept
   and already being shown by another indicator — the core takes what they report

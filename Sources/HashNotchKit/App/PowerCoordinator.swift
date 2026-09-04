@@ -45,6 +45,7 @@ public final class PowerCoordinator {
     /// digest reconstructed from a total would report a whole day's data as
     /// five minutes' worth.
     private var leftAt: AwaySnapshot?
+    private var reportWork: DispatchWorkItem?
 
     /// Called with `true` when the island must leave the screen entirely, and
     /// `false` when it may come back. Wired by the app to the overlay window,
@@ -85,6 +86,11 @@ public final class PowerCoordinator {
         })
     }
 
+    /// How long to let the monitors settle before comparing them. Long enough
+    /// for a count handed to a background queue to come back, short enough that
+    /// the line still arrives as part of coming back to the Mac.
+    private static let settleBeforeReporting: TimeInterval = 4
+
     package static let lockedNotification = "com.apple.screenIsLocked"
     package static let unlockedNotification = "com.apple.screenIsUnlocked"
 
@@ -100,6 +106,9 @@ public final class PowerCoordinator {
     private func pause() {
         guard !isPaused else { return }
         isPaused = true
+        // A report that had not fired yet belongs to a spell that is now over.
+        reportWork?.cancel()
+        reportWork = nil
         leftAt = snapshot()
         registry.suspendAll()
     }
@@ -108,7 +117,23 @@ public final class PowerCoordinator {
         guard isPaused else { return }
         isPaused = false
         registry.resumeAll(context: context)
-        report()
+        // Not immediately. The monitors have just been restarted, and not all of
+        // them answer straight away: the network total and the battery are read
+        // synchronously as they start, but the token count is done off the main
+        // thread, so asking in the same turn of the loop gets the value from
+        // BEFORE the screen went away and a difference of nothing.
+        //
+        // Measured rather than assumed — `PollingSampler.start()` ticks once
+        // immediately, which is what makes the first two safe, and
+        // `TokensMonitor.refresh()` hands its work to a queue, which is what
+        // makes this wait necessary. A figure whose monitor is still not ready
+        // simply shows no change and drops out of the line, so this is a
+        // question of how much the digest can say, never of whether it is true.
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.report() }
+        }
+        reportWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleBeforeReporting, execute: work)
     }
 
     /// Everything the running features are willing to have compared, now.

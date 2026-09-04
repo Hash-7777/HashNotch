@@ -44,16 +44,15 @@ public final class DownloadsFeature: NotchFeature {
 
     public init() {}
 
-    /// The question somebody actually walks back to the desk asking.
-    public var awayFigure: AwayFigure? {
-        AwayFigure(
-            id: "downloads.finished",
-            noun: "download",
-            suffix: "finished",
-            value: Double(monitor.finishedCount),
-            unit: .count
-        )
-    }
+    // No away figure, and it is worth saying why rather than leaving the
+    // absence to look like an oversight. This monitor re-seeds its baseline
+    // from the folder every time it starts, deliberately, so that files already
+    // there never announce themselves on launch — and a spell away stops and
+    // restarts it. Anything that landed while the screen was off is therefore
+    // seeded as already known and never counted. It could be made to survive by
+    // watching the folder through a lock, and it should not be: nothing reads
+    // anything while the screen is away, and that rule is worth more than this
+    // line of a digest.
 
     public func start(context: FeatureContext) { monitor.start(presence: context.presence) }
     public func stop() { monitor.stop() }
