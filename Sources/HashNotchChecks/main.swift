@@ -5753,6 +5753,49 @@ check(
     NotchIconGeometry.detailWeight < NotchIconGeometry.strokeWeight
 )
 
+// ...and that has to be true of the DRAWING, not just of the two numbers. The
+// check above compares two constants and passed for as long as the scaler threw
+// the authored weight away and drew every line at the outline's weight — which
+// is the very thing detailWeight was measured and added to prevent. Six marks
+// were affected and none of them could have failed a check.
+check(
+    "and the lighter line survives into the drawing, not just into the constants",
+    {
+        let box = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let widths = NotchIcon.allCases.flatMap { icon in
+            NotchIconGeometry.parts(for: icon, in: box).compactMap { part -> CGFloat? in
+                if case .stroke(let w) = part.style { return w }
+                return nil
+            }
+        }
+        return widths.contains { abs($0 - NotchIconGeometry.detailWeight) < 0.001 }
+            && widths.contains { abs($0 - NotchIconGeometry.strokeWeight) < 0.001 }
+    }()
+)
+check(
+    "every mark's lines keep the weight they were drawn at",
+    NotchIcon.allCases.allSatisfy { icon in
+        let box = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let authored = NotchIconGeometry.unscaled(icon).map(\.style)
+        let drawn = NotchIconGeometry.parts(for: icon, in: box).map(\.style)
+        return authored == drawn
+    }
+)
+check(
+    "and a mark at half the size draws every one of its weights at half",
+    NotchIcon.allCases.allSatisfy { icon in
+        let full = NotchIconGeometry.parts(for: icon, in: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let half = NotchIconGeometry.parts(for: icon, in: CGRect(x: 0, y: 0, width: 50, height: 50))
+        return zip(full, half).allSatisfy { big, small in
+            switch (big.style, small.style) {
+            case (.stroke(let b), .stroke(let s)): return abs(b / 2 - s) < 0.001
+            case (.fill, .fill): return true
+            default: return false
+            }
+        }
+    }
+)
+
 check(
     "line weight scales with the mark",
     {

@@ -84,15 +84,22 @@ public enum NotchIconGeometry {
     public static let detailWeight: CGFloat = 6.5
 
     /// The marks, scaled into `box`.
+    ///
+    /// Each line keeps the weight it was drawn at. That sounds like it goes
+    /// without saying, and it did not: this scaled the path but replaced every
+    /// line's weight with `strokeWeight`, so `detailWeight` was authored in six
+    /// marks and reached the screen in none of them. The processor's legs, the
+    /// bars in the memory chip, the globe's meridian and equator, the timer's
+    /// ticks and the aerial were all drawn at the outline's full weight — the
+    /// exact thing `detailWeight` was measured and added to stop.
     public static func parts(for icon: NotchIcon, in box: CGRect) -> [NotchIconPart] {
         let scale = min(box.width, box.height) / grid
-        let width = strokeWeight * scale
         return unscaled(icon).map { part in
             var transform = CGAffineTransform(translationX: box.minX, y: box.minY)
             transform = transform.scaledBy(x: scale, y: scale)
             let scaled = part.path.applying(transform)
             switch part.style {
-            case .stroke: return NotchIconPart(path: scaled, style: .stroke(width))
+            case .stroke(let weight): return NotchIconPart(path: scaled, style: .stroke(weight * scale))
             case .fill: return NotchIconPart(path: scaled, style: .fill)
             }
         }

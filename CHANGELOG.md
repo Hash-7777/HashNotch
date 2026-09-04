@@ -36,6 +36,16 @@ All notable changes to HashNotch are recorded here.
   the microphone at once now has something to compare — it was matching against
   helper process ids, which the frontmost app's id could never equal.
 
+- **The small drawings beside each heading are drawn at the weights they were
+  designed at.** The family uses two line weights: one for outlines and a
+  lighter one for the lines inside them, which exists because at nine points a
+  full-weight interior line inks into the edge beside it and the shape stops
+  meaning anything. The lighter weight was written into six of the marks and
+  reached the screen in none of them — the code that scales a mark to its box
+  replaced every line's weight with the outline's. The processor's legs, the
+  bars in the memory chip, the globe's meridian and equator, the timer's ticks
+  and the aerial were all a third heavier than intended.
+
 - **On a Mac with no notch, the island no longer hangs below the menu bar.**
   The island is made exactly as tall as whatever it is matching — the notch on
   hardware that has one, the menu bar on hardware that does not — so that the
