@@ -231,8 +231,8 @@ package enum ConsentReadings {
             id: "focus",
             icon: "target",
             title: "Focus, and the day's tally",
-            reads: "Nothing about your Mac. It records what YOU did in this app — when a focus block ran, whether it finished, and how long the screen was away during one — and keeps the last 7 days on this Mac so today has something to compare against.",
-            never: "Never leaves the Mac, and is never sent anywhere. It keeps four numbers and a date per day, and knows only that a block ran — never what you were working on. Nothing older than a week is kept, and you can forget the lot in one press in Settings."
+            reads: "Nothing about your Mac. It records your own focus blocks — when one ran, and whether you finished it — and keeps the last 7 days.",
+            never: "Never sent anywhere. It knows a block ran, never what you were working on. Nothing older than a week is kept, and you can delete it all in Settings."
         ),
         Reader(
             id: "away",

@@ -104,15 +104,4 @@ public enum FocusTallyMath {
         return rest == 0 ? "\(hours) hr" : "\(hours) hr \(rest) min"
     }
 
-    /// The one-line summary the panel leads with.
-    public static func summary(_ tally: FocusTally) -> String {
-        guard !tally.isEmpty else { return "Nothing counted yet today" }
-        var parts = [duration(tally.workSeconds) + " focus"]
-        if tally.finishedWork > 0 {
-            parts.append("\(tally.finishedWork) \(tally.finishedWork == 1 ? "block" : "blocks")")
-        }
-        if tally.breakSeconds >= 60 { parts.append(duration(tally.breakSeconds) + " break") }
-        if tally.awaySeconds >= 60 { parts.append(duration(tally.awaySeconds) + " away") }
-        return parts.joined(separator: " \u{b7} ")
-    }
 }

@@ -29,13 +29,15 @@ All notable changes to HashNotch are recorded here.
 
   The last seven days are kept, so today has something to measure against —
   today's figure alone is not information, since three hours twenty is good or
-  bad only against something. What is kept is four numbers and a date per day,
-  never what you were working on, and a day with nothing in it is not kept at
-  all so a weekend does not drag the average down. It states what an ordinary
-  day looks like rather than passing a verdict on this one: a part-finished day
-  set against whole ones would flatter you at six in the evening and scold you
-  at ten in the morning, with the same number doing both. One press in the
-  settings page forgets all of it, and nothing is ever sent anywhere.
+  bad only against something. It knows a block ran, never what anybody was
+  working on, and a day with nothing in it is not kept at all so a weekend does
+  not drag the average down.
+
+  What it says about them is short and is a fact rather than a verdict:
+  "Usually 1 hr 50 min". Setting a part-finished day against whole ones would
+  flatter you at six in the evening and scold you at ten in the morning, with
+  the same number doing both. One press in the settings page deletes the lot,
+  and nothing is ever sent anywhere.
 
   A block that ends tells you so. The deadline is handed to the system rather
   than announced by the app, so the alert lands on time whether the display is

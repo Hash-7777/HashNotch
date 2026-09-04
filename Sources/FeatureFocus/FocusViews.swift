@@ -125,8 +125,8 @@ struct FocusDetailView: View {
                     .monospacedDigit()
                     .rollingDigits()
                 Text(session.block.isWork
-                     ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) to the long break"
-                     : "Then back to it")
+                     ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) more until a long rest"
+                     : "Then back to work")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
             }
@@ -150,7 +150,7 @@ struct FocusDetailView: View {
             }
             if engine.alertsAllowed == false {
                 // Never promise what will not happen.
-                Text("Notifications are off, so it will chime instead")
+                Text("Notifications are off. It will chime instead.")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
                     .fixedSize(horizontal: false, vertical: true)
@@ -188,7 +188,7 @@ struct FocusDetailView: View {
                     .foregroundStyle(theme.subtitleColor)
             }
             if engine.tally.abandonedWork > 0 {
-                Text("\(engine.tally.abandonedWork) not finished")
+                Text("\(engine.tally.abandonedWork) block\(engine.tally.abandonedWork == 1 ? "" : "s") not finished")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
             }

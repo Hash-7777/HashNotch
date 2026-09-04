@@ -3462,17 +3462,8 @@ MainActor.assumeIsolated {
     check("under an hour is minutes", FocusTallyMath.duration(20 * 60) == "20 min")
     check("a round hour drops the minutes", FocusTallyMath.duration(2 * 3_600) == "2 hr")
     check("and an odd one keeps them", FocusTallyMath.duration(3 * 3_600 + 20 * 60) == "3 hr 20 min")
-    check("a day with nothing in it says so rather than showing zeroes",
-          FocusTallyMath.summary(empty) == "Nothing counted yet today")
-    check(
-        "and a day with something in it leads with the focus",
-        FocusTallyMath.summary(
-            FocusTally(day: today, workSeconds: 3 * 3_600 + 20 * 60, breakSeconds: 1_800, awaySeconds: 2_400, finishedWork: 8)
-        ) == "3 hr 20 min focus \u{b7} 8 blocks \u{b7} 30 min break \u{b7} 40 min away"
-    )
-    check("one block is not one blocks",
-          FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 block")
-          && !FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 blocks"))
+    // The panel says the day's focus on its own now, beside a row of marks, so
+    // there is no sentence of four figures left to check.
 
     // ── What the alert says ─────────────────────────────────────────────────
     //
@@ -3493,7 +3484,16 @@ MainActor.assumeIsolated {
         "every alert says what comes next AND how long it runs",
         FocusBlock.allCases.allSatisfy { next in
             let body = FocusAlert.body(next: next, plan: FocusPlan())
-            return body.contains("\(FocusPlan().minutes(for: next))") && body.hasSuffix("minutes.")
+            let namesHowLong = body.contains("\(FocusPlan().minutes(for: next))")
+            let namesWhat = next.isWork ? body.contains("work") : body.contains("rest")
+            return namesHowLong && namesWhat
+        }
+    )
+    check(
+        "and says it in one short sentence",
+        FocusBlock.allCases.allSatisfy { next in
+            let body = FocusAlert.body(next: next, plan: FocusPlan())
+            return body.count <= 40 && body.hasSuffix(".") && !body.contains(",")
         }
     )
     check(
@@ -3597,15 +3597,20 @@ MainActor.assumeIsolated {
             // at six in the evening and scold them at ten in the morning, with
             // the same number doing both.
             guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
-            return text.contains("on an average day")
+            return text.hasPrefix("Usually ")
                 && !text.lowercased().contains("behind")
                 && !text.lowercased().contains("ahead")
                 && !text.contains("%")
         }()
     )
     check(
-        "one day is a day, not one days",
-        FocusHistoryMath.averageText(FocusHistory(days: [dayOne]))?.hasSuffix("over 1 day") == true
+        "and says it in three words, not a clause with a tail",
+        {
+            // It read "1 hr 50 min on an average day, over 6 days" \u{2014} two
+            // clauses and the sample size explained to somebody who did not ask.
+            guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
+            return text.count <= 24 && !text.contains(",")
+        }()
     )
     check(
         "the row of marks is drawn against the busiest day, so it does not rescale under somebody mid-morning",

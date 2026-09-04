@@ -48,19 +48,22 @@ public enum FocusHistoryMath {
         return worked.reduce(0) { $0 + $1.workSeconds } / Double(worked.count)
     }
 
-    /// What to say about the days behind today, or nothing when there is
-    /// nothing honest to say.
+    /// What an ordinary day looks like, or nothing when there is nothing honest
+    /// to say.
     ///
-    /// Deliberately a FACT rather than a comparison. Putting a part-finished day
-    /// against a set of whole ones would flatter somebody at six in the evening
-    /// and scold them at ten in the morning, and it would be the same number
-    /// doing both — which is how a figure like this stops being trusted. So it
-    /// states what an ordinary day looks like and lets the person do the
-    /// comparing, which they can do and it cannot.
+    /// Three words and a number. It said "1 hr 50 min on an average day, over 6
+    /// days", which is two clauses and a tail explaining the sample size to
+    /// somebody who did not ask.
+    ///
+    /// Still a fact and never a verdict. Putting a part-finished day against
+    /// whole ones would flatter somebody at six in the evening and scold them
+    /// at ten in the morning, with the same number doing both — which is how a
+    /// figure like this stops being trusted. "Usually" says what is normal for
+    /// them and leaves the comparing to the person, who can do it and this
+    /// cannot.
     public static func averageText(_ history: FocusHistory) -> String? {
         guard let average = averageWorkSeconds(history) else { return nil }
-        let days = history.days.filter { $0.workSeconds >= 60 }.count
-        return "\(FocusTallyMath.duration(average)) on an average day, over \(days) \(days == 1 ? "day" : "days")"
+        return "Usually \(FocusTallyMath.duration(average))"
     }
 
     /// The most blocks finished on any day kept, which is what the row of marks

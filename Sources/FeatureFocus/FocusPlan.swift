@@ -117,9 +117,9 @@ public enum FocusAlert {
     public static func body(next: FocusBlock, plan: FocusPlan) -> String {
         let minutes = plan.minutes(for: next)
         switch next {
-        case .work: return "Back to it — \(minutes) minutes."
-        case .shortBreak: return "Take \(minutes) minutes."
-        case .longBreak: return "Take a longer one — \(minutes) minutes."
+        case .work: return "Back to work — \(minutes) minutes."
+        case .shortBreak: return "Time for a \(minutes) minute rest."
+        case .longBreak: return "Time for a long rest — \(minutes) minutes."
         }
     }
 }

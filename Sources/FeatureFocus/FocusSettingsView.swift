@@ -15,7 +15,7 @@ struct FocusSettingsView: View {
         VStack(alignment: .leading, spacing: 22) {
             PageHeader(
                 "Focus",
-                detail: "A stretch of work, a short rest, and a longer one every few rounds. The day's tally counts only the time you were actually here."
+                detail: "Work, then a short rest. A longer rest every few rounds. Only time you were at the Mac is counted."
             )
 
             SettingCard {
@@ -32,8 +32,8 @@ struct FocusSettingsView: View {
                 }
                 SettingDivider()
                 SettingRow(
-                    "Rounds before the long rest",
-                    detail: "How many stretches of work come first."
+                    "Rounds before a long rest",
+                    detail: "How many rounds of work come first."
                 ) {
                     Stepper(
                         value: Binding(
@@ -52,12 +52,12 @@ struct FocusSettingsView: View {
 
             SettingCard {
                 SettingRow(
-                    "The days behind today",
+                    "Past days",
                     detail: engine.history.isEmpty
-                        ? "Nothing kept yet. Finished days are kept here so today has something to compare against."
-                        : "\(engine.history.days.count) \(engine.history.days.count == 1 ? "day" : "days") kept, at most \(FocusHistory.keptDays). Four numbers and a date each \u{2014} never what you were working on. Nothing is sent anywhere."
+                        ? "Nothing kept yet."
+                        : "\(engine.history.days.count) day\(engine.history.days.count == 1 ? "" : "s") kept, up to \(FocusHistory.keptDays). On this Mac only, never sent anywhere."
                 ) {
-                    Button("Forget them") { engine.clearHistory() }
+                    Button("Delete") { engine.clearHistory() }
                         .disabled(engine.history.isEmpty)
                 }
             }
