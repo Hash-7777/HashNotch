@@ -106,7 +106,7 @@ All checks passed.
 
 ## ◦ Install
 
-1. Download the disk image — `HashNotch-1.3.1.dmg` — from [Releases](https://github.com/Hash-7777/HashNotch/releases/latest) and open it. Drag **HashNotch** onto the **Applications** folder shown beside it, then eject the disk image.
+1. Download the disk image — `HashNotch-1.4.0.dmg` — from [Releases](https://github.com/Hash-7777/HashNotch/releases/latest) and open it. Drag **HashNotch** onto the **Applications** folder shown beside it, then eject the disk image.
 2. First launch, macOS says it cannot verify the developer. Click **Done**, then open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**. Once only.
 3. **Hover the notch.** No Dock icon, no menu-bar item — the notch is the whole interface. The gear beside it opens settings.
 

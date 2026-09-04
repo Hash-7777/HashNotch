@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 132" width="44" height="44" role="img" aria-label="camera">
+  <rect x="0.5" y="0.5" width="131" height="131" rx="30" fill="#0F1117" stroke="#1E2230"/>
+    <path d="M38 40 L76 40 C82.63 40 88 45.37 88 52 L88 78 C88 84.63 82.63 90 76 90 L38 90 C31.37 90 26 84.63 26 78 L26 52 C26 45.37 31.37 40 38 40 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M94 54 L106 46 L106 84 L94 76 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

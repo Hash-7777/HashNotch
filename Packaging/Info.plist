@@ -2,44 +2,34 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>HashNotch</string>
 	<key>CFBundleDisplayName</key>
 	<string>HashNotch</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.hashnotch.app</string>
 	<key>CFBundleExecutable</key>
 	<string>HashNotch</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.hashnotch.app</string>
+	<key>CFBundleName</key>
+	<string>HashNotch</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.3.1</string>
+	<string>1.4.0</string>
 	<key>CFBundleVersion</key>
-	<string>5</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>12.0</string>
+	<string>6</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
-	<!-- Agent app: no Dock icon, no app-switcher entry, and no menu-bar item
-	     either — the notch overlay is the whole interface. -->
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-	<!-- Shown by macOS in the Automation permission prompt. Without this key,
-	     hardened-runtime builds are denied Apple Events silently. The app is
-	     named here exactly as it is named everywhere else: this string is the
-	     first thing a new user reads about it, and a prompt that cites a name
-	     they have never seen is a prompt they are right to refuse. -->
 	<key>NSAppleEventsUsageDescription</key>
 	<string>HashNotch asks your media apps for the current track and artwork — and, for web videos, asks your browser for the playing tab's address to show its thumbnail — so Now Playing can appear around the notch. Playback and volume are controlled only when you use the panel's buttons. Deny this and everything else still works.</string>
-	<!-- macOS protects the Downloads folder, so listing it prompts once. Without
-	     this key that prompt carries no explanation at all, which is the worst
-	     possible moment for the app to have nothing to say for itself. -->
 	<key>NSDownloadsFolderUsageDescription</key>
 	<string>HashNotch reads the names and dates of files in your Downloads folder so it can show a short notice at the notch when a download finishes. It never opens, moves, or uploads a file. Deny this and everything else still works.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Seif Hashish. Licensed under the GNU General Public License v3 or later.</string>
 </dict>

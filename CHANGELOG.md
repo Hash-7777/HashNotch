@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.4.0 — it says who is watching, what you missed, and what you got done
 
 ### Fixed
 
