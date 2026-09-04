@@ -31,6 +31,7 @@ let package = Package(
         .target(name: "FeatureTimer", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureDownloads", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureAway", dependencies: ["HashNotchKit"]),
+        .target(name: "FeatureFocus", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureAirPods", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureCall", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureStorage", dependencies: ["HashNotchKit"]),
@@ -48,7 +49,7 @@ let package = Package(
                 "FeatureMedia",
                 "FeatureActivities",
                 "FeatureTimer",
-                "FeatureDownloads", "FeatureAway",
+                "FeatureDownloads", "FeatureAway", "FeatureFocus",
                 "FeatureAirPods", "FeatureCall",
                 "FeatureStorage",
                 "FeatureCPU",
@@ -62,7 +63,7 @@ let package = Package(
         // .testTarget once full Xcode is available.
         .executableTarget(
             name: "HashNotchChecks",
-            dependencies: ["HashNotchKit", "FeatureMedia", "FeatureActivities", "FeatureTokens", "FeatureBattery", "FeatureDownloads", "FeatureAway", "FeatureAirPods", "FeatureCall", "FeatureNetwork", "FeatureStorage", "FeatureThermal", "FeatureCPU", "FeatureMemory", "FeatureTimer"]
+            dependencies: ["HashNotchKit", "FeatureMedia", "FeatureActivities", "FeatureTokens", "FeatureBattery", "FeatureDownloads", "FeatureAway", "FeatureFocus", "FeatureAirPods", "FeatureCall", "FeatureNetwork", "FeatureStorage", "FeatureThermal", "FeatureCPU", "FeatureMemory", "FeatureTimer"]
         ),
     ],
     swiftLanguageModes: [.v5]

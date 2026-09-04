@@ -228,6 +228,13 @@ package enum ConsentReadings {
             never: "Never opens, moves or looks inside a file. macOS will ask your permission the first time."
         ),
         Reader(
+            id: "focus",
+            icon: "target",
+            title: "Focus, and the day's tally",
+            reads: "Nothing about your Mac. It records what YOU did in this app — when a focus block ran, whether it finished, and how long the screen was away during one — and keeps today's totals on this Mac.",
+            never: "Never leaves the Mac, and is never sent anywhere. It knows only that a block ran, not what you were working on. Yesterday is not kept: the tally starts again each day."
+        ),
+        Reader(
             id: "away",
             icon: "clock.arrow.circlepath",
             title: "While you were away",

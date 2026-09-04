@@ -15,7 +15,20 @@ public final class AwayReport: ObservableObject {
     @Published public private(set) var changes: [AwayChange] = []
     @Published public private(set) var awayFor: TimeInterval = 0
 
+    /// The last spell away, whether or not it was worth a digest.
+    ///
+    /// The digest above needs something to have CHANGED and five minutes to
+    /// have passed. A tally of the day needs neither: two minutes away is still
+    /// two minutes away, and a piece of work you walked out of was walked out
+    /// of however little happened while you were gone. So this is recorded on
+    /// every return and the digest is decided separately.
+    @Published public private(set) var lastReturn: AwaySpell?
+
     public init() {}
+
+    public func recordReturn(leftAt: Date, returnedAt: Date) {
+        lastReturn = AwaySpell(leftAt: leftAt, returnedAt: returnedAt)
+    }
 
     public func post(line: String, changes: [AwayChange], awayFor: TimeInterval) {
         self.line = line
@@ -30,4 +43,17 @@ public final class AwayReport: ObservableObject {
         changes = []
         awayFor = 0
     }
+}
+
+/// One spell with the screen away.
+public struct AwaySpell: Equatable, Sendable {
+    public let leftAt: Date
+    public let returnedAt: Date
+
+    public init(leftAt: Date, returnedAt: Date) {
+        self.leftAt = leftAt
+        self.returnedAt = returnedAt
+    }
+
+    public var seconds: TimeInterval { max(0, returnedAt.timeIntervalSince(leftAt)) }
 }

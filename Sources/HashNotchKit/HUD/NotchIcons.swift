@@ -14,7 +14,7 @@ import SwiftUI
 ///   where the mark should be. The oldest Mac this app supports is four
 ///   releases behind the one it is built on, and nothing in a build here would
 ///   notice a mark that is blank there.
-/// - **A borrowed set cannot be held to one shape.** These are thirteen marks
+/// - **A borrowed set cannot be held to one shape.** These are fourteen marks
 ///   that have to look like eleven members of one family at nine points, on
 ///   black. Drawing them against one grid, at one stroke weight, is the only
 ///   way to be sure of that — and it is what was already done for the battery,
@@ -36,6 +36,7 @@ public enum NotchIcon: String, CaseIterable, Sendable {
     case microphone
     case camera
     case away
+    case focus
     case airpods
     case activities
 }
@@ -123,6 +124,7 @@ public enum NotchIconGeometry {
         case .microphone: return microphone
         case .camera: return camera
         case .away: return away
+        case .focus: return focus
         case .airpods: return airpods
         case .activities: return activities
         }
@@ -390,6 +392,22 @@ public enum NotchIconGeometry {
         back.move(to: CGPoint(x: 50, y: 50))
         back.addLine(to: CGPoint(x: 31, y: 61))
         parts.append(NotchIconPart(path: back, style: .stroke(detailWeight)))
+        return parts
+    }
+
+    /// A target. Rings and a centre, which is the one shape in this family that
+    /// means aiming at something rather than measuring it.
+    private static var focus: [NotchIconPart] {
+        var parts: [NotchIconPart] = []
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 10, y: 10, width: 80, height: 80)),
+            style: .stroke(strokeWeight)))
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 32, y: 32, width: 36, height: 36)),
+            style: .stroke(detailWeight)))
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 44, y: 44, width: 12, height: 12)),
+            style: .fill))
         return parts
     }
 

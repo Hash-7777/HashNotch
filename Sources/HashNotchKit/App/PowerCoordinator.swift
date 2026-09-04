@@ -116,6 +116,14 @@ public final class PowerCoordinator {
     private func resume() {
         guard isPaused else { return }
         isPaused = false
+        // Recorded BEFORE the features are picked up, so one that keeps a tally
+        // of the day finds the spell already waiting when it starts and can
+        // reconcile what it had running against it. Recorded on every return,
+        // whether or not there is a digest to show — two minutes away is still
+        // two minutes away.
+        if let before = leftAt {
+            context.away.recordReturn(leftAt: before.at, returnedAt: Date())
+        }
         registry.resumeAll(context: context)
         // Not immediately. The monitors have just been restarted, and not all of
         // them answer straight away: the network total and the battery are read

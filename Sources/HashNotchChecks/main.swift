@@ -16,6 +16,7 @@ import FeatureStorage
 import FeatureCPU
 import FeatureMemory
 import FeatureTimer
+import FeatureFocus
 
 /// Writes `content` to a fresh temp file and returns its URL.
 func tempFile(_ content: String) -> URL {
@@ -1597,13 +1598,19 @@ MainActor.assumeIsolated {
     let consentIDs = Set(ConsentReadings.all.map(\.id))
     check(
         "the consent window names every reading that is not just a hardware counter",
+        // "focus" reads nothing about the Mac at all — it records what somebody
+        // did in this app. It is named anyway, and for the same reason the
+        // network breakdown is: a record of how somebody spent their working
+        // day is a fact about them, and one kept on disk. That it never leaves
+        // the Mac is what makes it safe, not a reason to leave it unsaid.
+        //
         // "away" is on this list despite reading NOTHING new — it only subtracts
         // two moments of figures the others already keep. It is named anyway,
         // because a line that tells you what your Mac did for two hours while
         // you were gone is exactly the kind of thing somebody is entitled to see
         // described before it starts, and "we already had the numbers" is a
         // reason it is harmless, not a reason to leave it unsaid.
-        consentIDs == ["media", "call", "downloads", "away", "tokens", "networkApps", "activities"]
+        consentIDs == ["media", "call", "downloads", "focus", "away", "tokens", "networkApps", "activities"]
     )
     check("and none of them is listed twice",
           ConsentReadings.all.count == consentIDs.count)
@@ -3353,6 +3360,124 @@ MainActor.assumeIsolated {
         }()
     )
 
+    // ── The focus cycle, and the day it adds up to ──────────────────────────
+    //
+    // A tracker of this kind is normally self-reported: you start it, you forget
+    // to stop it, and the number at the end of the week is a guess. What makes
+    // this one worth having is what it refuses to count, and every one of those
+    // refusals is a rule that can be stated here rather than lived through.
+
+    let plan = FocusPlan()
+    check("the cycle starts on the ordinary quarter of an hour and a bit", plan.workMinutes == 25 && plan.shortBreakMinutes == 5)
+    check("work is followed by a rest", plan.next(after: .work, finishedWorkBlocks: 1) == .shortBreak)
+    check("and a rest is always followed by work, because there is nowhere else to go",
+          plan.next(after: .shortBreak, finishedWorkBlocks: 2) == .work
+          && plan.next(after: .longBreak, finishedWorkBlocks: 4) == .work)
+    check("the fourth piece of work earns the long rest",
+          plan.next(after: .work, finishedWorkBlocks: 4) == .longBreak)
+    check("and the fifth does not", plan.next(after: .work, finishedWorkBlocks: 5) == .shortBreak)
+    check("the eighth does again, so the cycle keeps its shape all day",
+          plan.next(after: .work, finishedWorkBlocks: 8) == .longBreak)
+    check("how many rounds are left is counted down, not up",
+          plan.worksUntilLongBreak(finishedWorkBlocks: 0) == 4
+          && plan.worksUntilLongBreak(finishedWorkBlocks: 1) == 3
+          && plan.worksUntilLongBreak(finishedWorkBlocks: 3) == 1)
+    check(
+        "a hand-edited plan cannot produce a two-second block or a nine-hour one",
+        {
+            let absurd = FocusPlan(workMinutes: 0, shortBreakMinutes: 999, longBreakMinutes: -5, worksBeforeLongBreak: 100).clamped
+            return FocusPlan.workRange.contains(absurd.workMinutes)
+                && FocusPlan.shortBreakRange.contains(absurd.shortBreakMinutes)
+                && FocusPlan.longBreakRange.contains(absurd.longBreakMinutes)
+                && FocusPlan.worksBeforeLongBreakRange.contains(absurd.worksBeforeLongBreak)
+        }()
+    )
+
+    // What a block served, which is never more than it was long. A session
+    // found hours after it was due must not credit the day with hours it did
+    // not have.
+    let started = Date()
+    let block = FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(1_500))
+    check("a block half done has served half of it", Int(block.servedSeconds(by: started.addingTimeInterval(750))) == 750)
+    check("one found long after it was due served only its own length",
+          Int(block.servedSeconds(by: started.addingTimeInterval(50_000))) == 1_500)
+    check("and one found before it started served nothing",
+          block.servedSeconds(by: started.addingTimeInterval(-100)) == 0)
+    check("a session still to come is picked up rather than counted",
+          FocusResume.decide(block, now: started.addingTimeInterval(100)) == .resume(block))
+    check("and one that ran out while nobody watched is counted rather than picked up",
+          FocusResume.decide(block, now: started.addingTimeInterval(2_000)) == .ranOut(block))
+
+    // The tally. The refusals are the point.
+    let today = FocusTallyMath.day(of: started)
+    let empty = FocusTally(day: today)
+    check("a fresh day has nothing in it", empty.isEmpty)
+    check(
+        "a finished piece of work counts as work AND as a block",
+        {
+            let after = FocusTallyMath.adding(empty, block: .work, seconds: 1_500, completed: true)
+            return after.workSeconds == 1_500 && after.finishedWork == 1 && after.abandonedWork == 0
+        }()
+    )
+    check(
+        "one walked out of counts the time it served but is NOT a finished block",
+        {
+            // This is the whole difference between a tally and a wish.
+            let after = FocusTallyMath.adding(empty, block: .work, seconds: 400, completed: false)
+            return after.workSeconds == 400 && after.finishedWork == 0 && after.abandonedWork == 1
+        }()
+    )
+    check(
+        "a rest is never counted as work",
+        {
+            let after = FocusTallyMath.adding(empty, block: .shortBreak, seconds: 300, completed: true)
+            return after.workSeconds == 0 && after.breakSeconds == 300 && after.finishedWork == 0
+        }()
+    )
+    check(
+        "time away is kept apart from work rather than folded into it",
+        {
+            let after = FocusTallyMath.addingAway(empty, seconds: 2_400)
+            return after.awaySeconds == 2_400 && after.workSeconds == 0
+        }()
+    )
+    check(
+        "a Mac left running through midnight starts a new day rather than one number covering two",
+        {
+            let calendar = Calendar.current
+            let yesterday = FocusTally(day: calendar.startOfDay(for: started.addingTimeInterval(-86_400)), workSeconds: 9_000, finishedWork: 6)
+            let rolled = FocusTallyMath.current(yesterday, now: started)
+            return rolled.day == today && rolled.workSeconds == 0 && rolled.finishedWork == 0
+        }()
+    )
+    check(
+        "but the same day's tally is carried on rather than restarted",
+        {
+            let kept = FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)
+            return FocusTallyMath.current(kept, now: started).workSeconds == 1_500
+        }()
+    )
+
+    // How the day is said.
+    check("under an hour is minutes", FocusTallyMath.duration(20 * 60) == "20 min")
+    check("a round hour drops the minutes", FocusTallyMath.duration(2 * 3_600) == "2 hr")
+    check("and an odd one keeps them", FocusTallyMath.duration(3 * 3_600 + 20 * 60) == "3 hr 20 min")
+    check("a day with nothing in it says so rather than showing zeroes",
+          FocusTallyMath.summary(empty) == "Nothing counted yet today")
+    check(
+        "and a day with something in it leads with the focus",
+        FocusTallyMath.summary(
+            FocusTally(day: today, workSeconds: 3 * 3_600 + 20 * 60, breakSeconds: 1_800, awaySeconds: 2_400, finishedWork: 8)
+        ) == "3 hr 20 min focus \u{b7} 8 blocks \u{b7} 30 min break \u{b7} 40 min away"
+    )
+    check("one block is not one blocks",
+          FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 block")
+          && !FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 blocks"))
+
+    check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")
+    check("and grows an hours field only when there are hours", FocusClock.text(3_725) == "1:02:05")
+    check("a countdown cannot go negative", FocusClock.text(-30) == "0:00")
+
     // The default order is a value in the core, and the manifest sorts itself
     // by it — so adding a feature to the manifest cannot silently rearrange
     // everybody's panel, and this pins the arrangement itself.
@@ -3367,6 +3492,9 @@ MainActor.assumeIsolated {
             // seconds each. "While you were away" sits among them because it is
             // one: a thing that just became true, and is never true twice.
             "media", "activities", "downloads", "away",
+            // Focus runs for as long as a block does, so it sits with the
+            // things that are ongoing rather than with the announcements.
+            "focus",
             "network", "battery", "airpods",
             "tokens", "thermal", "memory", "cpu",
             "timer", "storage",
@@ -6023,7 +6151,7 @@ check(
 )
 
 // A mark that came out the same as another one is the copy-and-paste failure
-// this family is most exposed to: thirteen marks written one after another, each
+// this family is most exposed to: fourteen marks written one after another, each
 // from the shape of the last.
 check(
     "no two marks are the same drawing",
