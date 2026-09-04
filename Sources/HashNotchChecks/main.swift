@@ -1597,7 +1597,13 @@ MainActor.assumeIsolated {
     let consentIDs = Set(ConsentReadings.all.map(\.id))
     check(
         "the consent window names every reading that is not just a hardware counter",
-        consentIDs == ["media", "call", "downloads", "tokens", "networkApps", "activities"]
+        // "away" is on this list despite reading NOTHING new — it only subtracts
+        // two moments of figures the others already keep. It is named anyway,
+        // because a line that tells you what your Mac did for two hours while
+        // you were gone is exactly the kind of thing somebody is entitled to see
+        // described before it starts, and "we already had the numbers" is a
+        // reason it is harmless, not a reason to leave it unsaid.
+        consentIDs == ["media", "call", "downloads", "away", "tokens", "networkApps", "activities"]
     )
     check("and none of them is listed twice",
           ConsentReadings.all.count == consentIDs.count)
@@ -3171,6 +3177,182 @@ MainActor.assumeIsolated {
         "two samples are enough to draw the real shape",
         Sparkline.showsBaselineOnly(sampleCount: 2) == false
     )
+    // ── What happened while nobody was looking ──────────────────────────────
+    //
+    // The one readout in this app about the PAST, and the only one that reads
+    // nothing of its own: every number in it was already being kept by another
+    // indicator, and this subtracts two moments of them.
+    //
+    // None of it can be staged. There is no way to be away for two hours inside
+    // a check, which is exactly why the rules are pure and the checks are here
+    // rather than in a comment about how it was tried once by hand.
+
+    // How long you were gone, in the fewest words still true.
+    check("under an hour is minutes", AwayDigest.awayText(47 * 60) == "Away 47 min")
+    check("a round hour drops the minutes", AwayDigest.awayText(2 * 3_600) == "Away 2 hr")
+    check("and an odd one keeps them", AwayDigest.awayText(2 * 3_600 + 18 * 60) == "Away 2 hr 18 min")
+    check("no absence is negative", AwayDigest.awayText(-500) == "Away 0 min")
+
+    // A digest that greets every unlock becomes wallpaper within a day. The
+    // danger here is not being wrong, it is being ignorable.
+    let bytesFigure = AwayFigure(id: "network.bytes", noun: "byte", suffix: "used", value: 0, unit: .bytes)
+    let batteryFigure = AwayFigure(id: "battery.percent", noun: "battery", value: 0, unit: .percent)
+    let downloadFigure = AwayFigure(id: "downloads.finished", noun: "download", suffix: "finished", value: 0, unit: .count)
+    let tokenFigure = AwayFigure(id: "tokens.today", noun: "token", value: 0, unit: .compact)
+
+    check(
+        "a spell shorter than five minutes is not worth a word",
+        !AwayDigest.isWorthShowing(
+            awayFor: 4 * 60,
+            changes: [AwayChange(figure: downloadFigure, delta: 3)]
+        )
+    )
+    check(
+        "and neither is a long one where nothing happened",
+        !AwayDigest.isWorthShowing(awayFor: 3 * 3_600, changes: [])
+    )
+    check(
+        "but a long one where something did is worth showing",
+        AwayDigest.isWorthShowing(
+            awayFor: 3 * 3_600,
+            changes: [AwayChange(figure: downloadFigure, delta: 1)]
+        )
+    )
+    check(
+        "a change too small to matter is left out of the line",
+        !AwayDigest.isWorthSaying(AwayChange(figure: bytesFigure, delta: 400_000))
+            && AwayDigest.isWorthSaying(AwayChange(figure: bytesFigure, delta: 4_000_000))
+    )
+    check(
+        "a battery that barely moved is not news either way",
+        !AwayDigest.isWorthSaying(AwayChange(figure: batteryFigure, delta: -2))
+            && AwayDigest.isWorthSaying(AwayChange(figure: batteryFigure, delta: -14))
+            && AwayDigest.isWorthSaying(AwayChange(figure: batteryFigure, delta: 22))
+    )
+
+    // Comparing the two moments. The traps are a figure that was not there
+    // before, and a counter that went backwards under us.
+    check(
+        "a figure with no before is dropped rather than guessed at",
+        {
+            // A feature switched on DURING the absence has no earlier value.
+            // Counting its whole total as the change would report a day's data
+            // as five minutes' worth.
+            let before = AwaySnapshot(at: Date(), figures: [])
+            let after = AwaySnapshot(at: Date(), figures: [
+                AwayFigure(id: "network.bytes", noun: "byte", suffix: "used", value: 9_000_000_000, unit: .bytes)
+            ])
+            return AwayDigest.changes(from: before, to: after).isEmpty
+        }()
+    )
+    check(
+        "a counter that went backwards was reset, and there is nothing true to say",
+        {
+            // Midnight rolls the day's total over. That is not negative usage.
+            let before = AwaySnapshot(at: Date(), figures: [
+                AwayFigure(id: "network.bytes", noun: "byte", suffix: "used", value: 8_000_000_000, unit: .bytes)
+            ])
+            let after = AwaySnapshot(at: Date(), figures: [
+                AwayFigure(id: "network.bytes", noun: "byte", suffix: "used", value: 12_000_000, unit: .bytes)
+            ])
+            return AwayDigest.changes(from: before, to: after).isEmpty
+        }()
+    )
+    check(
+        "but a battery going down is the whole point, so it is kept",
+        {
+            let before = AwaySnapshot(at: Date(), figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 91, unit: .percent)
+            ])
+            let after = AwaySnapshot(at: Date(), figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 73, unit: .percent)
+            ])
+            let changes = AwayDigest.changes(from: before, to: after)
+            return changes.count == 1 && changes[0].delta == -18
+        }()
+    )
+
+    // How each one is said.
+    check(
+        "data is said in the size it is",
+        AwayDigest.text(for: AwayChange(figure: bytesFigure, delta: 1_200_000_000)).hasSuffix("used")
+    )
+    check(
+        "a battery that fell carries the minus sign, which is the meaning",
+        AwayDigest.text(for: AwayChange(figure: batteryFigure, delta: -14)) == "battery \u{2212}14%"
+    )
+    check(
+        "and one that rose carries the plus",
+        AwayDigest.text(for: AwayChange(figure: batteryFigure, delta: 9)) == "battery +9%"
+    )
+    check(
+        "one download is not one downloads",
+        AwayDigest.text(for: AwayChange(figure: downloadFigure, delta: 1)) == "1 download finished"
+            && AwayDigest.text(for: AwayChange(figure: downloadFigure, delta: 4)) == "4 downloads finished"
+    )
+    check(
+        "a large tally is said short",
+        AwayDigest.text(for: AwayChange(figure: tokenFigure, delta: 780_000)).hasSuffix("tokens")
+    )
+    check(
+        "the line leads with how long you were gone",
+        AwayDigest.line(
+            awayFor: 47 * 60,
+            changes: [AwayChange(figure: batteryFigure, delta: -14)]
+        ) == "Away 47 min \u{b7} battery \u{2212}14%"
+    )
+    check(
+        "and with nothing to report it is only that",
+        AwayDigest.line(awayFor: 47 * 60, changes: []) == "Away 47 min"
+    )
+
+    // The whole decision at once, handed a spell away rather than waiting one.
+    check(
+        "two hours away with something to show produces a line",
+        {
+            let then = Date()
+            let now = then.addingTimeInterval(2 * 3_600)
+            let before = AwaySnapshot(at: then, figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 91, unit: .percent),
+                AwayFigure(id: "downloads.finished", noun: "download", suffix: "finished", value: 4, unit: .count),
+            ])
+            let after = AwaySnapshot(at: now, figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 73, unit: .percent),
+                AwayFigure(id: "downloads.finished", noun: "download", suffix: "finished", value: 5, unit: .count),
+            ])
+            guard let result = AwayDigest.result(from: before, to: after) else { return false }
+            return result.line == "Away 2 hr \u{b7} battery \u{2212}18% \u{b7} 1 download finished"
+                && result.changes.count == 2
+                && Int(result.awayFor) == 7_200
+        }()
+    )
+    check(
+        "two hours away with nothing to show produces nothing",
+        {
+            let then = Date()
+            let before = AwaySnapshot(at: then, figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 91, unit: .percent)
+            ])
+            let after = AwaySnapshot(at: then.addingTimeInterval(2 * 3_600), figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 90, unit: .percent)
+            ])
+            return AwayDigest.result(from: before, to: after) == nil
+        }()
+    )
+    check(
+        "a moment away with plenty to show still produces nothing",
+        {
+            let then = Date()
+            let before = AwaySnapshot(at: then, figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 91, unit: .percent)
+            ])
+            let after = AwaySnapshot(at: then.addingTimeInterval(30), figures: [
+                AwayFigure(id: "battery.percent", noun: "battery", value: 40, unit: .percent)
+            ])
+            return AwayDigest.result(from: before, to: after) == nil
+        }()
+    )
+
     // The default order is a value in the core, and the manifest sorts itself
     // by it — so adding a feature to the manifest cannot silently rearrange
     // everybody's panel, and this pins the arrangement itself.
@@ -3181,7 +3363,10 @@ MainActor.assumeIsolated {
             // might have forgotten was happening, and the one worth seeing
             // before anything else on the panel.
             "call",
-            "media", "activities", "downloads",
+            // Then the announcements, which are only ever on screen for a few
+            // seconds each. "While you were away" sits among them because it is
+            // one: a thing that just became true, and is never true twice.
+            "media", "activities", "downloads", "away",
             "network", "battery", "airpods",
             "tokens", "thermal", "memory", "cpu",
             "timer", "storage",
@@ -5838,7 +6023,7 @@ check(
 )
 
 // A mark that came out the same as another one is the copy-and-paste failure
-// this family is most exposed to: twelve marks written one after another, each
+// this family is most exposed to: thirteen marks written one after another, each
 // from the shape of the last.
 check(
     "no two marks are the same drawing",

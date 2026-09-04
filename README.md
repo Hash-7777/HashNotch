@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-988%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="988 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1010%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1010 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -46,6 +46,8 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 ## ◦ What it shows
 
 **Now playing** — anything that plays: Spotify, Apple Music, TV, Podcasts, Anghami, VLC, a browser tab. Title, artist, live position, a progress bar you can drag, and a volume slider. Album art comes from Spotify and Apple Music, and a video's thumbnail from your browser; anything else shows a placeholder tile.
+
+**While you were away** — shut the lid, come back, and the island says what you missed in one line: how long you were gone, how much data went out, whether the battery fell, whether that download finished. It is the only readout here about the past, and it **reads nothing of its own** — every number in it was already being kept by one of the indicators above, and this subtracts two moments of them.
 
 **Microphone and camera** — the moment any app opens your microphone or a camera, a live dot and a running timer appear beside the notch, with that app's own icon: FaceTime, Zoom, Teams, a browser call, a voice memo. One row, not two, so a video call reads as one thing — and the strip shows a microphone, a camera, or both, so a glance says which. It asks macOS one yes-or-no question per app — *does this app have an input stream open* — and one per camera — *is this camera running* — and **never listens, watches, records or transcribes**. It holds no microphone or camera permission of its own, and could not use one.
 
@@ -83,7 +85,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 988 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1010 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks

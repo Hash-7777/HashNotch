@@ -228,6 +228,13 @@ package enum ConsentReadings {
             never: "Never opens, moves or looks inside a file. macOS will ask your permission the first time."
         ),
         Reader(
+            id: "away",
+            icon: "clock.arrow.circlepath",
+            title: "While you were away",
+            reads: "Nothing of its own. It subtracts what the indicators above were already showing at two moments — when the screen went away, and when it came back.",
+            never: "Nothing is read for this that is not already read for something else, and nothing is written down: the two moments live in memory and are gone when the app quits."
+        ),
+        Reader(
             id: "tokens",
             icon: "number",
             title: "AI tokens",

@@ -6,6 +6,28 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
+- **The island now says what happened while you were away.** Shut the lid, come
+  back, and one line appears for a few seconds before folding away: how long you
+  were gone, how much data went through, whether the battery fell, whether a
+  download finished. Every other readout in this app answers what is true right
+  now; this is the only one that answers what was missed, and macOS answers it
+  nowhere.
+
+  It reads nothing of its own. Every figure in the line was already being kept
+  and already being shown by another indicator — the core takes what they report
+  when the screen goes away, takes it again when it comes back, and subtracts.
+  An indicator you have switched off contributes nothing, because off means off.
+  Nothing is written to disk: the earlier moment lives in memory, so restarting
+  the app mid-absence means there is no "before" and it says nothing rather than
+  guessing.
+
+  It is deliberately hard to trigger. Under five minutes away, or nothing that
+  moved by enough to matter, and it stays quiet — a line that greets every
+  unlock becomes wallpaper within a day. A counter that went backwards (midnight
+  rolling a daily total over) is dropped rather than reported as negative usage,
+  and a figure with no earlier value is dropped rather than having its whole
+  total reported as five minutes' worth.
+
 - **The notch now says when a camera is on, not just a microphone.** It is the
   same question asked of the other device — one yes-or-no per camera, no video
   opened, no frame read, nothing recorded, and no camera permission held or

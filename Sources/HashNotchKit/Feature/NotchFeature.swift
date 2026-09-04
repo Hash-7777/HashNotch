@@ -124,6 +124,15 @@ public protocol NotchFeature: AnyObject {
     /// somebody has any business returning more.
     var outlineUrgency: Double { get }
 
+    /// One number this feature is willing to have compared across a spell
+    /// away, or nil (the default) for a feature with nothing that accumulates.
+    ///
+    /// It must be a running total or a level — something where the difference
+    /// between two moments means something on its own. "How fast the network is
+    /// right now" is not one; "how many bytes have gone through today" is. The
+    /// feature is not told when it is read or why, and never sees the result.
+    var awayFigure: AwayFigure? { get }
+
     /// A page of this feature's own settings, or nil for a feature that needs
     /// nothing beyond its switch. See `FeatureSettingsPage`.
     func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage?
@@ -186,6 +195,7 @@ public extension NotchFeature {
     var livePriority: Int { LivePriority.ongoing }
     var outlineTint: Color? { nil }
     var outlineUrgency: Double { 0 }
+    var awayFigure: AwayFigure? { nil }
     func handleSwipe(_ direction: SwipeDirection) -> Bool { false }
 }
 

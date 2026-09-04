@@ -19,6 +19,13 @@ public final class FeatureContext {
     /// against this instead of running around the clock.
     public let visibility: PanelVisibility
 
+    /// What happened while nobody was looking, once there is anything to say.
+    ///
+    /// The core fills this in; one feature draws it. Neither the features that
+    /// supplied the numbers nor the one that shows them has to know the other
+    /// exists — see `AwayDigest`.
+    public let away: AwayReport
+
     /// Opens the customization window. The app wires this at launch; the
     /// island's gear button calls it (there is no menu-bar item).
     public var openSettings: () -> Void = {}
@@ -70,5 +77,6 @@ public final class FeatureContext {
         self.settings = settings
         self.presence = presence ?? LivePresence()
         self.visibility = visibility ?? PanelVisibility()
+        self.away = AwayReport()
     }
 }

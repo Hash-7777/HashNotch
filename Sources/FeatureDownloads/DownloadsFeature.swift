@@ -44,6 +44,17 @@ public final class DownloadsFeature: NotchFeature {
 
     public init() {}
 
+    /// The question somebody actually walks back to the desk asking.
+    public var awayFigure: AwayFigure? {
+        AwayFigure(
+            id: "downloads.finished",
+            noun: "download",
+            suffix: "finished",
+            value: Double(monitor.finishedCount),
+            unit: .count
+        )
+    }
+
     public func start(context: FeatureContext) { monitor.start(presence: context.presence) }
     public func stop() { monitor.stop() }
 

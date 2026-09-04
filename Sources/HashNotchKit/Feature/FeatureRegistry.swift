@@ -13,6 +13,17 @@ public final class FeatureRegistry {
     /// start or stop the one that changed without disturbing the others.
     private var running: Set<String> = []
 
+    /// The features that are actually running, in registration order.
+    ///
+    /// A feature somebody switched off must not turn up in a digest of what
+    /// happened while they were away: off means off, and a figure from a
+    /// monitor that stopped is a stale number wearing a fresh timestamp.
+    /// Suspended features DO appear — the screen going away is not somebody
+    /// switching anything off, and the whole point is to compare across it.
+    public var runningFeatures: [NotchFeature] {
+        features.filter { running.contains($0.id) || suspended.contains($0.id) }
+    }
+
     /// Which features were put down because the screen went away, rather than
     /// because anybody switched them off. Remembered so that coming back picks
     /// up exactly what was up, and so the two reasons for a feature not running
@@ -40,7 +51,7 @@ public final class FeatureRegistry {
     ///
     /// Only a starting point — every one of them can be dragged anywhere.
     public static let defaultOrder: [String] = [
-        "call", "media", "activities", "downloads",
+        "call", "media", "activities", "downloads", "away",
         "network", "battery", "airpods",
         "tokens", "thermal", "memory", "cpu",
         "timer", "storage",

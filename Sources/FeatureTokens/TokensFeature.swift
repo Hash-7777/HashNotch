@@ -32,6 +32,17 @@ public final class TokensFeature: NotchFeature {
 
     public init() {}
 
+    /// What an agent spent while nobody was watching it, which is exactly when
+    /// one spends the most.
+    public var awayFigure: AwayFigure? {
+        AwayFigure(
+            id: "tokens.today",
+            noun: "token",
+            value: Double(monitor.today.total),
+            unit: .compact
+        )
+    }
+
     public func start(context: FeatureContext) {
         monitor.start(
             scale: context.settings.samplingScale,

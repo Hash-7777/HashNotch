@@ -7,6 +7,7 @@ import FeatureMedia
 import FeatureActivities
 import FeatureTimer
 import FeatureDownloads
+import FeatureAway
 import FeatureAirPods
 import FeatureCall
 import FeatureStorage
@@ -37,6 +38,7 @@ enum FeatureManifest {
             MediaFeature(),
             ActivitiesFeature(),
             DownloadsFeature(),
+            AwayFeature(),
             TimerFeature(),
             TokensFeature(),
             NetworkFeature(),

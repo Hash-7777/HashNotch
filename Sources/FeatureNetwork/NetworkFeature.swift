@@ -38,6 +38,18 @@ public final class NetworkFeature: NotchFeature {
 
     public init() {}
 
+    /// Bytes through the interfaces. The one number people are surprised by
+    /// after an absence, and the one that explains the battery beside it.
+    public var awayFigure: AwayFigure? {
+        AwayFigure(
+            id: "network.bytes",
+            noun: "byte",
+            suffix: "used",
+            value: Double(monitor.usage.received) + Double(monitor.usage.sent),
+            unit: .bytes
+        )
+    }
+
     public func start(context: FeatureContext) {
         monitor.start(
             visibility: context.visibility,

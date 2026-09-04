@@ -19,6 +19,12 @@ public struct FinishedDownload: Identifiable, Equatable {
 @MainActor
 public final class DownloadsMonitor: ObservableObject {
     @Published public private(set) var latest: FinishedDownload?
+    /// How many have finished since the app started.
+    ///
+    /// `latest` is a moment and clears itself after a few seconds, which is
+    /// right for the strip and useless for saying what happened while nobody
+    /// was looking. This only climbs.
+    @Published public private(set) var finishedCount: Int = 0
 
     private var watcher: DirectoryWatcher?
     private var sampler: PollingSampler?
@@ -87,6 +93,7 @@ public final class DownloadsMonitor: ObservableObject {
     private func announce(_ download: FinishedDownload) {
         guard download != latest else { return }
         latest = download
+        finishedCount += 1
         presence?.setActive("downloads", true)
         clearWork?.cancel()
         let work = DispatchWorkItem { [weak self] in

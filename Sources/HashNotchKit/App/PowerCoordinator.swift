@@ -38,6 +38,13 @@ public final class PowerCoordinator {
     private var workspaceObservers: [NSObjectProtocol] = []
     private var lockObservers: [NSObjectProtocol] = []
     private var isPaused = false
+    /// What every feature was reporting when the screen went away.
+    ///
+    /// Held in memory only, on purpose. If the app is restarted mid-absence
+    /// there is no "before", and the honest outcome is to say nothing — a
+    /// digest reconstructed from a total would report a whole day's data as
+    /// five minutes' worth.
+    private var leftAt: AwaySnapshot?
 
     /// Called with `true` when the island must leave the screen entirely, and
     /// `false` when it may come back. Wired by the app to the overlay window,
@@ -93,6 +100,7 @@ public final class PowerCoordinator {
     private func pause() {
         guard !isPaused else { return }
         isPaused = true
+        leftAt = snapshot()
         registry.suspendAll()
     }
 
@@ -100,6 +108,25 @@ public final class PowerCoordinator {
         guard isPaused else { return }
         isPaused = false
         registry.resumeAll(context: context)
+        report()
+    }
+
+    /// Everything the running features are willing to have compared, now.
+    private func snapshot() -> AwaySnapshot {
+        AwaySnapshot(at: Date(), figures: registry.runningFeatures.compactMap(\.awayFigure))
+    }
+
+    /// Work out what was missed, and hand it to whoever draws it.
+    ///
+    /// Taken AFTER `resumeAll`, so a feature that was put down while the screen
+    /// was away has been picked up again and can answer. A feature that still
+    /// cannot is simply absent from the second snapshot and drops out of the
+    /// comparison rather than being guessed at.
+    private func report() {
+        guard let before = leftAt else { return }
+        leftAt = nil
+        guard let result = AwayDigest.result(from: before, to: snapshot()) else { return }
+        context.away.post(line: result.line, changes: result.changes, awayFor: result.awayFor)
     }
 
     /// Off the screen, and everything stopped with it.

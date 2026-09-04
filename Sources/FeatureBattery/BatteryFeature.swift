@@ -73,6 +73,18 @@ public final class BatteryFeature: NotchFeature {
         }
     }
 
+    /// The level, not a total — so this is the one figure that can move both
+    /// ways, and the one whose sign carries the meaning. A battery that fell
+    /// fourteen points in a bag is the whole reason somebody reads this line.
+    public var awayFigure: AwayFigure? {
+        AwayFigure(
+            id: "battery.percent",
+            noun: "battery",
+            value: Double(monitor.percentage),
+            unit: .percent
+        )
+    }
+
     public func start(context: FeatureContext) { monitor.start(presence: context.presence) }
     public func stop() { monitor.stop() }
 

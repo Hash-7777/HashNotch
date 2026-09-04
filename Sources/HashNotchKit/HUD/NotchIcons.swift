@@ -14,7 +14,7 @@ import SwiftUI
 ///   where the mark should be. The oldest Mac this app supports is four
 ///   releases behind the one it is built on, and nothing in a build here would
 ///   notice a mark that is blank there.
-/// - **A borrowed set cannot be held to one shape.** These are twelve marks
+/// - **A borrowed set cannot be held to one shape.** These are thirteen marks
 ///   that have to look like eleven members of one family at nine points, on
 ///   black. Drawing them against one grid, at one stroke weight, is the only
 ///   way to be sure of that — and it is what was already done for the battery,
@@ -35,6 +35,7 @@ public enum NotchIcon: String, CaseIterable, Sendable {
     case timer
     case microphone
     case camera
+    case away
     case airpods
     case activities
 }
@@ -121,6 +122,7 @@ public enum NotchIconGeometry {
         case .timer: return timer
         case .microphone: return microphone
         case .camera: return camera
+        case .away: return away
         case .airpods: return airpods
         case .activities: return activities
         }
@@ -369,6 +371,25 @@ public enum NotchIconGeometry {
         lens.addLine(to: CGPoint(x: 74, y: 64))
         lens.closeSubpath()
         parts.append(NotchIconPart(path: lens, style: .stroke(strokeWeight)))
+        return parts
+    }
+
+    /// A clock whose hand has been wound back: the one readout here about the
+    /// past. A ring with a hand pointing up-left, where every other hand in
+    /// this family points forward.
+    private static var away: [NotchIconPart] {
+        var parts: [NotchIconPart] = []
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 12, y: 12, width: 76, height: 76)),
+            style: .stroke(strokeWeight)))
+        var hand = Path()
+        hand.move(to: CGPoint(x: 50, y: 50))
+        hand.addLine(to: CGPoint(x: 50, y: 28))
+        parts.append(NotchIconPart(path: hand, style: .stroke(detailWeight)))
+        var back = Path()
+        back.move(to: CGPoint(x: 50, y: 50))
+        back.addLine(to: CGPoint(x: 31, y: 61))
+        parts.append(NotchIconPart(path: back, style: .stroke(detailWeight)))
         return parts
     }
 
