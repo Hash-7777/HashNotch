@@ -3636,6 +3636,54 @@ MainActor.assumeIsolated {
                               page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
         ]) == ["Agents", "Focus"]
     )
+    // Every tab takes an equal share of the strip, so one more tab makes every
+    // label narrower. A label that will not fit is truncated with an ellipsis
+    // and nothing says so — which is what adding the focus page did to
+    // "Appearance". Measured against the real font at the real size.
+    check(
+        "every tab label fits the room it is given, at the width the window ships",
+        {
+            let titles = SettingsTabs.allTitles(features: [
+                FeatureDescriptor(id: "activities", title: "Agents", options: [],
+                                  page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
+                FeatureDescriptor(id: "focus", title: "Focus", options: [],
+                                  page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
+            ])
+            let share = SettingsTabs.share(forTabs: titles.count, windowWidth: SettingsWindowController.windowWidth)
+            let font = NSFont.systemFont(
+                ofSize: SettingsTabs.labelSize * SettingsTabs.minimumScale, weight: .semibold
+            )
+            return titles.allSatisfy { title in
+                (title as NSString).size(withAttributes: [.font: font]).width <= share
+            }
+        }()
+    )
+    check(
+        "and the width it ships at is not one point of luck",
+        {
+            // Two more points of label than the strip has room for is the same
+            // failure; this holds a margin so the next tab is a decision rather
+            // than a surprise.
+            let titles = SettingsTabs.allTitles(features: [
+                FeatureDescriptor(id: "a", title: "Agents", options: [],
+                                  page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
+                FeatureDescriptor(id: "f", title: "Focus", options: [],
+                                  page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
+            ])
+            let share = SettingsTabs.share(forTabs: titles.count, windowWidth: SettingsWindowController.windowWidth)
+            let font = NSFont.systemFont(
+                ofSize: SettingsTabs.labelSize * SettingsTabs.minimumScale, weight: .semibold
+            )
+            let widest = titles.map { (($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
+            return share - widest >= 3
+        }()
+    )
+    check(
+        "a strip with no room in it asks for none",
+        SettingsTabs.share(forTabs: 0, windowWidth: 500) == 0
+            && SettingsTabs.share(forTabs: 8, windowWidth: 10) == 0
+    )
+
     check(
         "and a build where no feature brings one gets no tab at all",
         SettingsTabs.suppliedTitles([

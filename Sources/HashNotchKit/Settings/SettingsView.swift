@@ -63,15 +63,15 @@ public struct SettingsView: View {
     /// what matters is where the row is going, not where the pointer is.
     @State private var hoveredRow: String?
 
-    enum Section: String, CaseIterable, Identifiable {
+    package enum Section: String, CaseIterable, Identifiable {
         case general, indicators, appearance, alerts, position, privacy
         /// A page a FEATURE supplies. Deliberately unnamed here: the tab's
         /// words and its symbol come from the feature, because the core does
         /// not know what any feature does and should not start now.
         case supplied
-        var id: String { rawValue }
+        package var id: String { rawValue }
 
-        var title: String {
+        package var title: String {
             switch self {
             case .general: return "General"
             case .indicators: return "Indicators"
@@ -83,7 +83,7 @@ public struct SettingsView: View {
             }
         }
 
-        var symbol: String {
+        package var symbol: String {
             switch self {
             case .general: return "gearshape.fill"
             case .indicators: return "square.stack.3d.up.fill"
@@ -300,12 +300,12 @@ public struct SettingsView: View {
     /// be pushed out. Stacked, each tab needs only as much width as its widest
     /// word.
     private var tabStrip: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: SettingsTabs.spacing) {
             ForEach(tabs) { item in
                 tab(item)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, SettingsTabs.horizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 10)
     }
@@ -337,12 +337,12 @@ public struct SettingsView: View {
                     .frame(height: 14)
                     .foregroundStyle(selected ? settings.accent.color : Color.white.opacity(0.55))
                 Text(title(for: item))
-                    .font(.system(size: 10, weight: selected ? .semibold : .regular))
+                    .font(.system(size: SettingsTabs.labelSize, weight: selected ? .semibold : .regular))
                     .foregroundStyle(selected ? Color.white : Color.white.opacity(0.7))
                     // One line, always. A tab that wraps is taller than its
                     // neighbours and the whole strip grows to match it.
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(SettingsTabs.minimumScale)
             }
             // Equal shares of whatever width there is, so the strip stays even
             // on a display that has squeezed the window narrower.
@@ -1741,6 +1741,32 @@ public struct SettingGroupLabel: View {
 /// vanished without a word — and nothing could have caught that, because the
 /// rule lived inside a `View` where no check can reach it.
 package enum SettingsTabs {
+    // The strip's own measurements, named here so the rule below is about the
+    // real numbers rather than about numbers that look like them.
+    package static let horizontalPadding: CGFloat = 12
+    package static let spacing: CGFloat = 4
+    package static let labelSize: CGFloat = 10
+    package static let minimumScale: CGFloat = 0.85
+
+    /// How wide each tab is when this many share the strip.
+    ///
+    /// Every tab takes an equal share, so one more tab makes every label
+    /// narrower — and a label that will not fit its share is truncated with an
+    /// ellipsis rather than reported. Adding the focus page took "Appearance"
+    /// from 58.9 points of room to 51.0, against the 52.1 it needs at the
+    /// smallest it is allowed to shrink to. It was measured, not noticed.
+    package static func share(forTabs count: Int, windowWidth: CGFloat) -> CGFloat {
+        guard count > 0 else { return 0 }
+        let usable = windowWidth - horizontalPadding * 2 - spacing * CGFloat(count - 1)
+        return max(0, usable) / CGFloat(count)
+    }
+
+    /// Every tab title the window would show, fixed pages first.
+    package static func allTitles(features: [FeatureDescriptor]) -> [String] {
+        SettingsView.Section.allCases.filter { $0 != .supplied }.map(\.title)
+            + suppliedTitles(features)
+    }
+
     package static func supplied(by features: [FeatureDescriptor]) -> [FeatureSettingsPage] {
         features.compactMap(\.page)
     }

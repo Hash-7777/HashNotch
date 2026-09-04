@@ -71,7 +71,17 @@ public final class SettingsWindowController {
     /// Indicators 844, Appearance 748 — because three of them are pages of
     /// prose and one grows a row per feature. Those scroll, and no window that
     /// fits on a laptop screen was ever going to stop them.
-    private static let size = CGSize(width: 460, height: 760)
+    /// Wide enough for the tabs the app actually ships.
+    ///
+    /// It was 460, which fitted seven. The focus page made eight, and eight
+    /// shares of 460 leave "Appearance" a point short of the smallest it may
+    /// shrink to — so it was quietly truncated. `SettingsTabs.share` is the rule
+    /// and the checks hold this width against it.
+    private static let size = CGSize(width: windowWidth, height: 760)
+
+    /// Package-visible so the checks can hold the tab strip against the real
+    /// width rather than against a number copied next to it.
+    package static let windowWidth: CGFloat = 500
     /// The gap between the island's edge and this one.
     private static let gap: CGFloat = 12
     /// How far it starts to the left of its resting place, so it reads as

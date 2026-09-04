@@ -4,6 +4,15 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Fixed
+
+- **The settings window fits its tabs again.** Every tab takes an equal share of
+  the strip, so the focus page's tab made all of them narrower — and "Appearance"
+  ended up a point short of the smallest it is allowed to shrink to, which
+  truncates it with an ellipsis and says nothing. The window is wider, and the
+  rule is now measured against the real font rather than looked at.
+
+
 ### Added
 
 - **A focus cycle, with a week behind it.** A stretch of work, a short rest, and
