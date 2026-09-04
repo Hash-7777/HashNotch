@@ -14,6 +14,7 @@ public final class FocusEngine: ObservableObject {
     @Published public private(set) var tally = FocusTally(day: FocusTallyMath.day(of: Date()))
     @Published public private(set) var now = Date()
     @Published public private(set) var plan = FocusPlan()
+    @Published public private(set) var history = FocusHistory()
 
     private var ticker: PollingSampler?
     private weak var presence: LivePresence?
@@ -38,7 +39,8 @@ public final class FocusEngine: ObservableObject {
         notifier.onAllowedChanged = { [weak self] allowed in
             MainActor.assumeIsolated { self?.alertsAllowed = allowed }
         }
-        tally = FocusTallyMath.current(FocusStore.loadTally(from: defaults), now: Date())
+        history = FocusHistoryStore.load(from: defaults)
+        rollOver(FocusStore.loadTally(from: defaults), now: Date())
 
         // A spell away may have ended a block while nobody was watching. Settle
         // that BEFORE picking a session up, so a block that was walked out of is
@@ -151,9 +153,9 @@ public final class FocusEngine: ObservableObject {
 
     private func tick() {
         now = Date()
-        // The day can turn over under a running block.
-        let rolled = FocusTallyMath.current(tally, now: now)
-        if rolled != tally { tally = rolled; FocusStore.save(tally, to: defaults) }
+        // The day can turn over under a running block. Yesterday is put away
+        // rather than dropped — that is the whole point of keeping any of this.
+        rollOver(tally, now: now)
 
         guard let running = session, now >= running.endsAt else { return }
         complete(running, at: running.endsAt)
@@ -234,6 +236,27 @@ public final class FocusEngine: ObservableObject {
             self.session = stamped
             FocusStore.save(stamped, to: self.defaults)
         }
+    }
+
+    /// Move to today's tally, keeping yesterday if there was anything in it.
+    private func rollOver(_ kept: FocusTally?, now: Date) {
+        let today = FocusTallyMath.day(of: now)
+        if let kept, kept.day != today {
+            history = FocusHistoryMath.archiving(history, finished: kept)
+            FocusHistoryStore.save(history, to: defaults)
+        }
+        let next = FocusTallyMath.current(kept, now: now)
+        guard next != tally else { return }
+        tally = next
+        FocusStore.save(tally, to: defaults)
+    }
+
+    /// Forget the days behind today. Offered because a record of somebody's
+    /// working days is theirs to end, and a promise to keep only a week is
+    /// worth less than a button that empties it now.
+    public func clearHistory() {
+        history = FocusHistory()
+        FocusHistoryStore.clear(from: defaults)
     }
 
     private func updatePresence() {

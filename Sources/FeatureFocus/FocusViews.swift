@@ -8,10 +8,13 @@ struct FocusIconView: View {
 
     var body: some View {
         if let session = engine.session {
-            Image(systemName: session.block.isWork ? "target" : "cup.and.saucer.fill")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(session.block.isWork ? theme.accent : FocusPalette.rest)
-                .transition(.scale.combined(with: .opacity))
+            FocusRing(
+                fraction: session.fractionDone(now: engine.now),
+                tint: session.block.isWork ? theme.accent : FocusPalette.rest,
+                lineWidth: 2.5
+            )
+            .frame(width: 16, height: 16)
+            .transition(.scale(scale: 0.4).combined(with: .opacity))
         }
     }
 }
@@ -37,89 +40,202 @@ struct FocusTitleView: View {
     }
 }
 
-/// Expanded: the cycle, and what the day has come to.
-struct FocusDetailView: View {
-    @ObservedObject var engine: FocusEngine
-    let theme: Theme
+/// A ring that fills as a block is served.
+///
+/// A ring rather than a bar for the one that sits beside the notch: a bar has to
+/// be wide to be read and the strip has no width to spare, while a ring says the
+/// same thing in a square. It is drawn from the top and clockwise, because that
+/// is the direction every clock anybody has looked at goes.
+struct FocusRing: View {
+    var fraction: Double
+    var tint: Color
+    var lineWidth: CGFloat = 4
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
-
-            if let session = engine.session {
-                HStack(spacing: 9) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(session.block.label)
-                            .foregroundStyle(theme.textColor)
-                        Text(session.block.isWork
-                             ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) to the long break"
-                             : "Then back to it")
-                            .font(.system(size: 9))
-                            .foregroundStyle(theme.subtitleColor)
-                    }
-                    Spacer(minLength: 8)
-                    Text(FocusClock.text(session.secondsLeft(now: engine.now)))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(theme.textColor)
-                        .monospacedDigit()
-                        .rollingDigits()
-                }
-
-                ProgressBar(
-                    fraction: session.fractionDone(now: engine.now),
-                    tint: session.block.isWork ? theme.accent : FocusPalette.rest
-                )
-
-                HStack(spacing: 8) {
-                    FocusButton("Skip", theme: theme) { engine.skip() }
-                    FocusButton("Stop", theme: theme) { engine.giveUp() }
-                }
-            } else {
-                HStack(spacing: 8) {
-                    FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true) {
-                        engine.begin(.work)
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-
-            Divider().overlay(theme.subtitleColor.opacity(0.25))
-
-            // The part that does not flatter you.
-            VStack(alignment: .leading, spacing: 2) {
-                Text("TODAY")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(theme.subtitleColor)
-                Text(FocusTallyMath.summary(engine.tally))
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.textColor)
-                if engine.tally.abandonedWork > 0 {
-                    Text("\(engine.tally.abandonedWork) not finished")
-                        .font(.system(size: 9))
-                        .foregroundStyle(theme.subtitleColor)
-                }
-            }
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.14), lineWidth: lineWidth)
+            Circle()
+                .trim(from: 0, to: max(0.001, min(1, fraction)))
+                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
         }
-        .frame(width: Panel.rowWidth, alignment: .leading)
     }
 }
 
-/// A plain bar. The panel has one already for the disk, but that one is a
-/// segmented picture of a filled thing; this is a fraction of a countdown.
-struct ProgressBar: View {
-    let fraction: Double
-    let tint: Color
+/// Expanded: the cycle, and what the day came to.
+struct FocusDetailView: View {
+    @ObservedObject var engine: FocusEngine
+    @ObservedObject var settings: SettingsStore
+    let theme: Theme
+
+    /// Everything here is scaled by the Motion setting and by what this macOS
+    /// can draw in time, like every other animation in the app. A page that
+    /// ignored Motion would be the one place in it that did.
+    private var motion: Double {
+        settings.appearance.motion.responseScale * SystemGeneration.current.motionScale
+    }
+
+    private var tint: Color {
+        guard let session = engine.session else { return theme.accent }
+        return session.block.isWork ? theme.accent : FocusPalette.rest
+    }
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.12))
-                Capsule()
-                    .fill(tint)
-                    .frame(width: max(3, geo.size.width * min(1, max(0, fraction))))
+        VStack(alignment: .leading, spacing: 10) {
+            NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
+
+            if let session = engine.session {
+                running(session)
+            } else {
+                idle
+            }
+
+            if !engine.tally.isEmpty || !engine.history.isEmpty {
+                Divider().overlay(theme.subtitleColor.opacity(0.22))
+                today
             }
         }
-        .frame(height: 4)
+        .frame(width: Panel.rowWidth, alignment: .leading)
+        .animation(.spring(response: 0.42 * motion, dampingFraction: 0.86), value: engine.session?.block)
+        .animation(.spring(response: 0.5 * motion, dampingFraction: 0.8), value: engine.tally.finishedWork)
+    }
+
+    // MARK: While a block runs
+
+    private func running(_ session: FocusSession) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                FocusRing(fraction: session.fractionDone(now: engine.now), tint: tint)
+                    .frame(width: 46, height: 46)
+                    // The ring is redrawn every second, so it must ease over
+                    // exactly one second or it arrives in steps you can see.
+                    .animation(.linear(duration: 1), value: session.fractionDone(now: engine.now))
+                Image(systemName: session.block.isWork ? "target" : "cup.and.saucer.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+                    .id(session.block)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(FocusClock.text(session.secondsLeft(now: engine.now)))
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundStyle(theme.textColor)
+                    .monospacedDigit()
+                    .rollingDigits()
+                Text(session.block.isWork
+                     ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) to the long break"
+                     : "Then back to it")
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.subtitleColor)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 5) {
+                FocusButton("Skip", theme: theme) { engine.skip() }
+                FocusButton("Stop", theme: theme) { engine.giveUp() }
+            }
+        }
+        .transition(.opacity.combined(with: .offset(y: -4)))
+    }
+
+    // MARK: While nothing runs
+
+    private var idle: some View {
+        HStack(spacing: 10) {
+            FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true) {
+                engine.begin(.work)
+            }
+            if engine.alertsAllowed == false {
+                // Never promise what will not happen.
+                Text("Notifications are off, so it will chime instead")
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.subtitleColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .transition(.opacity.combined(with: .offset(y: 4)))
+    }
+
+    // MARK: The day
+
+    private var today: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("TODAY")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(theme.subtitleColor)
+                Spacer(minLength: 8)
+                Text(FocusTallyMath.duration(engine.tally.workSeconds))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(theme.textColor)
+                    .monospacedDigit()
+            }
+
+            FocusBlockDots(
+                done: engine.tally.finishedWork,
+                of: max(engine.plan.worksBeforeLongBreak, FocusHistoryMath.busiestBlocks(engine.history, today: engine.tally)),
+                tint: theme.accent,
+                motion: motion
+            )
+
+            if let average = FocusHistoryMath.averageText(engine.history) {
+                Text(average)
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.subtitleColor)
+            }
+            if engine.tally.abandonedWork > 0 {
+                Text("\(engine.tally.abandonedWork) not finished")
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.subtitleColor)
+            }
+        }
+        .transition(.opacity)
+    }
+}
+
+/// One mark per piece of work, filled as they are earned.
+///
+/// The thing somebody actually wants from a cycle like this is to see the day
+/// stack up, which is why every app of this kind draws something countable. A
+/// sentence of four figures is read; this is glanced at.
+struct FocusBlockDots: View {
+    let done: Int
+    let of: Int
+    let tint: Color
+    let motion: Double
+
+    /// A cap, because a very long day must not push the row past the panel.
+    /// Past this the count beside it carries the number.
+    private static let mostDrawn = 12
+
+    private var drawn: Int { min(max(of, done), Self.mostDrawn) }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<drawn, id: \.self) { index in
+                Circle()
+                    .fill(index < done ? tint : Color.white.opacity(0.14))
+                    .frame(width: 7, height: 7)
+                    // Each one lands a beat after the one before it, so a row
+                    // arriving at once reads as a row rather than a flash.
+                    .scaleEffect(index < done ? 1 : 0.72)
+                    .animation(
+                        .spring(response: 0.34 * motion, dampingFraction: 0.62)
+                            .delay(Double(index) * 0.02 * motion),
+                        value: done
+                    )
+            }
+            if done > Self.mostDrawn {
+                Text("+\(done - Self.mostDrawn)")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -128,6 +244,7 @@ struct FocusButton: View {
     let theme: Theme
     var filled: Bool = false
     let action: () -> Void
+    @State private var hovered = false
 
     init(_ title: String, theme: Theme, filled: Bool = false, action: @escaping () -> Void) {
         self.title = title
@@ -143,11 +260,18 @@ struct FocusButton: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
-                    Capsule().fill(filled ? theme.accent : Color.white.opacity(0.10))
+                    Capsule().fill(
+                        filled
+                            ? theme.accent.opacity(hovered ? 0.85 : 1)
+                            : Color.white.opacity(hovered ? 0.18 : 0.10)
+                    )
                 )
                 .foregroundStyle(filled ? theme.onAccent : theme.textColor)
         }
         .buttonStyle(.plain)
+        .scaleEffect(hovered ? 1.04 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
+        .onHover { hovered = $0 }
     }
 }
 

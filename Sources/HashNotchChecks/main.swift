@@ -3526,6 +3526,96 @@ MainActor.assumeIsolated {
             != DeadlineNotifier(requestIdentifier: "com.hashnotch.timer.deadline").requestIdentifier
     )
 
+    // ── The days behind today ───────────────────────────────────────────────
+    //
+    // Today's figure alone is not information: three hours twenty is good or bad
+    // only against something. The first version kept nothing, so the tally could
+    // never acquire the one thing that would have made it worth reading. What is
+    // kept is a week, and the rules for it cannot be exercised by living through
+    // one.
+    let dayOne = FocusTally(day: today.addingTimeInterval(-86_400), workSeconds: 7_200, finishedWork: 4)
+    let dayTwo = FocusTally(day: today.addingTimeInterval(-172_800), workSeconds: 3_600, finishedWork: 2)
+
+    check(
+        "a finished day is put away, newest first",
+        {
+            let after = FocusHistoryMath.archiving(FocusHistoryMath.archiving(FocusHistory(), finished: dayTwo), finished: dayOne)
+            return after.days.count == 2 && after.days[0] == dayOne
+        }()
+    )
+    check(
+        "a day with nothing in it is not kept, so a weekend does not drag the average down",
+        FocusHistoryMath.archiving(FocusHistory(), finished: FocusTally(day: today)).isEmpty
+    )
+    check(
+        "the same day put away twice is kept once, not twice",
+        {
+            let once = FocusHistoryMath.archiving(FocusHistory(), finished: dayOne)
+            return FocusHistoryMath.archiving(once, finished: dayOne).days.count == 1
+        }()
+    )
+    check(
+        "only a week is kept, and it is the most recent week",
+        {
+            var history = FocusHistory()
+            for index in 1...12 {
+                history = FocusHistoryMath.archiving(history, finished: FocusTally(
+                    day: today.addingTimeInterval(TimeInterval(-86_400 * index)),
+                    workSeconds: TimeInterval(index * 600),
+                    finishedWork: index
+                ))
+            }
+            // Newest first, and the newest of those twelve is the one added last.
+            return history.days.count == FocusHistory.keptDays && history.days[0].finishedWork == 12
+        }()
+    )
+    check(
+        "an average needs a day to average, and says nothing without one",
+        FocusHistoryMath.averageWorkSeconds(FocusHistory()) == nil
+            && FocusHistoryMath.averageText(FocusHistory()) == nil
+    )
+    check(
+        "the average is over the days that had work in them",
+        {
+            let history = FocusHistory(days: [dayOne, dayTwo])
+            guard let average = FocusHistoryMath.averageWorkSeconds(history) else { return false }
+            return Int(average) == 5_400
+        }()
+    )
+    check(
+        "a day where nothing was done does not count towards it",
+        {
+            let history = FocusHistory(days: [dayOne, dayTwo, FocusTally(day: today.addingTimeInterval(-259_200), workSeconds: 3)])
+            guard let average = FocusHistoryMath.averageWorkSeconds(history) else { return false }
+            return Int(average) == 5_400
+        }()
+    )
+    check(
+        "what it says is a fact about an ordinary day, never a verdict on this one",
+        {
+            // A part-finished day set against whole ones would flatter somebody
+            // at six in the evening and scold them at ten in the morning, with
+            // the same number doing both.
+            guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
+            return text.contains("on an average day")
+                && !text.lowercased().contains("behind")
+                && !text.lowercased().contains("ahead")
+                && !text.contains("%")
+        }()
+    )
+    check(
+        "one day is a day, not one days",
+        FocusHistoryMath.averageText(FocusHistory(days: [dayOne]))?.hasSuffix("over 1 day") == true
+    )
+    check(
+        "the row of marks is drawn against the busiest day, so it does not rescale under somebody mid-morning",
+        FocusHistoryMath.busiestBlocks(FocusHistory(days: [dayOne, dayTwo]), today: FocusTally(day: today, finishedWork: 1)) == 4
+    )
+    check(
+        "and a record day sets its own scale",
+        FocusHistoryMath.busiestBlocks(FocusHistory(days: [dayOne]), today: FocusTally(day: today, finishedWork: 9)) == 9
+    )
+
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")
     check("and grows an hours field only when there are hours", FocusClock.text(3_725) == "1:02:05")
     check("a countdown cannot go negative", FocusClock.text(-30) == "0:00")

@@ -50,6 +50,18 @@ struct FocusSettingsView: View {
                 }
             }
 
+            SettingCard {
+                SettingRow(
+                    "The days behind today",
+                    detail: engine.history.isEmpty
+                        ? "Nothing kept yet. Finished days are kept here so today has something to compare against."
+                        : "\(engine.history.days.count) \(engine.history.days.count == 1 ? "day" : "days") kept, at most \(FocusHistory.keptDays). Four numbers and a date each \u{2014} never what you were working on. Nothing is sent anywhere."
+                ) {
+                    Button("Forget them") { engine.clearHistory() }
+                        .disabled(engine.history.isEmpty)
+                }
+            }
+
             Spacer(minLength: 0)
         }
     }
