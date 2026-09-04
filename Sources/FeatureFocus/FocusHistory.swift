@@ -63,14 +63,9 @@ public enum FocusHistoryMath {
     /// cannot.
     public static func averageText(_ history: FocusHistory) -> String? {
         guard let average = averageWorkSeconds(history) else { return nil }
-        return "Usually \(FocusTallyMath.duration(average))"
+        return "Usually \(FocusTallyMath.duration(average)) a day"
     }
 
-    /// The most blocks finished on any day kept, which is what the row of marks
-    /// is drawn against so it does not rescale under somebody mid-morning.
-    public static func busiestBlocks(_ history: FocusHistory, today: FocusTally) -> Int {
-        max(today.finishedWork, history.days.map(\.finishedWork).max() ?? 0)
-    }
 }
 
 /// Where the days behind today are kept.

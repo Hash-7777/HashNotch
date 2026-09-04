@@ -33,11 +33,19 @@ All notable changes to HashNotch are recorded here.
   working on, and a day with nothing in it is not kept at all so a weekend does
   not drag the average down.
 
-  What it says about them is short and is a fact rather than a verdict:
-  "Usually 1 hr 50 min". Setting a part-finished day against whole ones would
-  flatter you at six in the evening and scold you at ten in the morning, with
-  the same number doing both. One press in the settings page deletes the lot,
-  and nothing is ever sent anywhere.
+  Every figure says what it counts. "1 hr 15 min focused", not "1 hr 15 min";
+  "3 rounds done" beside the marks, so they are not decoration somebody counts
+  and then wonders about; "1 round stopped early". The word is round, because
+  that is the word the settings page already used — "block" was invented here
+  and appeared nowhere a person would have met it. The marks are only the rounds
+  that happened: empty ones scaled to your busiest day read as "3 of 6" against
+  a target of six that did not exist.
+
+  What it says about past days is short and a fact rather than a verdict:
+  "Usually 1 hr 50 min a day". Setting a part-finished day against whole ones
+  would flatter you at six in the evening and scold you at ten in the morning,
+  with the same number doing both. One press in the settings page deletes the
+  lot, and nothing is ever sent anywhere.
 
   A block that ends tells you so. The deadline is handed to the system rather
   than announced by the app, so the alert lands on time whether the display is

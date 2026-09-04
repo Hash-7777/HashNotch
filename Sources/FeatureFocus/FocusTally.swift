@@ -92,7 +92,30 @@ public enum FocusTallyMath {
         return next
     }
 
-    /// How the day is said, in the fewest words that are still true.
+    /// What the day's figures are CALLED.
+    ///
+    /// Kept as rules rather than written into the view, because the wording has
+    /// been wrong twice and both times for the same reason: a number was shown
+    /// without the noun that says what it counts. "1 hr 15 min" of what. "3"
+    /// of what. Short is not the goal — a reader who has to guess has been given
+    /// nothing, however few words it took.
+    ///
+    /// The word is "round", because that is the word the settings page already
+    /// uses. "Block" was this file's own coinage and appeared nowhere a person
+    /// would have met it.
+    public static func focusedText(_ seconds: TimeInterval) -> String {
+        "\(duration(seconds)) focused"
+    }
+
+    public static func roundsText(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "round" : "rounds") done"
+    }
+
+    public static func stoppedText(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "round" : "rounds") stopped early"
+    }
+
+    /// How long something lasted, in the fewest words that are still true.
     ///
     /// Hours and minutes, and never "0 hr 20 min" — a leading zero hour is a
     /// word that carries nothing.

@@ -3597,7 +3597,7 @@ MainActor.assumeIsolated {
             // at six in the evening and scold them at ten in the morning, with
             // the same number doing both.
             guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
-            return text.hasPrefix("Usually ")
+            return text.hasPrefix("Usually ") && text.hasSuffix(" a day")
                 && !text.lowercased().contains("behind")
                 && !text.lowercased().contains("ahead")
                 && !text.contains("%")
@@ -3609,16 +3609,42 @@ MainActor.assumeIsolated {
             // It read "1 hr 50 min on an average day, over 6 days" \u{2014} two
             // clauses and the sample size explained to somebody who did not ask.
             guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
-            return text.count <= 24 && !text.contains(",")
+            return text.count <= 32 && !text.contains(",")
         }()
     )
+    // ── Saying what a number counts ─────────────────────────────────────────
+    //
+    // Reported twice as unclear, and twice for the same reason: a figure shown
+    // without the noun that says what it counts. "1 hr 15 min" of what. "3" of
+    // what. These are rules rather than strings in a view, because that is the
+    // mistake this panel keeps making.
     check(
-        "the row of marks is drawn against the busiest day, so it does not rescale under somebody mid-morning",
-        FocusHistoryMath.busiestBlocks(FocusHistory(days: [dayOne, dayTwo]), today: FocusTally(day: today, finishedWork: 1)) == 4
+        "a time is never shown without saying what it counts",
+        FocusTallyMath.focusedText(4_500) == "1 hr 15 min focused"
     )
     check(
-        "and a record day sets its own scale",
-        FocusHistoryMath.busiestBlocks(FocusHistory(days: [dayOne]), today: FocusTally(day: today, finishedWork: 9)) == 9
+        "the marks are named, in the word the settings page already uses",
+        // "block" was this file's own coinage and appeared nowhere a person
+        // would have met it. The settings page says rounds, so this says rounds.
+        FocusTallyMath.roundsText(3) == "3 rounds done"
+            && FocusTallyMath.roundsText(1) == "1 round done"
+    )
+    check(
+        "and a round somebody gave up on says what happened to it",
+        FocusTallyMath.stoppedText(1) == "1 round stopped early"
+            && FocusTallyMath.stoppedText(2) == "2 rounds stopped early"
+    )
+    check(
+        "no line in the day says a bare number with no noun after it",
+        [
+            FocusTallyMath.focusedText(4_500),
+            FocusTallyMath.roundsText(3),
+            FocusTallyMath.stoppedText(1),
+            FocusHistoryMath.averageText(FocusHistory(days: [dayOne])) ?? "",
+        ].allSatisfy { line in
+            guard let last = line.split(separator: " ").last else { return false }
+            return !last.allSatisfy(\.isNumber)
+        }
     )
 
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")

@@ -125,7 +125,7 @@ struct FocusDetailView: View {
                     .monospacedDigit()
                     .rollingDigits()
                 Text(session.block.isWork
-                     ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) more until a long rest"
+                     ? "\(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) more rounds until a long rest"
                      : "Then back to work")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
@@ -169,18 +169,24 @@ struct FocusDetailView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(theme.subtitleColor)
                 Spacer(minLength: 8)
-                Text(FocusTallyMath.duration(engine.tally.workSeconds))
+                // The noun is the point. "1 hr 15 min" on its own is a number
+                // somebody has to guess the meaning of.
+                Text(FocusTallyMath.focusedText(engine.tally.workSeconds))
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(theme.textColor)
-                    .monospacedDigit()
             }
 
-            FocusBlockDots(
-                done: engine.tally.finishedWork,
-                of: max(engine.plan.worksBeforeLongBreak, FocusHistoryMath.busiestBlocks(engine.history, today: engine.tally)),
-                tint: theme.accent,
-                motion: motion
-            )
+            if engine.tally.finishedWork > 0 {
+                HStack(spacing: 7) {
+                    FocusRoundDots(done: engine.tally.finishedWork, tint: theme.accent, motion: motion)
+                    // What the marks ARE. Without this they are decoration that
+                    // somebody counts and then wonders about.
+                    Text(FocusTallyMath.roundsText(engine.tally.finishedWork))
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.subtitleColor)
+                    Spacer(minLength: 0)
+                }
+            }
 
             if let average = FocusHistoryMath.averageText(engine.history) {
                 Text(average)
@@ -188,7 +194,7 @@ struct FocusDetailView: View {
                     .foregroundStyle(theme.subtitleColor)
             }
             if engine.tally.abandonedWork > 0 {
-                Text("\(engine.tally.abandonedWork) block\(engine.tally.abandonedWork == 1 ? "" : "s") not finished")
+                Text(FocusTallyMath.stoppedText(engine.tally.abandonedWork))
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
             }
@@ -197,32 +203,30 @@ struct FocusDetailView: View {
     }
 }
 
-/// One mark per piece of work, filled as they are earned.
+/// One mark per round finished.
 ///
-/// The thing somebody actually wants from a cycle like this is to see the day
-/// stack up, which is why every app of this kind draws something countable. A
-/// sentence of four figures is read; this is glanced at.
-struct FocusBlockDots: View {
+/// Only the rounds that happened. It used to draw empty ones as well, scaled to
+/// the busiest day kept — which read as "3 of 6 done" against a target of six
+/// that did not exist anywhere. A row that grows as the day goes says the same
+/// thing and invents nothing.
+struct FocusRoundDots: View {
     let done: Int
-    let of: Int
     let tint: Color
     let motion: Double
 
-    /// A cap, because a very long day must not push the row past the panel.
-    /// Past this the count beside it carries the number.
-    private static let mostDrawn = 12
-
-    private var drawn: Int { min(max(of, done), Self.mostDrawn) }
+    /// A cap, so a very long day cannot push the row past the panel. Past this
+    /// the count beside it carries the number.
+    private static let mostDrawn = 10
 
     var body: some View {
         HStack(spacing: 5) {
-            ForEach(0..<drawn, id: \.self) { index in
+            ForEach(0..<min(done, Self.mostDrawn), id: \.self) { index in
                 Circle()
-                    .fill(index < done ? tint : Color.white.opacity(0.14))
+                    .fill(tint)
                     .frame(width: 7, height: 7)
-                    // Each one lands a beat after the one before it, so a row
-                    // arriving at once reads as a row rather than a flash.
-                    .scaleEffect(index < done ? 1 : 0.72)
+                    // Each lands a beat after the one before, so a row arriving
+                    // at once reads as a row rather than a flash.
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
                     .animation(
                         .spring(response: 0.34 * motion, dampingFraction: 0.62)
                             .delay(Double(index) * 0.02 * motion),
@@ -234,7 +238,6 @@ struct FocusBlockDots: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(tint)
             }
-            Spacer(minLength: 0)
         }
     }
 }
