@@ -16,7 +16,10 @@ struct CallIconView: View {
                         .interpolation(.high)
                         .frame(width: 20, height: 20)
                 } else {
-                    Image(systemName: "mic.fill")
+                    // No app to show, so the symbol has to carry which thing is
+                    // live. A camera on its own can never be attributed, so this
+                    // is the ordinary case for it rather than a rare fallback.
+                    Image(systemName: monitor.use?.microphone == true ? "mic.fill" : "video.fill")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(CallPalette.live)
                         .frame(width: 20, height: 20)
@@ -35,21 +38,31 @@ struct CallIconView: View {
     }
 }
 
-/// Trailing compact: how long, and that the microphone is the reason.
+/// Trailing compact: how long, and which of the two is the reason.
 struct CallTitleView: View {
     @ObservedObject var monitor: CallMonitor
     let theme: Theme
 
     var body: some View {
         if let use = monitor.use {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Text(CallReader.elapsedText(use.elapsed(now: monitor.now)))
                     .foregroundStyle(theme.textColor)
                     .monospacedDigit()
                     .rollingDigits()
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(CallPalette.live)
+                // One symbol per thing that is live, so a glance at the strip
+                // says whether you are heard, seen, or both — which is the
+                // thing people get wrong in a meeting.
+                if use.microphone {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(CallPalette.live)
+                }
+                if use.camera {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(CallPalette.live)
+                }
             }
             .fixedSize(horizontal: true, vertical: false)
             .transition(.opacity.combined(with: .offset(x: -6)))
@@ -57,8 +70,8 @@ struct CallTitleView: View {
     }
 }
 
-/// Expanded: which app, how long, and — the part that matters — what the app
-/// does and does not know about it.
+/// Expanded: what is live, which app when that can be answered, how long, and —
+/// the part that matters — what this app does and does not know about it.
 struct CallDetailView: View {
     @ObservedObject var monitor: CallMonitor
     let theme: Theme
@@ -66,7 +79,14 @@ struct CallDetailView: View {
     var body: some View {
         if let use = monitor.use {
             VStack(alignment: .leading, spacing: 7) {
-                NotchSectionHeader("MICROPHONE", icon: .microphone, theme: theme)
+                NotchSectionHeader(
+                    CallReader.headline(microphone: use.microphone, camera: use.camera),
+                    // The microphone's mark stands for both when both are live:
+                    // one heading gets one mark, and the words beside it already
+                    // name the pair.
+                    icon: use.microphone ? .microphone : .camera,
+                    theme: theme
+                )
 
                 HStack(spacing: 9) {
                     if let icon = monitor.appIcon() {
@@ -84,20 +104,19 @@ struct CallDetailView: View {
                                 .foregroundStyle(theme.textColor)
                                 .lineLimit(1)
                         }
-                        // Only claim an owner when there is one. When the
-                        // microphone is held by a background service nothing
-                        // could attribute, the name above already says
-                        // "Microphone in use" and a second line insisting it
-                        // belongs to something would be inventing a fact.
-                        if use.isNamedApp {
-                            Text("has your microphone open")
-                                .font(.system(size: 9))
-                                .foregroundStyle(theme.subtitleColor)
-                        } else {
-                            Text("by a background service")
-                                .font(.system(size: 9))
-                                .foregroundStyle(theme.subtitleColor)
-                        }
+                        // Only claim an owner when there is one. When nothing
+                        // could be attributed, the name above is already a
+                        // statement rather than an app, and a second line
+                        // insisting it belongs to something would invent a fact.
+                        // A camera on its own is always in that case: nothing
+                        // macOS publishes can say whose it is.
+                        Text(CallReader.subtitle(
+                            microphone: use.microphone,
+                            camera: use.camera,
+                            isNamedApp: use.isNamedApp
+                        ))
+                        .font(.system(size: 9))
+                        .foregroundStyle(theme.subtitleColor)
                     }
                     Spacer(minLength: 8)
                     Text(CallReader.elapsedText(use.elapsed(now: monitor.now)))
@@ -111,7 +130,7 @@ struct CallDetailView: View {
                 // one readout where somebody is entitled to wonder. An app that
                 // notices your microphone should say what it noticed with, and
                 // it should say it where the noticing is on screen.
-                Text("HashNotch only sees that an app opened the microphone. It never listens, records or transcribes, and has no microphone permission of its own.")
+                Text("HashNotch only sees that a microphone or camera was opened. It never listens, watches, records or transcribes, and holds no microphone or camera permission of its own.")
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
                     .fixedSize(horizontal: false, vertical: true)

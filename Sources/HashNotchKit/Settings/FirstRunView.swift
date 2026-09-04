@@ -216,9 +216,9 @@ package enum ConsentReadings {
         Reader(
             id: "call",
             icon: "mic",
-            title: "Microphone in use",
-            reads: "Asks macOS one yes-or-no question per app: does this app have the microphone open?",
-            never: "Never listens, records or transcribes. The app holds no microphone permission and could not use one."
+            title: "Microphone and camera in use",
+            reads: "Asks macOS one yes-or-no question per app — does this app have the microphone open? — and one per camera: is this camera running?",
+            never: "Never listens, watches, records or transcribes. The app holds no microphone or camera permission and could not use one. It cannot tell which app a camera belongs to, and does not guess."
         ),
         Reader(
             id: "downloads",

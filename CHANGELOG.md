@@ -4,6 +4,27 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Added
+
+- **The notch now says when a camera is on, not just a microphone.** It is the
+  same question asked of the other device — one yes-or-no per camera, no video
+  opened, no frame read, nothing recorded, and no camera permission held or
+  needed. Measured: it reads with no permission and no prompt, and turns on
+  within a second of an app opening a camera.
+
+  One row rather than two, because something using both is one thing happening.
+  A video call reads as a single line that names the app, times it, and shows a
+  microphone, a camera, or both — so a glance says which of the two is live.
+  Muting yourself in an app that really releases the microphone leaves the
+  camera behind without restarting the clock, because the call did not end.
+
+  Two things it will not do. A camera cannot be traced to an app — macOS
+  publishes no list of which process holds one — so a camera on its own is shown
+  as live and named as nothing, rather than blamed on whichever app seems most
+  likely. And it reports that an app **holds** your microphone, which is not the
+  same as you being heard: many apps, Google Meet among them, keep it open and
+  mute in software.
+
 ### Fixed
 
 - **The microphone readout names the app you are actually in.** During a

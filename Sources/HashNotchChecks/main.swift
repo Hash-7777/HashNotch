@@ -2901,6 +2901,112 @@ MainActor.assumeIsolated {
             listener.isNamedApp || listener.name == "Microphone in use"
         } ?? true
     )
+    // ── The camera, and the two of them together ────────────────────────────
+    //
+    // The camera is read the same way the microphone is: one boolean per device,
+    // no video opened, no frame read, no permission held. What it CANNOT do is
+    // name an app — CoreMediaIO publishes no list of processes to ask — so a
+    // camera on its own is reported live and unnamed rather than attributed to
+    // whichever app seems likely.
+    //
+    // A camera-less machine is a real case: this runs on a hosted runner that
+    // has none. So nothing here asserts that a camera exists, only that the two
+    // answers agree with each other.
+    check(
+        "a camera cannot be running unless it exists",
+        CameraReader.capturingCount() <= CameraReader.deviceCount()
+    )
+    check(
+        "and the yes-or-no answer agrees with the count behind it",
+        CameraReader.isCapturing() == (CameraReader.capturingCount() > 0)
+    )
+    check(
+        "a machine with no cameras reports none in use rather than failing",
+        CameraReader.deviceCount() >= 0 && (CameraReader.deviceCount() > 0 || !CameraReader.isCapturing())
+    )
+
+    // The heading over the row says which of the two is live. This is the whole
+    // point of folding them together: one row that can say "both".
+    check("a microphone alone is a microphone", CallReader.headline(microphone: true, camera: false) == "MICROPHONE")
+    check("a camera alone is a camera", CallReader.headline(microphone: false, camera: true) == "CAMERA")
+    check("and the two together are one heading, not two rows", CallReader.headline(microphone: true, camera: true) == "MICROPHONE AND CAMERA")
+    check("with nothing live there is nothing to head", CallReader.headline(microphone: false, camera: false).isEmpty)
+    check(
+        "no two of the three live headings read the same",
+        Set([
+            CallReader.headline(microphone: true, camera: false),
+            CallReader.headline(microphone: false, camera: true),
+            CallReader.headline(microphone: true, camera: true),
+        ]).count == 3
+    )
+
+    // The line under the name. When an app is named it finishes a sentence about
+    // that app; when nothing could be named the name above is already a
+    // statement, and this must not insist it belongs to something.
+    check(
+        "a named app is said to have the thing open",
+        CallReader.subtitle(microphone: true, camera: false, isNamedApp: true) == "has your microphone open"
+            && CallReader.subtitle(microphone: false, camera: true, isNamedApp: true) == "has your camera open"
+            && CallReader.subtitle(microphone: true, camera: true, isNamedApp: true) == "has your microphone and camera open"
+    )
+    check(
+        "and an unnamed camera claims no owner at all",
+        CallReader.subtitle(microphone: false, camera: true, isNamedApp: false) == "no app could be named for it"
+    )
+    check(
+        "no unnamed subtitle claims the thing belongs to anybody",
+        [(true, true), (true, false), (false, true)].allSatisfy { microphone, camera in
+            let line = CallReader.subtitle(microphone: microphone, camera: camera, isNamedApp: false)
+            return !line.contains("your") && !line.isEmpty
+        }
+    )
+    check(
+        "what an unattributable reading is called says which half is live",
+        CallReader.unattributedName(microphone: true, camera: false) == "Microphone in use"
+            && CallReader.unattributedName(microphone: false, camera: true) == "Camera in use"
+            && CallReader.unattributedName(microphone: true, camera: true) == "Microphone and camera in use"
+    )
+
+    // Muting yourself mid-call takes the microphone, and the app's name with it,
+    // leaving a camera nobody can attribute. The clock must not restart there —
+    // that would say the call had ended, and it had not.
+    check(
+        "the same app holding on is the same session",
+        CallReader.isSameSession(previousBundle: "us.zoom.xos", previousIsNamed: true, bundle: "us.zoom.xos", isNamed: true)
+    )
+    check(
+        "muting yourself does not restart the clock",
+        CallReader.isSameSession(previousBundle: "us.zoom.xos", previousIsNamed: true, bundle: "", isNamed: false)
+    )
+    check(
+        "and neither does unmuting, which hands the name back",
+        CallReader.isSameSession(previousBundle: "", previousIsNamed: false, bundle: "us.zoom.xos", isNamed: true)
+    )
+    check(
+        "one unnamed reading following another is still one session",
+        CallReader.isSameSession(previousBundle: "", previousIsNamed: false, bundle: "", isNamed: false)
+    )
+    check(
+        "but one app handing over to a different app is a new session",
+        !CallReader.isSameSession(previousBundle: "us.zoom.xos", previousIsNamed: true, bundle: "com.apple.FaceTime", isNamed: true)
+    )
+
+    // The reading itself: both halves can be live, and either can be alone.
+    check(
+        "a reading can carry the microphone, the camera, or both",
+        {
+            let both = MicrophoneOrCameraUse(
+                appName: "Safari", bundleIdentifier: "com.apple.Safari", isNamedApp: true,
+                microphone: true, camera: true, since: Date())
+            let cameraOnly = MicrophoneOrCameraUse(
+                appName: "Camera in use", bundleIdentifier: "", isNamedApp: false,
+                microphone: false, camera: true, since: Date())
+            return both.microphone && both.camera
+                && !cameraOnly.microphone && cameraOnly.camera
+                && cameraOnly.isNamedApp == false
+        }()
+    )
+
     check(
         "an unattributed microphone still reports that it is live",
         {
@@ -5697,7 +5803,7 @@ check(
 )
 
 // A mark that came out the same as another one is the copy-and-paste failure
-// this family is most exposed to: eleven marks written one after another, each
+// this family is most exposed to: twelve marks written one after another, each
 // from the shape of the last.
 check(
     "no two marks are the same drawing",

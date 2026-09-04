@@ -139,7 +139,7 @@ package enum CallReader {
         // name, which tells the reader nothing and looks like a bug.
         return Listener(
             bundleIdentifier: listeners[0].bundleIdentifier,
-            name: "Microphone in use",
+            name: unattributedName(microphone: true, camera: false),
             processID: listeners[0].processID,
             isNamedApp: false
         )
@@ -163,7 +163,7 @@ package enum CallReader {
         guard inputBusyDeviceWide() else { return nil }
         return Listener(
             bundleIdentifier: "",
-            name: "Microphone in use",
+            name: unattributedName(microphone: true, camera: false),
             processID: 0,
             isNamedApp: false
         )
@@ -366,6 +366,77 @@ package enum CallReader {
             device, &runningAddress, 0, nil, &runningSize, &running
         ) == noErr else { return false }
         return running != 0
+    }
+
+    // MARK: The words, and when one reading is still the same reading
+    //
+    // Pure rules, kept here beside the readings they describe, so the checks can
+    // ask them directly rather than through a call somebody has to be having.
+
+    /// The heading over the row: what is live, named plainly.
+    package static func headline(microphone: Bool, camera: Bool) -> String {
+        switch (microphone, camera) {
+        case (true, true): return "MICROPHONE AND CAMERA"
+        case (true, false): return "MICROPHONE"
+        case (false, true): return "CAMERA"
+        case (false, false): return ""
+        }
+    }
+
+    /// The line under the app's name.
+    ///
+    /// Two shapes, because there are two situations. When an app is named, this
+    /// finishes a sentence about it. When nothing could be named — a background
+    /// service holding the microphone, or a camera, which cannot be attributed
+    /// at all — the name above is already a statement rather than an app, and
+    /// this says how it is being used without inventing an owner for it.
+    package static func subtitle(microphone: Bool, camera: Bool, isNamedApp: Bool) -> String {
+        guard isNamedApp else {
+            switch (microphone, camera) {
+            case (true, true): return "a microphone and a camera are in use"
+            case (true, false): return "by a background service"
+            case (false, true): return "no app could be named for it"
+            case (false, false): return ""
+            }
+        }
+        switch (microphone, camera) {
+        case (true, true): return "has your microphone and camera open"
+        case (true, false): return "has your microphone open"
+        case (false, true): return "has your camera open"
+        case (false, false): return ""
+        }
+    }
+
+    /// What to call the reading when nothing can be attributed to an app.
+    package static func unattributedName(microphone: Bool, camera: Bool) -> String {
+        switch (microphone, camera) {
+        case (true, true): return "Microphone and camera in use"
+        case (true, false): return "Microphone in use"
+        case (false, true): return "Camera in use"
+        case (false, false): return ""
+        }
+    }
+
+    /// Whether what is live now is a continuation of what was live a moment ago,
+    /// so the clock keeps running instead of starting again.
+    ///
+    /// The microphone can name an app and the camera cannot, so an ordinary
+    /// video call crosses between named and unnamed without anything actually
+    /// stopping: mute yourself and the app's name goes with the microphone,
+    /// leaving a camera nobody can attribute. Restarting the timer there would
+    /// say the call had ended, which it had not.
+    ///
+    /// So a change of name only counts as a new session when BOTH ends are named
+    /// and the names differ — which is the one case where something really did
+    /// hand over to something else.
+    package static func isSameSession(
+        previousBundle: String,
+        previousIsNamed: Bool,
+        bundle: String,
+        isNamed: Bool
+    ) -> Bool {
+        guard previousIsNamed, isNamed else { return true }
+        return previousBundle == bundle
     }
 
     /// How long a call has been running, as the notch says it.

@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-965%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="965 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-983%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="983 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -47,7 +47,9 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Now playing** — anything that plays: Spotify, Apple Music, TV, Podcasts, Anghami, VLC, a browser tab. Title, artist, live position, a progress bar you can drag, and a volume slider. Album art comes from Spotify and Apple Music, and a video's thumbnail from your browser; anything else shows a placeholder tile.
 
-**Microphone** — the moment any app opens your microphone, a live dot and a running timer appear beside the notch, with that app's own icon: FaceTime, Zoom, Teams, a browser call, a voice memo. It asks macOS one yes-or-no question — *does this app have an input stream open* — and **never listens, records or transcribes**. It holds no microphone permission of its own, and could not use one.
+**Microphone and camera** — the moment any app opens your microphone or a camera, a live dot and a running timer appear beside the notch, with that app's own icon: FaceTime, Zoom, Teams, a browser call, a voice memo. One row, not two, so a video call reads as one thing — and the strip shows a microphone, a camera, or both, so a glance says which. It asks macOS one yes-or-no question per app — *does this app have an input stream open* — and one per camera — *is this camera running* — and **never listens, watches, records or transcribes**. It holds no microphone or camera permission of its own, and could not use one.
+
+> A camera cannot be traced to an app: macOS publishes no list of which process is using one, so a camera on its own is shown as live and named as nothing rather than blamed on a likely guess. And this says an app **holds** your microphone, which is not the same as you being heard — plenty of apps, Google Meet among them, keep it open and mute in software.
 
 **Internet** — live upload and download, with the last half-minute graphed underneath, and how much has gone through: today, this month, or since you last reset it. Underneath that, a list you can open: the three programs that used the most, each row drawn as the length it used against the biggest — so a large figure says where it went instead of just being large, and the biggest is obvious before you read a number. What one program sent and received separately is one hover away. Shut, it still names the biggest. Those three are counted only while HashNotch is running, and the panel says so: your Mac keeps no per-program history, because those counters live inside the programs themselves and go when they do. The total above them has no such limit. Your choice of span under Settings → General, and the breakdown has its own switch there.
 
@@ -81,7 +83,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 965 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 983 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
