@@ -21,14 +21,18 @@ struct CallIconView: View {
                     // is the ordinary case for it rather than a rare fallback.
                     Image(systemName: monitor.use?.microphone == true ? "mic.fill" : "video.fill")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(CallPalette.live)
+                        .foregroundStyle(CallPalette.dot(
+                            microphone: monitor.use?.microphone ?? false,
+                            camera: monitor.use?.camera ?? false))
                         .frame(width: 20, height: 20)
                 }
                 // The dot. Small, bright, and on the icon rather than beside it,
                 // so it reads as "this app has your microphone" rather than as a
                 // decoration that happens to be nearby.
                 Circle()
-                    .fill(CallPalette.live)
+                    .fill(CallPalette.dot(
+                        microphone: monitor.use?.microphone ?? false,
+                        camera: monitor.use?.camera ?? false))
                     .frame(width: 7, height: 7)
                     .overlay(Circle().stroke(Color.black, lineWidth: 1.5))
                     .offset(x: 2, y: 2)
@@ -56,12 +60,12 @@ struct CallTitleView: View {
                 if use.microphone {
                     Image(systemName: "mic.fill")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(CallPalette.live)
+                        .foregroundStyle(CallPalette.microphone)
                 }
                 if use.camera {
                     Image(systemName: "video.fill")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(CallPalette.live)
+                        .foregroundStyle(CallPalette.camera)
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -98,7 +102,8 @@ struct CallDetailView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 5) {
                             Circle()
-                                .fill(CallPalette.live)
+                                .fill(CallPalette.dot(
+                                    microphone: use.microphone, camera: use.camera))
                                 .frame(width: 6, height: 6)
                             Text(use.appName)
                                 .foregroundStyle(theme.textColor)
@@ -140,8 +145,34 @@ struct CallDetailView: View {
     }
 }
 
-enum CallPalette {
+package enum CallPalette {
     /// The same orange macOS itself uses for its microphone indicator, so it
     /// reads as the system's own warning rather than as this app's decoration.
-    static let live = Color(red: 1.00, green: 0.58, blue: 0.00)
+    package static let microphone = Color(red: 1.00, green: 0.58, blue: 0.00)
+
+    /// And the green it uses for the camera, for exactly the same reason.
+    ///
+    /// The two halves of this readout were both drawn in the microphone's
+    /// orange to begin with, which broke the promise the line above makes:
+    /// macOS says orange for a microphone and GREEN for a camera, so a camera
+    /// drawn in orange is speaking the system's language for one symbol and not
+    /// the other. Somebody glancing at the strip during a call already has the
+    /// system's colours in the menu bar above it.
+    ///
+    /// `NSColor.systemGreen` in the dark appearance, measured — rgb(0.188,
+    /// 0.820, 0.345) — and written out rather than taken live, because the
+    /// island is black whatever appearance the Mac is set to, and a dynamic
+    /// colour would shift with a setting that changes nothing underneath it.
+    package static let camera = Color(red: 0.188, green: 0.820, blue: 0.345)
+
+    /// The colour of the live dot on the app's icon, and of the stand-in symbol
+    /// when there is no icon to put it on.
+    ///
+    /// One dot, two things it could mean, so the camera wins — which is what
+    /// macOS does too: with both live it shows the green one. Being seen is the
+    /// larger fact, and it is the one somebody wants to know from across the
+    /// room.
+    package static func dot(microphone: Bool, camera: Bool) -> Color {
+        camera ? Self.camera : Self.microphone
+    }
 }

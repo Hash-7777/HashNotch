@@ -25,6 +25,15 @@ All notable changes to HashNotch are recorded here.
   same as you being heard: many apps, Google Meet among them, keep it open and
   mute in software.
 
+- **A live camera is green and a live microphone is orange, the way macOS says
+  them.** Both were drawn in the microphone's orange at first, which kept the
+  reason the colour was chosen — it is the system's own signal, not this app's
+  decoration — and lost the point of it, since macOS says orange for a
+  microphone and green for a camera. Anybody glancing at the strip has the
+  system's own dots in the menu bar directly above it. The live dot on the app's
+  icon follows the same rule and shows green when a camera is live, which is
+  what macOS does when both are on.
+
 ### Fixed
 
 - **The microphone readout names the app you are actually in.** During a

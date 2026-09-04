@@ -2912,6 +2912,41 @@ MainActor.assumeIsolated {
     // A camera-less machine is a real case: this runs on a hosted runner that
     // has none. So nothing here asserts that a camera exists, only that the two
     // answers agree with each other.
+    // ── The two symbols speak the system's colour language ──────────────────
+    //
+    // The palette's whole justification is that it borrows the colours macOS
+    // itself uses, so the strip reads as the system's signal rather than as this
+    // app's decoration. macOS says orange for a microphone and green for a
+    // camera. Both symbols were drawn in the microphone's orange to begin with,
+    // which kept the justification and dropped the point of it — and somebody
+    // glancing at the strip has the system's own dots in the menu bar directly
+    // above it.
+    check(
+        "the microphone and the camera are not drawn in the same colour",
+        Theme.perceptualDistance(CallPalette.microphone, CallPalette.camera) >= 20
+    )
+    check(
+        "and neither of them can be mistaken for a reading that is running high",
+        [CallPalette.microphone, CallPalette.camera].allSatisfy { live in
+            Theme.perceptualDistance(live, Theme.caution) >= 20
+                && Theme.perceptualDistance(live, Theme.danger) >= 20
+        }
+    )
+    // One dot, two things it could mean. The camera wins, which is what macOS
+    // does: with both live it shows the green one.
+    check(
+        "a camera on its own takes the camera's colour",
+        CallPalette.dot(microphone: false, camera: true) == CallPalette.camera
+    )
+    check(
+        "a microphone on its own takes the microphone's",
+        CallPalette.dot(microphone: true, camera: false) == CallPalette.microphone
+    )
+    check(
+        "and with both live the dot says camera, the larger fact of the two",
+        CallPalette.dot(microphone: true, camera: true) == CallPalette.camera
+    )
+
     check(
         "a camera cannot be running unless it exists",
         CameraReader.capturingCount() <= CameraReader.deviceCount()
