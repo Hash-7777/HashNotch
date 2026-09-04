@@ -3408,37 +3408,37 @@ MainActor.assumeIsolated {
     check("and one that ran out while nobody watched is counted rather than picked up",
           FocusResume.decide(block, now: started.addingTimeInterval(2_000)) == .ranOut(block))
 
-    // The tally. The refusals are the point.
+    // The tally. Two figures, and the refusals are still the point.
     let today = FocusTallyMath.day(of: started)
     let empty = FocusTally(day: today)
     check("a fresh day has nothing in it", empty.isEmpty)
     check(
-        "a finished piece of work counts as work AND as a block",
+        "a finished round counts its time AND itself",
         {
             let after = FocusTallyMath.adding(empty, block: .work, seconds: 1_500, completed: true)
-            return after.workSeconds == 1_500 && after.finishedWork == 1 && after.abandonedWork == 0
+            return after.workSeconds == 1_500 && after.finishedWork == 1
         }()
     )
     check(
-        "one walked out of counts the time it served but is NOT a finished block",
+        "one walked out of counts the time it served but is NOT finished",
         {
-            // This is the whole difference between a tally and a wish.
+            // This is the whole difference between a tally and a wish, and it
+            // survives the columns that used to display it being dropped.
             let after = FocusTallyMath.adding(empty, block: .work, seconds: 400, completed: false)
-            return after.workSeconds == 400 && after.finishedWork == 0 && after.abandonedWork == 1
+            return after.workSeconds == 400 && after.finishedWork == 0
         }()
     )
     check(
-        "a rest is never counted as work",
-        {
-            let after = FocusTallyMath.adding(empty, block: .shortBreak, seconds: 300, completed: true)
-            return after.workSeconds == 0 && after.breakSeconds == 300 && after.finishedWork == 0
-        }()
+        "a rest adds nothing at all — it is not work and nobody needs it counted",
+        FocusTallyMath.adding(empty, block: .shortBreak, seconds: 300, completed: true) == empty
     )
     check(
-        "time away is kept apart from work rather than folded into it",
+        "a day written by an earlier build still loads rather than being thrown away",
         {
-            let after = FocusTallyMath.addingAway(empty, seconds: 2_400)
-            return after.awaySeconds == 2_400 && after.workSeconds == 0
+            // It kept four figures. Three are gone; the day must survive them.
+            let old = #"{"day":100.0,"workSeconds":1500.0,"breakSeconds":300.0,"awaySeconds":600.0,"finishedWork":2,"abandonedWork":1}"#
+            guard let decoded = try? JSONDecoder().decode(FocusTally.self, from: Data(old.utf8)) else { return false }
+            return decoded.workSeconds == 1_500 && decoded.finishedWork == 2
         }()
     )
     check(
@@ -3452,87 +3452,20 @@ MainActor.assumeIsolated {
     )
     check(
         "but the same day's tally is carried on rather than restarted",
-        {
-            let kept = FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)
-            return FocusTallyMath.current(kept, now: started).workSeconds == 1_500
-        }()
+        FocusTallyMath.current(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1), now: started).workSeconds == 1_500
     )
 
-    // How the day is said.
+    // How long something lasted.
     check("under an hour is minutes", FocusTallyMath.duration(20 * 60) == "20 min")
     check("a round hour drops the minutes", FocusTallyMath.duration(2 * 3_600) == "2 hr")
     check("and an odd one keeps them", FocusTallyMath.duration(3 * 3_600 + 20 * 60) == "3 hr 20 min")
-    // The panel says the day's focus on its own now, beside a row of marks, so
-    // there is no sentence of four figures left to check.
 
-    // ── What the alert says ─────────────────────────────────────────────────
+    // ── The one line under the cycle ─────────────────────────────────────────
     //
-    // The thing an alert like this most easily gets wrong is saying only what
-    // ENDED, which leaves somebody looking at a banner working out what to do
-    // next. Every one of these names what comes next and how long it runs.
-    check(
-        "each ending is named for what it was",
-        FocusAlert.title(for: .work) == "Focus done"
-            && FocusAlert.title(for: .shortBreak) == "Break over"
-            && FocusAlert.title(for: .longBreak) == "Long break over"
-    )
-    check(
-        "no two endings read the same",
-        Set(FocusBlock.allCases.map(FocusAlert.title(for:))).count == FocusBlock.allCases.count
-    )
-    check(
-        "every alert says what comes next AND how long it runs",
-        FocusBlock.allCases.allSatisfy { next in
-            let body = FocusAlert.body(next: next, plan: FocusPlan())
-            let namesHowLong = body.contains("\(FocusPlan().minutes(for: next))")
-            let namesWhat = next.isWork ? body.contains("work") : body.contains("rest")
-            return namesHowLong && namesWhat
-        }
-    )
-    check(
-        "and says it in one short sentence",
-        FocusBlock.allCases.allSatisfy { next in
-            let body = FocusAlert.body(next: next, plan: FocusPlan())
-            return body.count <= 40 && body.hasSuffix(".") && !body.contains(",")
-        }
-    )
-    check(
-        "and it follows the lengths actually set, not the ones it shipped with",
-        FocusAlert.body(next: .work, plan: FocusPlan(workMinutes: 50)).contains("50")
-    )
-    // A block found already over must not be announced twice: if the system was
-    // given the deadline it has already said so, on time.
-    check(
-        "a session remembers whether the system was handed its alert",
-        {
-            let started = Date()
-            let handed = FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(60), alertScheduled: true)
-            let not = FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(60))
-            return handed.alertScheduled && !not.alertScheduled
-        }()
-    )
-    check(
-        "a session written before that field existed reads as NOT handed over, which is the reading that alerts",
-        {
-            // The old shape, exactly as an earlier build wrote it.
-            let old = #"{"block":"work","startedAt":100.0,"endsAt":200.0}"#.data(using: .utf8)!
-            guard let decoded = try? JSONDecoder().decode(FocusSession.self, from: old) else { return false }
-            return decoded.alertScheduled == false && decoded.block == .work
-        }()
-    )
-    check(
-        "the focus alert and the countdown alert cannot cancel one another",
-        DeadlineNotifier(requestIdentifier: "com.hashnotch.focus.block").requestIdentifier
-            != DeadlineNotifier(requestIdentifier: "com.hashnotch.timer.deadline").requestIdentifier
-    )
-
-    // ── The days behind today ───────────────────────────────────────────────
-    //
-    // Today's figure alone is not information: three hours twenty is good or bad
-    // only against something. The first version kept nothing, so the tally could
-    // never acquire the one thing that would have made it worth reading. What is
-    // kept is a week, and the rules for it cannot be exercised by living through
-    // one.
+    // Reported unclear three times, each time because a number was shown with
+    // nothing saying what it counted, or with a word — "block", "round" — that
+    // existed nowhere a person would have met it. There is one sentence now,
+    // and no vocabulary in it at all.
     let dayOne = FocusTally(day: today.addingTimeInterval(-86_400), workSeconds: 7_200, finishedWork: 4)
     let dayTwo = FocusTally(day: today.addingTimeInterval(-172_800), workSeconds: 3_600, finishedWork: 2)
 
@@ -3544,11 +3477,11 @@ MainActor.assumeIsolated {
         }()
     )
     check(
-        "a day with nothing in it is not kept, so a weekend does not drag the average down",
+        "a day with nothing in it is not kept, so a weekend is not a day of failure",
         FocusHistoryMath.archiving(FocusHistory(), finished: FocusTally(day: today)).isEmpty
     )
     check(
-        "the same day put away twice is kept once, not twice",
+        "the same day put away twice is kept once",
         {
             let once = FocusHistoryMath.archiving(FocusHistory(), finished: dayOne)
             return FocusHistoryMath.archiving(once, finished: dayOne).days.count == 1
@@ -3561,90 +3494,49 @@ MainActor.assumeIsolated {
             for index in 1...12 {
                 history = FocusHistoryMath.archiving(history, finished: FocusTally(
                     day: today.addingTimeInterval(TimeInterval(-86_400 * index)),
-                    workSeconds: TimeInterval(index * 600),
-                    finishedWork: index
-                ))
+                    workSeconds: TimeInterval(index * 600), finishedWork: index))
             }
-            // Newest first, and the newest of those twelve is the one added last.
             return history.days.count == FocusHistory.keptDays && history.days[0].finishedWork == 12
         }()
     )
     check(
-        "an average needs a day to average, and says nothing without one",
-        FocusHistoryMath.averageWorkSeconds(FocusHistory()) == nil
-            && FocusHistoryMath.averageText(FocusHistory()) == nil
+        "the week counts today as well as the days behind it",
+        FocusHistoryMath.weekSeconds(FocusHistory(days: [dayOne, dayTwo]), today: FocusTally(day: today, workSeconds: 1_800)) == 12_600
     )
     check(
-        "the average is over the days that had work in them",
+        "the line names what the figure counts, and over what stretch",
+        FocusHistoryMath.weekText(FocusHistory(days: [dayOne, dayTwo]), today: FocusTally(day: today, workSeconds: 1_800))
+            == "You focused 3 hr 30 min in the last 7 days. Keep it up."
+    )
+    check(
+        "a week with nothing in it invites rather than scolds",
         {
-            let history = FocusHistory(days: [dayOne, dayTwo])
-            guard let average = FocusHistoryMath.averageWorkSeconds(history) else { return false }
-            return Int(average) == 5_400
+            let line = FocusHistoryMath.weekText(FocusHistory(), today: FocusTally(day: today))
+            // An empty week must read as an invitation, not as a zero score.
+            return line.contains("Start when you are ready") && !line.contains("0 min")
         }()
     )
     check(
-        "a day where nothing was done does not count towards it",
+        "no word in it has to be taught",
         {
-            let history = FocusHistory(days: [dayOne, dayTwo, FocusTally(day: today.addingTimeInterval(-259_200), workSeconds: 3)])
-            guard let average = FocusHistoryMath.averageWorkSeconds(history) else { return false }
-            return Int(average) == 5_400
+            // "block" and "round" were both invented here. A person meeting the
+            // panel for the first time should need no vocabulary at all.
+            let lines = [
+                FocusHistoryMath.weekText(FocusHistory(days: [dayOne]), today: FocusTally(day: today, workSeconds: 600)),
+                FocusHistoryMath.weekText(FocusHistory(), today: FocusTally(day: today)),
+            ]
+            return lines.allSatisfy { line in
+                !line.lowercased().contains("block") && !line.lowercased().contains("round")
+            }
         }()
     )
     check(
-        "what it says is a fact about an ordinary day, never a verdict on this one",
+        "and it never ends in a bare number",
         {
-            // A part-finished day set against whole ones would flatter somebody
-            // at six in the evening and scold them at ten in the morning, with
-            // the same number doing both.
-            guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
-            return text.hasPrefix("Usually ") && text.hasSuffix(" a day")
-                && !text.lowercased().contains("behind")
-                && !text.lowercased().contains("ahead")
-                && !text.contains("%")
-        }()
-    )
-    check(
-        "and says it in three words, not a clause with a tail",
-        {
-            // It read "1 hr 50 min on an average day, over 6 days" \u{2014} two
-            // clauses and the sample size explained to somebody who did not ask.
-            guard let text = FocusHistoryMath.averageText(FocusHistory(days: [dayOne, dayTwo])) else { return false }
-            return text.count <= 32 && !text.contains(",")
-        }()
-    )
-    // ── Saying what a number counts ─────────────────────────────────────────
-    //
-    // Reported twice as unclear, and twice for the same reason: a figure shown
-    // without the noun that says what it counts. "1 hr 15 min" of what. "3" of
-    // what. These are rules rather than strings in a view, because that is the
-    // mistake this panel keeps making.
-    check(
-        "a time is never shown without saying what it counts",
-        FocusTallyMath.focusedText(4_500) == "1 hr 15 min focused"
-    )
-    check(
-        "the marks are named, in the word the settings page already uses",
-        // "block" was this file's own coinage and appeared nowhere a person
-        // would have met it. The settings page says rounds, so this says rounds.
-        FocusTallyMath.roundsText(3) == "3 rounds done"
-            && FocusTallyMath.roundsText(1) == "1 round done"
-    )
-    check(
-        "and a round somebody gave up on says what happened to it",
-        FocusTallyMath.stoppedText(1) == "1 round stopped early"
-            && FocusTallyMath.stoppedText(2) == "2 rounds stopped early"
-    )
-    check(
-        "no line in the day says a bare number with no noun after it",
-        [
-            FocusTallyMath.focusedText(4_500),
-            FocusTallyMath.roundsText(3),
-            FocusTallyMath.stoppedText(1),
-            FocusHistoryMath.averageText(FocusHistory(days: [dayOne])) ?? "",
-        ].allSatisfy { line in
+            let line = FocusHistoryMath.weekText(FocusHistory(days: [dayOne]), today: FocusTally(day: today))
             guard let last = line.split(separator: " ").last else { return false }
             return !last.allSatisfy(\.isNumber)
-        }
+        }()
     )
 
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")

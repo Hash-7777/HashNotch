@@ -6,54 +6,30 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
-- **A focus cycle, and an honest account of the day it added up to.** A stretch
-  of work, a short rest, and a longer one every few rounds, counted down in the
-  notch with the edge lit while work is running and dark while it is not. The
-  lengths are yours to set.
+- **A focus cycle, with a week behind it.** A stretch of work, a short rest, and
+  a longer one every few rounds, counted down in the notch with the edge lit
+  while work is running. The lengths are yours to set, and a stretch survives the
+  screen sleeping and the app quitting, because it is a deadline somebody set for
+  themselves rather than a reading about the machine.
 
-  What makes it worth having is what it refuses to count. Every tracker of this
-  kind is self-reported: you start it, you forget to stop it, and the figure at
-  the end of the week is a guess with a decimal point on it. This app already
-  knew when the screen went away, for entirely unrelated reasons — so a piece of
-  work you walked out of **ends at the moment you left, counts only the time it
-  actually served, and is recorded as not finished**. A rest is left alone,
-  because being away IS the rest.
+  Underneath it, one sentence: "You focused 9 hr 20 min in the last 7 days. Keep
+  it up." A week rather than a day, because a single day has nothing to be
+  measured against, and a total rather than an average, because an average
+  invites a comparison that flatters you at six in the evening and scolds you at
+  ten in the morning with the same number.
 
-  At the bottom of the panel is the day: focus time, blocks finished, rest, and
-  time away, kept apart from one another rather than blended into a single
-  flattering number. A Mac left running through midnight starts a new day rather
-  than showing one figure covering two. A block survives the screen sleeping and
-  the app quitting, because a focus block is a deadline somebody set for
-  themselves rather than a reading about the machine — the same reasoning the
-  countdown already followed.
+  The sentence carries no vocabulary. Earlier drafts showed a row of marks, a
+  count of "blocks", then of "rounds", and a bare "1 hr 15 min" with nothing
+  saying what it counted — three separate ways of asking somebody to learn a word
+  or guess a meaning before they could read their own day.
 
-  The last seven days are kept, so today has something to measure against —
-  today's figure alone is not information, since three hours twenty is good or
-  bad only against something. It knows a block ran, never what anybody was
-  working on, and a day with nothing in it is not kept at all so a weekend does
-  not drag the average down.
+  It knows when the screen went away, so a stretch walked out of ends where you
+  left it, counts only the time it served, and never counts as finished. A rest
+  is left alone, because being away is the rest.
 
-  Every figure says what it counts. "1 hr 15 min focused", not "1 hr 15 min";
-  "3 rounds done" beside the marks, so they are not decoration somebody counts
-  and then wonders about; "1 round stopped early". The word is round, because
-  that is the word the settings page already used — "block" was invented here
-  and appeared nowhere a person would have met it. The marks are only the rounds
-  that happened: empty ones scaled to your busiest day read as "3 of 6" against
-  a target of six that did not exist.
-
-  What it says about past days is short and a fact rather than a verdict:
-  "Usually 1 hr 50 min a day". Setting a part-finished day against whole ones
-  would flatter you at six in the evening and scold you at ten in the morning,
-  with the same number doing both. One press in the settings page deletes the
-  lot, and nothing is ever sent anywhere.
-
-  A block that ends tells you so. The deadline is handed to the system rather
-  than announced by the app, so the alert lands on time whether the display is
-  asleep, the panel is shut, or the app has been quit — which matters more here
-  than for a countdown, because the whole point of a focus block is that you are
-  not looking at the screen. It names what comes next and how long it runs, not
-  just what ended. There is exactly one alert: if the system will show a banner
-  the app makes no noise of its own, and if it will not, the app chimes.
+  What is kept is a date and two numbers a day, for seven days — never what you
+  were working on. One press in the settings page deletes the lot, and nothing is
+  ever sent anywhere.
 
 - **The island now says what happened while you were away.** Shut the lid, come
   back, and one line appears for a few seconds before folding away: how long you

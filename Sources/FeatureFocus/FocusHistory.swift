@@ -1,17 +1,16 @@
 import Foundation
 
-/// The days behind today.
+/// The last few days, so the one line under the cycle has something to add up.
 ///
-/// Today's figure on its own is not information. "Three hours twenty" is good or
-/// bad only against something, and the first version of this kept nothing — so
-/// the tally could never acquire the one thing that would have made it worth
-/// reading. A handful of days fixes that and costs a few hundred bytes.
+/// A single day's figure is not worth reading — three hours twenty is good or
+/// bad only against something, and a day on its own has nothing to be measured
+/// by. A week has enough in it to be worth a sentence.
 ///
-/// It is a handful on purpose. Enough to know what an ordinary day looks like,
-/// short enough that it is not a record of your working life sitting on a disk,
-/// and it can be cleared from the settings page in one press. What it holds is
-/// four numbers and a date per day — never what you were working on, which this
-/// app has no way of knowing and no business asking.
+/// It is a week on purpose. Long enough to mean something, short enough that it
+/// is not a record of somebody's working life sitting on a disk, and one press
+/// in the settings page deletes it. What it holds is a date and two numbers per
+/// day — never what anybody was working on, which this app has no way of
+/// knowing and no business asking.
 public struct FocusHistory: Codable, Equatable, Sendable {
     /// Finished days, most recent first.
     public var days: [FocusTally]
@@ -20,8 +19,7 @@ public struct FocusHistory: Codable, Equatable, Sendable {
         self.days = days
     }
 
-    /// How many are kept. A working week, so the average is not thrown by one
-    /// unusual day and not stretched over a month of them.
+    /// How many are kept.
     public static let keptDays = 7
 
     public var isEmpty: Bool { days.isEmpty }
@@ -32,8 +30,7 @@ public enum FocusHistoryMath {
     /// Put a finished day away, newest first, and drop anything past the limit.
     ///
     /// A day with nothing in it is not kept: a weekend, or a day the Mac was
-    /// off, would otherwise drag the average down as though somebody had sat
-    /// there achieving nothing.
+    /// off, is not a day somebody sat there achieving nothing.
     public static func archiving(_ history: FocusHistory, finished: FocusTally) -> FocusHistory {
         guard !finished.isEmpty else { return history }
         var days = history.days.filter { $0.day != finished.day }
@@ -41,31 +38,29 @@ public enum FocusHistoryMath {
         return FocusHistory(days: Array(days.prefix(FocusHistory.keptDays)))
     }
 
-    /// The average focus on the days kept, or nil when there are none.
-    public static func averageWorkSeconds(_ history: FocusHistory) -> TimeInterval? {
-        let worked = history.days.filter { $0.workSeconds >= 60 }
-        guard !worked.isEmpty else { return nil }
-        return worked.reduce(0) { $0 + $1.workSeconds } / Double(worked.count)
+    /// Everything focused in the last week, today included.
+    public static func weekSeconds(_ history: FocusHistory, today: FocusTally) -> TimeInterval {
+        history.days.reduce(today.workSeconds) { $0 + $1.workSeconds }
     }
 
-    /// What an ordinary day looks like, or nothing when there is nothing honest
-    /// to say.
+    /// The one line under the cycle.
     ///
-    /// Three words and a number. It said "1 hr 50 min on an average day, over 6
-    /// days", which is two clauses and a tail explaining the sample size to
-    /// somebody who did not ask.
+    /// A week rather than a day, and a total rather than an average, because
+    /// both of those are things somebody can feel good about. An average invites
+    /// a comparison, and a comparison against a part-finished day flatters
+    /// somebody at six in the evening and scolds them at ten in the morning with
+    /// the same number.
     ///
-    /// Still a fact and never a verdict. Putting a part-finished day against
-    /// whole ones would flatter somebody at six in the evening and scold them
-    /// at ten in the morning, with the same number doing both — which is how a
-    /// figure like this stops being trusted. "Usually" says what is normal for
-    /// them and leaves the comparing to the person, who can do it and this
-    /// cannot.
-    public static func averageText(_ history: FocusHistory) -> String? {
-        guard let average = averageWorkSeconds(history) else { return nil }
-        return "Usually \(FocusTallyMath.duration(average)) a day"
+    /// It says "focused" so the figure is never a bare number, and it says the
+    /// stretch so it is never mistaken for a total of all time. There is no
+    /// vocabulary in it to learn: no rounds, no blocks, no marks to interpret.
+    public static func weekText(_ history: FocusHistory, today: FocusTally) -> String {
+        let seconds = weekSeconds(history, today: today)
+        guard seconds >= 60 else {
+            return "No focus time in the last 7 days yet. Start when you are ready."
+        }
+        return "You focused \(FocusTallyMath.duration(seconds)) in the last 7 days. Keep it up."
     }
-
 }
 
 /// Where the days behind today are kept.

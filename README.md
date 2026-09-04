@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-1057%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1057 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1045%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1045 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -47,9 +47,9 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Now playing** — anything that plays: Spotify, Apple Music, TV, Podcasts, Anghami, VLC, a browser tab. Title, artist, live position, a progress bar you can drag, and a volume slider. Album art comes from Spotify and Apple Music, and a video's thumbnail from your browser; anything else shows a placeholder tile.
 
-**Focus** — a stretch of work, a short rest, a longer one every few rounds, counted down in the notch with the edge lit while you are meant to be working. At the bottom of the panel, what the day actually came to: *3 hr 20 min focus · 8 blocks · 30 min break · 40 min away*.
+**Focus** — a stretch of work, a short rest, a longer one every few rounds, counted down in the notch with the edge lit while you are meant to be working. Underneath it, one sentence: *You focused 9 hr 20 min in the last 7 days. Keep it up.*
 
-> Every tracker of this kind is self-reported — you start it, forget to stop it, and the number at the end of the week is a guess. This one already knows when your screen went away, so **a block you walked out of ends when you left, counts only the time it served, and is recorded as not finished.** It keeps the last 7 days, so today has something to measure against — it knows a block ran, never what you were working on. Delete it any time in Settings. Nothing about your day is ever sent anywhere.
+> It knows when your screen went away, so **a stretch you walked out of ends when you left and never counts as finished** — most timers of this kind are self-reported guesses. It keeps a week so the sentence has something to add up: a date and two numbers a day, never what you were working on. Delete it any time in Settings. Nothing about your day is ever sent anywhere.
 
 **While you were away** — shut the lid, come back, and the island says what you missed in one line: how long you were gone, how much data went through, whether the battery fell, what an agent spent. It is the only readout here about the past, and it **reads nothing of its own** — every number in it was already being kept by one of the indicators above, and this subtracts two moments of them. Only indicators that can honestly answer across an absence take part: nothing is watched while the screen is away, so anything that had to keep watching to know is left out rather than guessed at.
 
@@ -89,7 +89,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 1057 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1045 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks

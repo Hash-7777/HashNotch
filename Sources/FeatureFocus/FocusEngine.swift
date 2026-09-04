@@ -193,29 +193,41 @@ public final class FocusEngine: ObservableObject {
 
     /// A spell with the screen away, applied to whatever was running.
     ///
-    /// A piece of work you walked out of is not a piece of work you did, so it
-    /// ends at the moment you left, counts only what it had served by then, and
-    /// is recorded as abandoned. A break is different: being away IS the break,
-    /// so it is left to run.
+    /// A round you walked out of is not a round you did, so it ends at the
+    /// moment you left and counts only what it had served by then — never as
+    /// finished. A rest is different: being away IS the rest, so it runs on.
     private func reconcileAway(_ spell: AwaySpell?) {
         guard let spell, spell != lastAwayHandled else { return }
         lastAwayHandled = spell
 
-        guard let running = FocusStore.loadSession(from: defaults) ?? session else {
-            tally = FocusTallyMath.addingAway(
-                FocusTallyMath.current(tally, now: spell.returnedAt), seconds: spell.seconds
-            )
-            FocusStore.save(tally, to: defaults)
-            return
-        }
+        guard let running = FocusStore.loadSession(from: defaults) ?? session else { return }
         guard running.block.isWork, spell.leftAt < running.endsAt else { return }
         session = running
         end(running, at: spell.leftAt, completed: false)
-        tally = FocusTallyMath.addingAway(tally, seconds: spell.seconds)
+    }
+
+    /// Move to today's tally, keeping yesterday if there was anything in it.
+    private func rollOver(_ kept: FocusTally?, now: Date) {
+        let today = FocusTallyMath.day(of: now)
+        if let kept, kept.day != today {
+            history = FocusHistoryMath.archiving(history, finished: kept)
+            FocusHistoryStore.save(history, to: defaults)
+        }
+        let next = FocusTallyMath.current(kept, now: now)
+        guard next != tally else { return }
+        tally = next
         FocusStore.save(tally, to: defaults)
     }
 
-    /// Hand a block already in progress to the system, if it will take it.
+    /// Forget the days behind today. Offered because a record of somebody's
+    /// working days is theirs to end, and a promise to keep only a week is worth
+    /// less than a button that empties it now.
+    public func clearHistory() {
+        history = FocusHistory()
+        FocusHistoryStore.clear(from: defaults)
+    }
+
+    /// Hand a round already in progress to the system, if it will take it.
     private func rescheduleAlert(for running: FocusSession) {
         let after = plan.next(
             after: running.block,
@@ -236,27 +248,6 @@ public final class FocusEngine: ObservableObject {
             self.session = stamped
             FocusStore.save(stamped, to: self.defaults)
         }
-    }
-
-    /// Move to today's tally, keeping yesterday if there was anything in it.
-    private func rollOver(_ kept: FocusTally?, now: Date) {
-        let today = FocusTallyMath.day(of: now)
-        if let kept, kept.day != today {
-            history = FocusHistoryMath.archiving(history, finished: kept)
-            FocusHistoryStore.save(history, to: defaults)
-        }
-        let next = FocusTallyMath.current(kept, now: now)
-        guard next != tally else { return }
-        tally = next
-        FocusStore.save(tally, to: defaults)
-    }
-
-    /// Forget the days behind today. Offered because a record of somebody's
-    /// working days is theirs to end, and a promise to keep only a week is
-    /// worth less than a button that empties it now.
-    public func clearHistory() {
-        history = FocusHistory()
-        FocusHistoryStore.clear(from: defaults)
     }
 
     private func updatePresence() {
