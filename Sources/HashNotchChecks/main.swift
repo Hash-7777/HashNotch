@@ -3474,6 +3474,58 @@ MainActor.assumeIsolated {
           FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 block")
           && !FocusTallyMath.summary(FocusTally(day: today, workSeconds: 1_500, finishedWork: 1)).contains("1 blocks"))
 
+    // ── What the alert says ─────────────────────────────────────────────────
+    //
+    // The thing an alert like this most easily gets wrong is saying only what
+    // ENDED, which leaves somebody looking at a banner working out what to do
+    // next. Every one of these names what comes next and how long it runs.
+    check(
+        "each ending is named for what it was",
+        FocusAlert.title(for: .work) == "Focus done"
+            && FocusAlert.title(for: .shortBreak) == "Break over"
+            && FocusAlert.title(for: .longBreak) == "Long break over"
+    )
+    check(
+        "no two endings read the same",
+        Set(FocusBlock.allCases.map(FocusAlert.title(for:))).count == FocusBlock.allCases.count
+    )
+    check(
+        "every alert says what comes next AND how long it runs",
+        FocusBlock.allCases.allSatisfy { next in
+            let body = FocusAlert.body(next: next, plan: FocusPlan())
+            return body.contains("\(FocusPlan().minutes(for: next))") && body.hasSuffix("minutes.")
+        }
+    )
+    check(
+        "and it follows the lengths actually set, not the ones it shipped with",
+        FocusAlert.body(next: .work, plan: FocusPlan(workMinutes: 50)).contains("50")
+    )
+    // A block found already over must not be announced twice: if the system was
+    // given the deadline it has already said so, on time.
+    check(
+        "a session remembers whether the system was handed its alert",
+        {
+            let started = Date()
+            let handed = FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(60), alertScheduled: true)
+            let not = FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(60))
+            return handed.alertScheduled && !not.alertScheduled
+        }()
+    )
+    check(
+        "a session written before that field existed reads as NOT handed over, which is the reading that alerts",
+        {
+            // The old shape, exactly as an earlier build wrote it.
+            let old = #"{"block":"work","startedAt":100.0,"endsAt":200.0}"#.data(using: .utf8)!
+            guard let decoded = try? JSONDecoder().decode(FocusSession.self, from: old) else { return false }
+            return decoded.alertScheduled == false && decoded.block == .work
+        }()
+    )
+    check(
+        "the focus alert and the countdown alert cannot cancel one another",
+        DeadlineNotifier(requestIdentifier: "com.hashnotch.focus.block").requestIdentifier
+            != DeadlineNotifier(requestIdentifier: "com.hashnotch.timer.deadline").requestIdentifier
+    )
+
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")
     check("and grows an hours field only when there are hours", FocusClock.text(3_725) == "1:02:05")
     check("a countdown cannot go negative", FocusClock.text(-30) == "0:00")

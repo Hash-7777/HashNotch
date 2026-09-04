@@ -48,7 +48,7 @@ public final class TimerEngine: ObservableObject {
     private var sampler: PollingSampler?
     private weak var presence: LivePresence?
     private var finishWork: DispatchWorkItem?
-    private let notifier = TimerNotifier()
+    private let notifier = DeadlineNotifier(requestIdentifier: "com.hashnotch.timer.deadline")
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {

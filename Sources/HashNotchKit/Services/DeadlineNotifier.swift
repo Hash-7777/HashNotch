@@ -1,7 +1,18 @@
 import AppKit
 import UserNotifications
 
-/// Tells the person their timer is up, and is honest about whether it can.
+/// Tells the person a deadline they set has come, and is honest about whether
+/// it can.
+///
+/// **Why this is in the core rather than beside the countdown.** It was written
+/// for the timer and was the timer's own file. The focus cycle then needed the
+/// identical thing — a deadline handed to the system so the alert lands whether
+/// or not this app is awake — and a feature may not import another feature, on
+/// purpose. Copying it would have meant two of these drifting apart, and every
+/// paragraph below is a decision somebody had to make twice to get right. So it
+/// moved here whole, with one change: the identifier is given at
+/// initialisation, because two deadlines cancelling each other's alerts would
+/// be worse than either having none.
 ///
 /// **Why the alert is scheduled rather than fired.** It used to be posted at
 /// the moment the app itself noticed the countdown reach zero, which means the
@@ -23,20 +34,38 @@ import UserNotifications
 /// hold no notification permission at all, so there the chime is the whole
 /// alert.
 @MainActor
-final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
-    /// One identifier, so a scheduled alert can be taken back exactly.
+public final class DeadlineNotifier: NSObject {
+    /// One identifier per kind of deadline, so a scheduled alert can be taken
+    /// back exactly.
     ///
-    /// Not a fresh UUID per timer, which is what this used to do: an
+    /// Not a fresh UUID per deadline, which is what this used to do: an
     /// unrepeatable identifier is one nothing can ever cancel, and a cancelled
     /// timer that still goes off at the original moment is worse than no timer.
-    static let requestIdentifier = "com.hashnotch.timer.deadline"
+    /// Given at initialisation rather than fixed, so the countdown and the focus
+    /// cycle cannot cancel one another.
+    public let requestIdentifier: String
+
+    public init(requestIdentifier: String) {
+        self.requestIdentifier = requestIdentifier
+        super.init()
+    }
+
+    /// The one delegate.
+    ///
+    /// `UNUserNotificationCenter` has room for exactly one, and holds it
+    /// WEAKLY. Letting each notifier be its own meant the last one created won
+    /// — and, worse, that the centre would be left with no delegate at all the
+    /// moment that one went away, which is a banner that silently stops
+    /// appearing while the app is running. It answers with two constants, so
+    /// one shared object serves every deadline there will ever be.
+    private static let presenter = BannerPresenter()
 
     /// What the system last said about showing a banner. `nil` until asked.
-    private(set) var isAllowed: Bool?
+    public private(set) var isAllowed: Bool?
 
     /// Called whenever that answer changes, so the panel can stop promising
     /// something that will not happen.
-    var onAllowedChanged: (Bool?) -> Void = { _ in }
+    public var onAllowedChanged: (Bool?) -> Void = { _ in }
 
     private var chime: NSSound?
 
@@ -53,14 +82,14 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
     /// got no banner, no chime and no explanation. Asking every time a timer
     /// starts also catches permission being withdrawn later, which the first
     /// answer cannot.
-    func prepare(then settled: @escaping () -> Void = {}) {
+    public func prepare(then settled: @escaping () -> Void = {}) {
         guard isBundled else {
             update(nil)
             settled()
             return
         }
         let center = UNUserNotificationCenter.current()
-        center.delegate = self
+        center.delegate = Self.presenter
         center.requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in
             // Asked for again rather than captured: the centre is a single
             // shared object and carrying it into a background closure is a
@@ -81,7 +110,7 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
     /// Returns whether the system took it, so the deadline can record that an
     /// alert exists somewhere other than in this process.
     @discardableResult
-    func schedule(at date: Date, title: String, body: String) -> Bool {
+    public func schedule(at date: Date, title: String, body: String) -> Bool {
         // Never claimed when the answer is known to be no: the request would be
         // added and quietly never delivered, and the deadline would go on
         // record as one the system is taking care of — which is what decides
@@ -100,7 +129,7 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
         // be awake.
         content.sound = .default
         let request = UNNotificationRequest(
-            identifier: Self.requestIdentifier,
+            identifier: requestIdentifier,
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         )
@@ -109,17 +138,17 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     /// Take back an alert for a timer that is no longer running.
-    func cancelScheduled() {
+    public func cancelScheduled() {
         guard isBundled else { return }
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [Self.requestIdentifier])
+            .removePendingNotificationRequests(withIdentifiers: [requestIdentifier])
     }
 
     /// The alert for when the system will not be making one.
     ///
     /// Retained for its lifetime: a throwaway `NSSound` is collected before it
     /// has finished sounding, which is silence with no error anywhere.
-    func chimeNow() {
+    public func chimeNow() {
         let sound = NSSound(named: NSSound.Name("Glass")) ?? NSSound(named: NSSound.Name("Ping"))
         sound?.stop()
         sound?.play()
@@ -132,15 +161,13 @@ final class TimerNotifier: NSObject, UNUserNotificationCenterDelegate {
         onAllowedChanged(allowed)
     }
 
-    /// Show the banner even though HashNotch is running — an agent app is never
-    /// "frontmost", but this makes the intent explicit — and let it sound,
-    /// since it is the only alert there is.
-    ///
-    /// Outside the main actor because it touches nothing of this object's:
-    /// it answers with two constants. Isolating it would make the whole
-    /// conformance cross an actor boundary for the sake of a reply that needs
-    /// no state at all.
-    nonisolated func userNotificationCenter(
+}
+
+/// Shows the banner even though HashNotch is running — an agent app is never
+/// "frontmost", but this makes the intent explicit — and lets it sound, since
+/// it is the only alert there is.
+private final class BannerPresenter: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void

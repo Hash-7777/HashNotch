@@ -20,6 +20,12 @@ public final class FocusEngine: ObservableObject {
     private var defaults: UserDefaults = .standard
     private var awayWatch: AnyCancellable?
     private var lastAwayHandled: AwaySpell?
+    /// Its own identifier, so a focus alert and a countdown alert can never
+    /// cancel one another.
+    private let notifier = DeadlineNotifier(requestIdentifier: "com.hashnotch.focus.block")
+    /// Whether the system says it will show a banner. The panel does not promise
+    /// what will not happen.
+    @Published public private(set) var alertsAllowed: Bool?
 
     public init() {}
 
@@ -29,6 +35,9 @@ public final class FocusEngine: ObservableObject {
         self.presence = presence
         self.defaults = defaults
         plan = FocusStore.loadPlan(from: defaults)
+        notifier.onAllowedChanged = { [weak self] allowed in
+            MainActor.assumeIsolated { self?.alertsAllowed = allowed }
+        }
         tally = FocusTallyMath.current(FocusStore.loadTally(from: defaults), now: Date())
 
         // A spell away may have ended a block while nobody was watching. Settle
@@ -43,6 +52,12 @@ public final class FocusEngine: ObservableObject {
             switch FocusResume.decide(kept, now: Date()) {
             case .resume(let live):
                 session = live
+                // A block picked up after a relaunch may never have been handed
+                // to the system — an older build wrote no such field, and
+                // permission may have been refused when it started and granted
+                // since. Without this it would run to its end in silence, which
+                // is the one case somebody would never think to test.
+                if !live.alertScheduled { rescheduleAlert(for: live) }
             case .ranOut(let done):
                 complete(done, at: done.endsAt)
             }
@@ -55,6 +70,7 @@ public final class FocusEngine: ObservableObject {
         ticker?.stop()
         ticker = nil
         awayWatch = nil
+        notifier.cancelScheduled()
         presence?.setActive("focus", false)
     }
 
@@ -73,11 +89,30 @@ public final class FocusEngine: ObservableObject {
     public func begin(_ block: FocusBlock? = nil) {
         let next = block ?? plan.next(after: .shortBreak, finishedWorkBlocks: tally.finishedWork)
         let started = Date()
-        let running = FocusSession(
-            block: next,
-            startedAt: started,
-            endsAt: started.addingTimeInterval(plan.seconds(for: next))
-        )
+        let endsAt = started.addingTimeInterval(plan.seconds(for: next))
+        let after = plan.next(after: next, finishedWorkBlocks: tally.finishedWork + (next.isWork ? 1 : 0))
+
+        // Asked every time a block starts rather than once, which is what
+        // catches permission being taken away later. The deadline is handed
+        // over inside the answer, because whether the system will show a banner
+        // decides whether it is worth handing over at all.
+        notifier.prepare { [weak self] in
+            guard let self, let running = self.session, running.startedAt == started else { return }
+            let scheduled = self.notifier.schedule(
+                at: endsAt,
+                title: FocusAlert.title(for: next),
+                body: FocusAlert.body(next: after, plan: self.plan)
+            )
+            guard scheduled else { return }
+            let stamped = FocusSession(
+                block: running.block, startedAt: running.startedAt,
+                endsAt: running.endsAt, alertScheduled: true
+            )
+            self.session = stamped
+            FocusStore.save(stamped, to: self.defaults)
+        }
+
+        let running = FocusSession(block: next, startedAt: started, endsAt: endsAt)
         session = running
         FocusStore.save(running, to: defaults)
         updatePresence()
@@ -128,6 +163,11 @@ public final class FocusEngine: ObservableObject {
     /// begins on its own — a cycle that waited to be told to carry on would be
     /// a cycle nobody completes.
     private func complete(_ running: FocusSession, at moment: Date) {
+        // Exactly one alert. If the system was given the deadline it has already
+        // made the noise, on time, and a chime here would be a second one at the
+        // wrong moment — the app's notice of a finish can be minutes late where
+        // the system's never is.
+        if !running.alertScheduled { notifier.chimeNow() }
         end(running, at: moment, completed: true)
         begin(plan.next(after: running.block, finishedWorkBlocks: tally.finishedWork))
     }
@@ -142,6 +182,10 @@ public final class FocusEngine: ObservableObject {
         FocusStore.save(tally, to: defaults)
         session = nil
         FocusStore.save(nil, to: defaults)
+        // A block that is over must not still go off at the moment it would
+        // have ended. A cancelled deadline that alerts anyway is worse than one
+        // that never existed.
+        notifier.cancelScheduled()
         updatePresence()
     }
 
@@ -167,6 +211,29 @@ public final class FocusEngine: ObservableObject {
         end(running, at: spell.leftAt, completed: false)
         tally = FocusTallyMath.addingAway(tally, seconds: spell.seconds)
         FocusStore.save(tally, to: defaults)
+    }
+
+    /// Hand a block already in progress to the system, if it will take it.
+    private func rescheduleAlert(for running: FocusSession) {
+        let after = plan.next(
+            after: running.block,
+            finishedWorkBlocks: tally.finishedWork + (running.block.isWork ? 1 : 0)
+        )
+        notifier.prepare { [weak self] in
+            guard let self, let live = self.session, live.startedAt == running.startedAt else { return }
+            let scheduled = self.notifier.schedule(
+                at: live.endsAt,
+                title: FocusAlert.title(for: live.block),
+                body: FocusAlert.body(next: after, plan: self.plan)
+            )
+            guard scheduled else { return }
+            let stamped = FocusSession(
+                block: live.block, startedAt: live.startedAt,
+                endsAt: live.endsAt, alertScheduled: true
+            )
+            self.session = stamped
+            FocusStore.save(stamped, to: self.defaults)
+        }
     }
 
     private func updatePresence() {

@@ -30,6 +30,14 @@ All notable changes to HashNotch are recorded here.
   Nothing about the day leaves the Mac, nothing is sent anywhere, and yesterday
   is not kept.
 
+  A block that ends tells you so. The deadline is handed to the system rather
+  than announced by the app, so the alert lands on time whether the display is
+  asleep, the panel is shut, or the app has been quit — which matters more here
+  than for a countdown, because the whole point of a focus block is that you are
+  not looking at the screen. It names what comes next and how long it runs, not
+  just what ended. There is exactly one alert: if the system will show a banner
+  the app makes no noise of its own, and if it will not, the app chimes.
+
 - **The island now says what happened while you were away.** Shut the lid, come
   back, and one line appears for a few seconds before folding away: how long you
   were gone, how much data went through, whether the battery fell, what an agent

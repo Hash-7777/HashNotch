@@ -97,3 +97,29 @@ public struct FocusPlan: Codable, Equatable, Sendable {
         return done == 0 && finishedWorkBlocks > 0 ? every : every - done
     }
 }
+
+/// What the alert says when a block ends.
+///
+/// A rule rather than two strings built where they are sent, so the wording can
+/// be checked — and so the thing it most needs to get right is stated once: an
+/// alert that only says what ENDED leaves somebody looking at a banner deciding
+/// what to do next. Every one of these names what comes next and how long it
+/// runs, because that is the part that gets acted on.
+public enum FocusAlert {
+    public static func title(for finished: FocusBlock) -> String {
+        switch finished {
+        case .work: return "Focus done"
+        case .shortBreak: return "Break over"
+        case .longBreak: return "Long break over"
+        }
+    }
+
+    public static func body(next: FocusBlock, plan: FocusPlan) -> String {
+        let minutes = plan.minutes(for: next)
+        switch next {
+        case .work: return "Back to it — \(minutes) minutes."
+        case .shortBreak: return "Take \(minutes) minutes."
+        case .longBreak: return "Take a longer one — \(minutes) minutes."
+        }
+    }
+}

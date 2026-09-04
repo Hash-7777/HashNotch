@@ -14,11 +14,31 @@ public struct FocusSession: Codable, Equatable {
     public let block: FocusBlock
     public let startedAt: Date
     public let endsAt: Date
+    /// Whether the system was handed the alert for this block.
+    ///
+    /// It decides one thing and it is worth the field: whether the app should
+    /// make a noise about a block it finds already over. If the system has the
+    /// alert, the system has already made it — on time, which is the whole
+    /// reason it was handed over — and a chime on the next launch would be a
+    /// second alert for one block, arriving whenever the Mac was next opened.
+    public let alertScheduled: Bool
 
-    public init(block: FocusBlock, startedAt: Date, endsAt: Date) {
+    public init(block: FocusBlock, startedAt: Date, endsAt: Date, alertScheduled: Bool = false) {
         self.block = block
         self.startedAt = startedAt
         self.endsAt = endsAt
+        self.alertScheduled = alertScheduled
+    }
+
+    /// Read leniently, so a session written by a build without this field still
+    /// loads. Missing means nothing was handed over, which is the reading that
+    /// alerts rather than the one that goes quiet.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        block = try container.decode(FocusBlock.self, forKey: .block)
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        endsAt = try container.decode(Date.self, forKey: .endsAt)
+        alertScheduled = try container.decodeIfPresent(Bool.self, forKey: .alertScheduled) ?? false
     }
 
     public var total: TimeInterval { max(0, endsAt.timeIntervalSince(startedAt)) }
