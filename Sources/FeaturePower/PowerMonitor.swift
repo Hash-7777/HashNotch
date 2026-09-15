@@ -2,7 +2,7 @@ import Foundation
 import IOKit
 import HashNotchKit
 
-/// Publishes the Mac's power draw, and the shape of the last minute of it.
+/// Publishes the Mac's power draw.
 ///
 /// Panel only. The draw is a number you look up, and nothing is added up over
 /// time, so there is no reason to read it while nobody is looking.
@@ -10,19 +10,13 @@ import HashNotchKit
 public final class PowerMonitor: ObservableObject {
     /// Watts, or nil until the first reading.
     @Published public private(set) var watts: Double?
-    /// The charger's rating while one is connected, for the red point and the
-    /// graph's limit line.
+    /// The charger's rating while one is connected, for the red point.
     @Published public private(set) var chargerWatts: Double?
-    /// Recent draws in watts, oldest first.
-    @Published public private(set) var history: [Double] = []
 
     /// Whether this Mac answers at all. Decided once at start, by asking: a Mac
     /// that gives no figure then will not give one later, and the row should
     /// not appear rather than sit there saying nothing.
     public private(set) var isAvailable = false
-
-    /// Half a minute at a reading a second, like the processor's graph.
-    private static let historyLength = 30
 
     private var sampler: VisibleSampler?
     private var smc: SMCConnection?
@@ -37,7 +31,7 @@ public final class PowerMonitor: ObservableObject {
         guard isAvailable else { release(); return }
         // A second: the SMC's system total refreshes once a second, so a
         // faster read would redraw the same figure and a slower one would
-        // miss the spikes the graph is for.
+        // show a number that is no longer "right now".
         let sampler = VisibleSampler(interval: 1.0 * scale, visibility: visibility) { [weak self] in
             self?.sample()
         }
@@ -49,12 +43,10 @@ public final class PowerMonitor: ObservableObject {
         sampler?.stop()
         sampler = nil
         release()
-        // The graph is about the last minute. Kept across a stop it would join
-        // a line from before the panel was shut to one from after, and draw a
-        // gap of any length as a single step.
+        // A figure from before the panel was shut is not "right now" when it
+        // opens again, so it goes rather than being shown until the next read.
         watts = nil
         chargerWatts = nil
-        history = []
     }
 
     private func release() {
@@ -68,7 +60,5 @@ public final class PowerMonitor: ObservableObject {
         watts = reading
         let charger = PowerReader.chargerWatts()
         if chargerWatts != charger { chargerWatts = charger }
-        history.append(reading)
-        if history.count > Self.historyLength { history.removeFirst(history.count - Self.historyLength) }
     }
 }

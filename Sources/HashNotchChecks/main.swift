@@ -4889,26 +4889,6 @@ check(
     check("27 W on a 30 W charger is red", PowerLevel.level(watts: 27, chargerWatts: 30) == .danger)
     check("26.9 W on it is not", PowerLevel.level(watts: 26.9, chargerWatts: 30) == .normal)
     check("on battery the draw is never red", PowerLevel.level(watts: 60, chargerWatts: nil) == .normal)
-    check(
-        "on the charger the graph is measured against the charger's rating",
-        PowerScale.ceiling(history: [5, 8], chargerWatts: 30) == 30
-    )
-    check(
-        "unless the Mac has drawn more than that, which it can for a moment",
-        PowerScale.ceiling(history: [5, 35], chargerWatts: 30) == 35
-    )
-    check(
-        "on battery a quiet Mac is not drawn as though it were flat out",
-        PowerScale.ceiling(history: [2, 3], chargerWatts: nil) == PowerScale.minimumCeilingWatts
-    )
-    check(
-        "and a busy one keeps room above its peak",
-        PowerScale.ceiling(history: [20], chargerWatts: nil) == 25
-    )
-    check(
-        "the graph's values stay between the floor and the ceiling",
-        PowerScale.normalised([0, 15, 40], chargerWatts: 30).allSatisfy { $0 >= 0 && $0 <= 1 }
-    )
     check("a draw under a hundred watts keeps its tenth", PowerFormat.watts(7.132) == "7.1 W")
     check("and one above it is whole watts", PowerFormat.watts(112.4) == "112 W")
 

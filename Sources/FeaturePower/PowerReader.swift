@@ -104,32 +104,6 @@ package enum PowerLevel {
     }
 }
 
-/// The height the graph is measured against.
-///
-/// On the charger it is the charger's rating, so the dashed line at the top of
-/// the graph means something: it is the most the charger can give, and a line
-/// climbing towards it is the reading climbing towards red. On battery there is
-/// no such limit, so the graph is scaled to the most recent peak with room
-/// above it, and draws no limit line at all — a dashed ceiling there would
-/// claim a limit that does not exist.
-package enum PowerScale {
-    /// The floor the scale never drops below, so a Mac idling at two watts is
-    /// not drawn as though it were at full tilt.
-    package static let minimumCeilingWatts = 10.0
-
-    package static func ceiling(history: [Double], chargerWatts: Double?) -> Double {
-        let peak = history.max() ?? 0
-        if let chargerWatts, chargerWatts > 0 { return max(chargerWatts, peak) }
-        return max(minimumCeilingWatts, peak * 1.25)
-    }
-
-    /// The history as shares of the ceiling, for the graph.
-    package static func normalised(_ history: [Double], chargerWatts: Double?) -> [Double] {
-        let top = ceiling(history: history, chargerWatts: chargerWatts)
-        return history.map { min(max($0 / top, 0), 1) }
-    }
-}
-
 /// How a draw is written: a decimal below a hundred watts, where the tenth is
 /// a real difference on a laptop, and whole watts above it.
 package enum PowerFormat {

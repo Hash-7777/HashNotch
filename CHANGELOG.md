@@ -6,12 +6,11 @@ All notable changes to HashNotch are recorded here.
 
 ### Added
 
-- **Power: what the whole Mac is using right now.** A new row, beside the
-  battery, in watts, with the last half-minute graphed under it. It is the
-  machine's total draw, read once a second from the System Management
-  Controller, so it means the same thing on battery or on the charger. On the
-  charger the top of the graph is the charger's own rating, and the figure turns
-  red at 90% of it — the point where the battery starts making up the
+- **Power consumption: what the whole Mac is using right now.** A new row,
+  beside the battery, in watts. It is the machine's total draw, read once a
+  second from the System Management Controller, so it means the same thing on
+  battery or on the charger. On the charger it turns red at 90% of the
+  charger's rating — the point where the battery starts making up the
   difference while plugged in. On battery it stays your colour. It reads
   nothing while the panel is shut and asks for no permission.
 

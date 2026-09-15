@@ -6,7 +6,7 @@ import HashNotchKit
 @MainActor
 public final class PowerFeature: NotchFeature {
     public let id = "power"
-    public let title = "Power"
+    public let title = "Power consumption"
     public let displayOptions: [FeatureOption] = []
 
     private let monitor = PowerMonitor()
