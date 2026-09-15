@@ -100,6 +100,14 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **A cleaner General page, and one tab fewer.** How long a finished alert
+  stays is now on General, under its own heading, and the Alerts tab that held
+  only that slider is gone. The page is in groups — Alerts, Counting, Cover art
+  and Permissions — each heading sitting on the card it names, with one short
+  sentence under each setting instead of a paragraph. On and off are macOS
+  switches at the end of the line, here and on the Indicators page, where there
+  used to be checkboxes, some of them under the text. Reset and Quit share the
+  last card.
 - **Storage in one row.** "Storage", what is free and how full share a line
   above the bar, instead of a heading, a line of figures and the bar.
 - **Shorter graphs.** The internet, processor and memory graphs are 16 points

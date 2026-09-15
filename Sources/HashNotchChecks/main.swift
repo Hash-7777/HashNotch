@@ -3700,6 +3700,13 @@ MainActor.assumeIsolated {
         "with room to spare, so the next page is a decision rather than a surprise",
         SettingsWindowController.minimumWidth - widestTabNeed >= 3
     )
+    // The finished-alert slider lives on General. It had a page of its own —
+    // one slider behind a tab — and every tab is a place taken from the strip
+    // in a window narrowed to fit beside the panel.
+    check(
+        "the window's own pages are General, Indicators, Appearance, Position and Privacy",
+        SettingsTabs.allTitles(features: []) == ["General", "Indicators", "Appearance", "Position", "Privacy"]
+    )
     check(
         "a strip with no tabs in it asks for no room",
         SettingsTabs.requiredWidth(tabs: 0, selectedLabelWidth: 80) == 0

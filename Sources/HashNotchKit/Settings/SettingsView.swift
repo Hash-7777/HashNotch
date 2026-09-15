@@ -64,7 +64,7 @@ public struct SettingsView: View {
     @State private var hoveredRow: String?
 
     package enum Section: String, CaseIterable, Identifiable {
-        case general, indicators, appearance, alerts, position, privacy
+        case general, indicators, appearance, position, privacy
         /// A page a FEATURE supplies. Deliberately unnamed here: the tab's
         /// words and its symbol come from the feature, because the core does
         /// not know what any feature does and should not start now.
@@ -76,7 +76,6 @@ public struct SettingsView: View {
             case .general: return "General"
             case .indicators: return "Indicators"
             case .appearance: return "Appearance"
-            case .alerts: return "Alerts"
             case .position: return "Position"
             case .privacy: return "Privacy"
             case .supplied: return ""
@@ -88,7 +87,6 @@ public struct SettingsView: View {
             case .general: return "gearshape.fill"
             case .indicators: return "square.stack.3d.up.fill"
             case .appearance: return "paintbrush.fill"
-            case .alerts: return "bell.fill"
             case .position: return "arrow.up.and.down.and.arrow.left.and.right"
             case .privacy: return "lock.shield.fill"
             case .supplied: return "puzzlepiece.extension.fill"
@@ -369,7 +367,6 @@ public struct SettingsView: View {
         case .general: general
         case .indicators: indicators
         case .appearance: appearance
-        case .alerts: alerts
         case .position: position
         case .privacy: privacy
         case .supplied:
@@ -377,17 +374,23 @@ public struct SettingsView: View {
         }
     }
 
+    /// How the app starts, what it counts, and what it may do — in groups that
+    /// each say what they are, one plain sentence under each setting.
+    ///
+    /// It was one long card of settings that each explained themselves in a
+    /// paragraph, with a checkbox parked under the paragraph, and two more
+    /// cards whose headings sat halfway between the card above and the card
+    /// below. Everything was there and nothing was easy to find. Now a heading
+    /// sits on the card it names, the switches are on the right where the eye
+    /// finishes a line, and the "why" of each setting lives in the code rather
+    /// than in the window.
     private var general: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            PageHeader("General", detail: "How the app starts, and how hard it works.")
+        VStack(alignment: .leading, spacing: 24) {
+            PageHeader("General", detail: "How the app starts, what it counts, and what it may do.")
 
             SettingCard {
-                SettingRow(
-                    "Open at login",
-                    detail: loginDetail
-                ) {
-                    Toggle("", isOn: launchAtLoginBinding)
-                        .labelsHidden()
+                SettingRow("Open at login", detail: loginDetail) {
+                    SettingSwitch(isOn: launchAtLoginBinding)
                         .disabled(!LoginItem.isSupported)
                 }
 
@@ -397,22 +400,38 @@ public struct SettingsView: View {
                     }
                     .buttonStyle(.link)
                     .font(.system(size: 10))
+                    .padding(.bottom, 6)
                 }
 
                 SettingDivider()
 
+                SettingRow("Battery saver", detail: "Checks everything half as often. Nothing disappears.") {
+                    SettingSwitch(isOn: $settings.batterySaver)
+                }
+            }
+
+            // What used to be a page of its own: one slider, behind a tab that
+            // cost the strip a place. It is about how long a notice stays, which
+            // is a general preference like the rest of this page.
+            SettingSection("Alerts") {
                 SettingRow(
-                    "Battery saver",
-                    detail: "Check everything half as often. Nothing disappears."
+                    "Keep a finished alert for",
+                    detail: "\(Int(settings.alerts.noticeSeconds)) seconds, then it goes on its own.",
+                    stacked: true
                 ) {
-                    Toggle("", isOn: $settings.batterySaver).labelsHidden()
+                    Slider(value: whole($settings.alerts.noticeSeconds), in: 1...10)
+                        .frame(maxWidth: .infinity)
                 }
+            }
 
-                SettingDivider()
-
+            SettingSection("Counting") {
+                // Counts on this rhythm whether or not the panel is open, so the
+                // figure on the notch is this fresh. Only what the tools have
+                // written since the last count is read, which is what makes even
+                // the short settings cheap.
                 SettingRow(
                     "Count AI tokens",
-                    detail: "Counts on this rhythm whether or not the panel is open, so the figure on the notch is this fresh. Only what your tools have written since the last count is read, which is what makes even the short settings cheap.",
+                    detail: "How often the figure on the notch is brought up to date.",
                     stacked: true
                 ) {
                     Picker("", selection: $settings.tokenScanInterval) {
@@ -431,8 +450,8 @@ public struct SettingsView: View {
                 // same day-by-day record, so this changes what the panel adds
                 // up rather than what it collects.
                 SettingRow(
-                    "Data used counts",
-                    detail: "How much has gone through your network, over the stretch you pick. \"Since I reset it\" is started again from the panel.",
+                    "Data used",
+                    detail: "What the internet row adds up. \"Since I reset it\" starts again from the panel.",
                     stacked: true
                 ) {
                     Picker("", selection: $settings.networkUsagePeriod) {
@@ -455,11 +474,23 @@ public struct SettingsView: View {
                 // but "this app knows which of your programs use the network"
                 // is a sentence somebody is entitled to say no to.
                 SettingRow(
-                    "Name the programs that used the most",
-                    detail: "Shows the two biggest under the total, with what each of them used. It asks macOS for its own per-program figures — the same ones Activity Monitor shows. Off means it is never asked.",
-                    stacked: true
+                    "Name the top programs",
+                    detail: "The two that used the most, from the figures Activity Monitor shows. Off means macOS is never asked."
                 ) {
-                    Toggle("", isOn: $settings.networkShowsApps).labelsHidden()
+                    SettingSwitch(isOn: $settings.networkShowsApps)
+                }
+            }
+
+            // Each service is its own switch, because each is a request to a
+            // different company. Rolling them into one would mean somebody who
+            // wants covers for the service they use has to accept requests to
+            // the others as well.
+            SettingSection("Cover art") {
+                ForEach(Array(ArtworkService.all.enumerated()), id: \.element.id) { index, service in
+                    if index > 0 { SettingDivider() }
+                    SettingRow(service.name, detail: service.detail) {
+                        SettingSwitch(isOn: artworkBinding(service))
+                    }
                 }
             }
 
@@ -469,55 +500,35 @@ public struct SettingsView: View {
             // something looks, and these are about what the app is allowed to
             // do, which is the first thing somebody looks for and the last
             // place they would think to find it.
-            // Each service is its own switch, because each is a request to a
-            // different company. Rolling them into one would mean somebody who
-            // wants covers for the service they use has to accept requests to
-            // the others as well.
-            SettingGroupLabel("Cover art")
-            SettingCard {
-                ForEach(Array(ArtworkService.all.enumerated()), id: \.element.id) { index, service in
-                    if index > 0 { SettingDivider() }
-                    SettingRow(service.name, detail: service.detail, stacked: true) {
-                        Toggle("", isOn: artworkBinding(service)).labelsHidden()
-                    }
-                }
-            }
-
-            SettingGroupLabel("Permissions")
-            SettingCard {
+            SettingSection("Permissions") {
                 SettingRow(
                     "Control video in your browser",
-                    detail: "Needs Accessibility, so the buttons can press the media keys. Without it they still work for Spotify and Music.",
-                    stacked: true
+                    detail: "Needs Accessibility to press the media keys. Spotify and Music work without it."
                 ) {
-                    Toggle("", isOn: mediaKeysBinding).labelsHidden()
+                    SettingSwitch(isOn: mediaKeysBinding)
                 }
 
                 SettingDivider()
 
                 SettingRow(
                     "Switch Low Power Mode from the panel",
-                    detail: "Switch it here instead of in System Settings. macOS asks for your password each time you use it.",
-                    stacked: true
+                    detail: "macOS asks for your password each time you use it."
                 ) {
-                    Toggle("", isOn: $settings.canSwitchLowPowerMode).labelsHidden()
+                    SettingSwitch(isOn: $settings.canSwitchLowPowerMode)
                 }
             }
 
             SettingCard {
                 ResetRow(
                     title: "Reset all settings",
-                    detail: "Puts every page back the way the app arrived — indicators, look, alerts, position. Your consent to read is kept, so nothing stops working.",
+                    detail: "Every page back the way the app arrived. Your consent to read is kept.",
                     confirmLabel: "Reset everything",
                     action: resetEverything
                 )
-            }
 
-            SettingCard {
-                SettingRow(
-                    "Quit HashNotch",
-                    detail: "Closes the island and stops everything."
-                ) {
+                SettingDivider()
+
+                SettingRow("Quit HashNotch", detail: "Closes the island and stops everything.") {
                     Button("Quit") { NSApp.terminate(nil) }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
@@ -594,7 +605,7 @@ public struct SettingsView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(enabled ? Color.white : Color.white.opacity(0.45))
                 Spacer(minLength: 0)
-                Toggle("", isOn: enabledBinding(feature.id)).labelsHidden()
+                SettingSwitch(isOn: enabledBinding(feature.id))
             }
 
             if enabled, !feature.options.isEmpty {
@@ -846,27 +857,6 @@ public struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .help(accent.name)
-    }
-
-    private var alerts: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            PageHeader("Alerts", detail: "What happens when something finishes, or wants your attention.")
-
-            SettingCard {
-                SettingRow(
-                    "Keep a finished alert for",
-                    detail: "\(Int(settings.alerts.noticeSeconds)) seconds, then it goes. No timer beside it.",
-                    stacked: true
-                ) {
-                    Slider(value: whole($settings.alerts.noticeSeconds), in: 1...10)
-                        .frame(maxWidth: .infinity)
-                }
-
-
-            }
-
-            Spacer(minLength: 0)
-        }
     }
 
     private var position: some View {
@@ -1732,6 +1722,50 @@ struct PrivacyNone: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.white.opacity(0.045))
         )
+    }
+}
+
+/// A heading and the card it names, as one piece.
+///
+/// Laid out as siblings on the page, a heading got the page's full gap above
+/// AND below it, so it sat exactly halfway between two cards and belonged to
+/// neither. Held together, the heading is close to its own card and a full gap
+/// from the one before.
+public struct SettingSection<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    public init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // In by a few points, so the heading lines up with the rounded
+            // card below it rather than with its outer edge.
+            SettingGroupLabel(title).padding(.leading, 4)
+            SettingCard { content }
+        }
+    }
+}
+
+/// An on/off setting, drawn as the switch macOS's own settings use.
+///
+/// SwiftUI's default on the Mac is a checkbox, which is right in a form and
+/// wrong beside a sentence: a small square box at the end of a line reads as
+/// something to tick, not something that is on. One shared piece, so every
+/// switch in the window is the same size.
+public struct SettingSwitch: View {
+    @Binding var isOn: Bool
+
+    public init(isOn: Binding<Bool>) { self._isOn = isOn }
+
+    public var body: some View {
+        Toggle("", isOn: $isOn)
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
     }
 }
 
