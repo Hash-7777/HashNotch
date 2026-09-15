@@ -68,8 +68,12 @@ done <<< "$staged"
 # cleaned up, and refusing that would be exactly backwards.
 added="$(git diff --cached --diff-filter=ACM -U0 | grep '^+' | grep -v '^+++' || true)"
 
+# The diff is handed to grep on its standard input rather than through a pipe.
+# Under `pipefail`, a pipeline's answer is only as good as every stage's exit
+# status, and a pattern search that stops at its first match is not something
+# the stage feeding it can be allowed to have an opinion about.
 check_pattern() {
-  if printf '%s' "$added" | grep -qE "$1"; then
+  if grep -qE "$1" <<< "$added"; then
     problem "$2"
   fi
 }
