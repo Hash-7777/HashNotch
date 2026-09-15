@@ -1,8 +1,18 @@
 import SwiftUI
 import HashNotchKit
 
-/// Compact thermal readout: a thermometer glyph tinted by pressure, plus the
-/// hottest die temperature (falling back to the pressure word).
+/// When a temperature counts as running high.
+///
+/// A temperature has no "100%", so it cannot use the shared share-of-the-whole
+/// rule. It names its own point instead and answers with the same two levels:
+/// the accent below it, red at and above it, and nothing in between.
+package enum ThermalLevel {
+    package static let hotCelsius = 80.0
+
+    package static func level(_ celsius: Double) -> ReadingLevel {
+        .of(celsius, dangerAt: hotCelsius)
+    }
+}
 
 /// Expanded detail: the top temperature sensors, shown when the HUD opens.
 struct ThermalDetailView: View {
@@ -17,12 +27,13 @@ struct ThermalDetailView: View {
     }
 
     private func tint(for celsius: Double) -> Color {
-        switch celsius {
-        case ..<50: return theme.downColor
-        case ..<70: return .yellow
-        case ..<85: return .orange
-        default: return theme.upColor
-        }
+        theme.color(for: ThermalLevel.level(celsius))
+    }
+
+    /// The figure stays white until it is running high, then takes the same
+    /// red as its thermometer, so a hot reading is not only a small glyph.
+    private func figureColor(for celsius: Double) -> Color {
+        ThermalLevel.level(celsius) == .danger ? Theme.danger : theme.textColor
     }
 
     var body: some View {
@@ -44,7 +55,7 @@ struct ThermalDetailView: View {
                             }
                             if style != .symbol {
                                 Text(reading(sensor.celsius))
-                                    .foregroundStyle(theme.textColor)
+                                    .foregroundStyle(figureColor(for: sensor.celsius))
                                     .monospacedDigit()
                                     .rollingDigits()
                             }

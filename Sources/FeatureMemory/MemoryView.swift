@@ -38,10 +38,9 @@ struct MemoryDetailView: View {
         }
     }
 
-    /// Quiet until it matters. Later than the processor, not "the same as" it
-    /// as this comment used to claim while the numbers said otherwise — memory
-    /// sitting at 60% is how a Mac is supposed to run.
+    /// The accent until 90% of memory is in use, then red — the same rule as
+    /// every full-scale readout (`ReadingLevel`).
     private var tint: Color {
-        theme.color(for: .of(monitor.snapshot?.fraction ?? 0, caution: 0.75, danger: 0.9))
+        theme.color(for: .of(share: monitor.snapshot?.fraction ?? 0))
     }
 }

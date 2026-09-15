@@ -2,6 +2,19 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Changed
+
+- **A reading turns red when it is running high, and not before.** The
+  processor, memory and the disk wear your accent colour until they reach 90%
+  of their scale, then turn red. There is no amber step in between any more:
+  next to the orange and yellow you can pick as your colour, a middle warning
+  read as the accent rather than as the reading climbing. Temperatures follow
+  the same two colours, turning red at 80°C — the figure as well as the
+  thermometer — and a battery running down turns red at 10% with no orange at
+  20%. The low-battery alert on the notch is the same red.
+
 ## 1.4.0 — it says who is watching, what you missed, and what you got done
 
 ### Fixed

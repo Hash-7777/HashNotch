@@ -59,9 +59,10 @@ public final class BatteryFeature: NotchFeature {
         case .pluggedIn, .fullyCharged:
             return Color(red: 0.30, green: 0.85, blue: 0.39)
         // Running out. The one that needs doing something about, so it takes
-        // the colour the eye is quickest to.
+        // the one colour the panel uses for "running high" everywhere else —
+        // red, never an orange that could be mistaken for somebody's accent.
         case .lowBattery:
-            return Color(red: 1.0, green: 0.55, blue: 0.10)
+            return Theme.danger
         // Off the charger and running on its own. White, because this is the
         // one of the four that reports rather than warns — it is the absence of
         // a state, not an event to act on — and white is the only colour that

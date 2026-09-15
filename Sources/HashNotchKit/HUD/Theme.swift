@@ -30,39 +30,25 @@ public struct Theme {
         self.cornerRadius = cornerRadius
     }
 
-    /// The colour a climbing reading takes once it is worth noticing, and the
-    /// one it takes when it is the reason you opened the panel.
+    /// The one colour a reading takes when it is running high.
     ///
     /// Fixed rather than derived from the accent, because a warning that
-    /// changes with taste is not a warning. They are also deliberately far from
-    /// every accent in the palette, which is the part that was wrong: the
-    /// caution colour used to be SwiftUI's `.orange`, and the palette's own
-    /// orange — the DEFAULT accent — sits 6.7 ΔE from it. Two colours that
-    /// close are one colour on a four-point bar seen at a glance, so on a
-    /// default install a disk at 74% and a disk at 76% looked identical and the
-    /// whole "quiet until it matters" idea did nothing at all. It also read as
-    /// a broken setting: somebody who picked Blue and still saw an orange bar
-    /// had no way to know the bar had left the accent on purpose.
+    /// changes with taste is not a warning. And there is only one of it. An
+    /// amber "getting high" step used to sit between the accent and this red,
+    /// and a middle step is exactly where a warning gets confused with a
+    /// choice: next to the orange and yellow people can pick as their colour,
+    /// it read as the accent rather than as the reading climbing. One colour
+    /// that means one thing is the only version that cannot be misread.
     ///
-    /// Measured against the six accents: this amber is at least 35 ΔE from
-    /// every one of them, and 87 from `danger`. `danger` is the same red the
-    /// upload arrow uses, unchanged, and is at least 28 away — its nearest is
-    /// the pink accent.
-    public static let caution = Color(red: 0.99, green: 0.85, blue: 0.24)
+    /// `danger` is the same red the upload arrow uses, and is at least 28 ΔE
+    /// from every accent in the palette — its nearest is the pink one.
     public static let danger = Color(red: 0.94, green: 0.30, blue: 0.36)
 
-    /// What to fill a reading with at a given level.
-    ///
-    /// Only for readouts that sit in the accent while nothing is wrong — the
-    /// processor, memory, and the disk. The temperature and battery readouts
-    /// have their own complete scales, green through yellow and orange to red,
-    /// and never wear the accent at all: this amber sits where their yellow
-    /// does, so handing them these tokens would merge two of their four bands
-    /// and lose a step. They are not an oversight.
+    /// What to fill a reading with at a given level: the accent while nothing
+    /// is wrong, red once it is.
     public func color(for level: ReadingLevel) -> Color {
         switch level {
         case .normal: return accent
-        case .caution: return Self.caution
         case .danger: return Self.danger
         }
     }
@@ -124,28 +110,29 @@ public struct Theme {
     )
 }
 
-/// How far up a climbing reading is: itself while nothing is wrong, then
-/// noticeable, then the reason you opened the panel.
+/// Whether a reading is running high.
 ///
-/// One rule in one place. It was the same three-case switch copied into the
-/// processor, memory and disk readouts, each with its own hard-coded orange —
-/// which is the thing `Theme` exists to prevent — and the copies had already
-/// drifted apart: memory's said it used "the same thresholds as the processor"
-/// while using 0.75 and 0.9 against the processor's 0.6 and 0.85.
-///
-/// The thresholds stay with each readout, because they genuinely differ and
-/// should: a processor at 60% is worth a glance, a disk at 60% is simply a
-/// disk. Only the colours are shared.
+/// One rule, one number, for every readout that has a full scale: at 90% of
+/// it, a reading turns red, and below that it wears the accent. The processor,
+/// memory and the disk all ask this, so they cannot drift apart the way three
+/// hand-copied switches once did. Readouts with no full scale — a temperature,
+/// a battery running DOWN — name their own point beside their own code, and
+/// still answer with these two levels and nothing between them.
 public enum ReadingLevel: Equatable, Sendable {
     case normal
-    case caution
     case danger
 
-    /// Which level a reading is at, in whatever unit the reading itself uses —
-    /// a fraction for the processor, a percentage for the disk.
-    public static func of(_ value: Double, caution: Double, danger: Double) -> ReadingLevel {
-        if value >= danger { return .danger }
-        if value >= caution { return .caution }
-        return .normal
+    /// Where "high" starts, as a share of the whole.
+    public static let dangerShare = 0.9
+
+    /// The level of a reading given as a share of its full scale, 0…1.
+    public static func of(share: Double) -> ReadingLevel {
+        share >= dangerShare ? .danger : .normal
+    }
+
+    /// The level of a reading against a point of its own, for readouts whose
+    /// scale has no top — a temperature, say.
+    public static func of(_ value: Double, dangerAt threshold: Double) -> ReadingLevel {
+        value >= threshold ? .danger : .normal
     }
 }

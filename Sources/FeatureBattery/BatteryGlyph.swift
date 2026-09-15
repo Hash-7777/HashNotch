@@ -124,15 +124,15 @@ struct BatteryGlyph: View {
     ///
     /// Low Power Mode outranks the level, because when both are true the more
     /// useful sentence is "the reason this feels different is a setting".
+    /// Nearly out is `BatteryLevel.isRunningLow` — one point, one red, and no
+    /// orange step before it, the same as every other reading in the panel.
     private var fillColor: Color {
         if isLowPowerMode { return .yellow }
         switch state {
         case .charging, .charged: return theme.downColor
         case .onHold: return theme.textColor.opacity(0.8)
         case .discharging:
-            if percentage <= 10 { return theme.upColor }
-            if percentage <= 20 { return .orange }
-            return theme.textColor
+            return BatteryLevel.isRunningLow(percentage) ? Theme.danger : theme.textColor
         }
     }
 
@@ -163,4 +163,15 @@ package enum BatteryGlyphShape {
     package static var capWidth: CGFloat { height * 0.155 }
     package static var capGap: CGFloat { height * 0.1 }
     package static var bodyWidth: CGFloat { totalWidth - capWidth - capGap }
+}
+
+/// Where a battery running down turns red. A battery has a full scale, but it is
+/// the bottom of it that matters, so it names its own point rather than
+/// borrowing the 90% the climbing readings share.
+package enum BatteryLevel {
+    package static let lowPercent = 10
+
+    package static func isRunningLow(_ percentage: Int) -> Bool {
+        percentage <= lowPercent
+    }
 }

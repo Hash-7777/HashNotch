@@ -2941,8 +2941,7 @@ MainActor.assumeIsolated {
     check(
         "and neither of them can be mistaken for a reading that is running high",
         [CallPalette.microphone, CallPalette.camera].allSatisfy { live in
-            Theme.perceptualDistance(live, Theme.caution) >= 20
-                && Theme.perceptualDistance(live, Theme.danger) >= 20
+            Theme.perceptualDistance(live, Theme.danger) >= 20
         }
     )
     // One dot, two things it could mean. The camera wins, which is what macOS
@@ -4759,53 +4758,37 @@ check(
     // ── A reading that leaves the accent has to LOOK like it left ────────────
     //
     // The processor, memory and disk readouts sit in the accent while nothing
-    // is wrong and take a warning colour when something is. That warning was
-    // SwiftUI's `.orange`, and the palette's own orange — the DEFAULT accent —
-    // is 6.7 ΔE from it. Two colours that close are one colour on a
-    // four-point bar: on a default install a disk at 74% and a disk at 76%
-    // looked the same, so the warning never warned. It also read as a broken
-    // setting to anybody who picked another colour and found the bar ignoring
-    // it, which is how this was reported.
+    // is wrong and turn red when they are running high — one colour, at one
+    // point, with no step in between. A middle "getting high" colour sat next
+    // to the orange and yellow people can pick as their accent and read as the
+    // accent rather than as a warning, so there is only the red now, and it has
+    // to be unmistakable against every accent on offer.
     //
     // The distance is measured rather than eyeballed, over CIE Lab, because
-    // component distance calls those two oranges far apart while the eye does
-    // not.
+    // component distance calls two near-identical colours far apart.
     let warningSeparation = 20.0
     check(
-        "the caution colour is clearly different from every accent somebody can pick",
-        AccentColor.all.allSatisfy {
-            Theme.perceptualDistance($0.color, Theme.caution) >= warningSeparation
-        }
-    )
-    check(
-        "and so is the danger colour",
+        "the high-reading red is clearly different from every accent somebody can pick",
         AccentColor.all.allSatisfy {
             Theme.perceptualDistance($0.color, Theme.danger) >= warningSeparation
         }
     )
     check(
-        "including from the accent a fresh install starts on, which is where this went wrong",
-        Theme.perceptualDistance(AccentColor.default.color, Theme.caution) >= warningSeparation
-            && Theme.perceptualDistance(AccentColor.default.color, Theme.danger) >= warningSeparation
-    )
-    check(
-        "caution and danger are not each other either",
-        Theme.perceptualDistance(Theme.caution, Theme.danger) >= warningSeparation
-    )
-    check(
-        "and the old caution colour would have failed this",
-        Theme.perceptualDistance(AccentColor.named("orange").color, .orange) < warningSeparation
+        "including the accent a fresh install starts on",
+        Theme.perceptualDistance(AccentColor.default.color, Theme.danger) >= warningSeparation
     )
 
-    // The levels themselves. Each readout keeps its own thresholds — a
-    // processor at 60% is worth a glance and a disk at 60% is simply a disk —
-    // so what is shared is the rule, not the numbers.
+    // The rule itself: 90% of the full scale, for every readout that has one.
     let theme = Theme.default.tinted(AccentColor.default.color)
-    check("a quiet reading wears the accent", ReadingLevel.of(0.1, caution: 0.75, danger: 0.9) == .normal)
-    check("one at the caution mark exactly has crossed it", ReadingLevel.of(0.75, caution: 0.75, danger: 0.9) == .caution)
-    check("just under it has not", ReadingLevel.of(0.7499, caution: 0.75, danger: 0.9) == .normal)
-    check("at the danger mark it is danger, not caution", ReadingLevel.of(0.9, caution: 0.75, danger: 0.9) == .danger)
-    check("and past it, still danger", ReadingLevel.of(2.0, caution: 0.75, danger: 0.9) == .danger)
+    check("a reading turns red at 90% of its scale", ReadingLevel.dangerShare == 0.9)
+    check("a quiet reading wears the accent", ReadingLevel.of(share: 0.1) == .normal)
+    check("so does one just under 90%", ReadingLevel.of(share: 0.8999) == .normal)
+    check("at 90% exactly it has crossed", ReadingLevel.of(share: 0.9) == .danger)
+    check("and past it, still red", ReadingLevel.of(share: 2.0) == .danger)
+    check(
+        "there is nothing between the accent and red: a reading at 80% is not flagged",
+        ReadingLevel.of(share: 0.8) == .normal
+    )
     check(
         "a normal reading is the accent itself, so changing the accent changes it",
         theme.color(for: .normal) == AccentColor.default.color
@@ -4813,16 +4796,25 @@ check(
                 == AccentColor.named("blue").color
     )
     check(
-        "and a warning is NOT the accent, whichever accent is chosen",
+        "and a high one is NOT the accent, whichever accent is chosen",
         AccentColor.all.allSatisfy { accent in
-            let tinted = Theme.default.tinted(accent.color)
-            return tinted.color(for: .caution) != accent.color
-                && tinted.color(for: .danger) != accent.color
+            Theme.default.tinted(accent.color).color(for: .danger) != accent.color
         }
     )
+
+    // Readouts with no "100%" name their own point and answer with the same two
+    // levels.
+    check("a temperature turns red at 80°C", ThermalLevel.hotCelsius == 80)
+    check("79.9°C is still the accent", ThermalLevel.level(79.9) == .normal)
+    check("80°C is red", ThermalLevel.level(80) == .danger)
+    check("a hot die is red too", ThermalLevel.level(97) == .danger)
+    check("a battery running down turns red at 10%", BatteryLevel.lowPercent == 10)
+    check("10% is red", BatteryLevel.isRunningLow(10))
+    check("11% is not", !BatteryLevel.isRunningLow(11))
+    check("and 20% has no warning step of its own any more", !BatteryLevel.isRunningLow(20))
     check(
-        "the disk reads in percent, so 80 is a caution rather than a danger",
-        ReadingLevel.of(80, caution: 75, danger: 90) == .caution
+        "the low-battery alert wears the same red as every other high reading",
+        BatteryFeature.tint(for: .lowBattery(8)) == Theme.danger
     )
 
     // The sentence Settings shows about this used to be written out beside the

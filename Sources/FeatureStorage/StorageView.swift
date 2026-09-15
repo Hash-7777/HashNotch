@@ -78,10 +78,10 @@ struct StorageDetailView: View {
         }
     }
 
-    /// Quiet until it matters. A disk at 70% is simply a disk; one with almost
-    /// nothing left is the reason you opened the panel. In percent, which is
-    /// what this readout measures in.
+    /// The accent until the disk is 90% full, then red — the same rule as
+    /// every full-scale readout (`ReadingLevel`). The readout measures in
+    /// percent, so it is handed over as a share.
     private var fill: Color {
-        theme.color(for: .of(Double(monitor.usage?.percentUsed ?? 0), caution: 75, danger: 90))
+        theme.color(for: .of(share: Double(monitor.usage?.percentUsed ?? 0) / 100))
     }
 }

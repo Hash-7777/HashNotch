@@ -40,9 +40,10 @@ struct CPUDetailView: View {
         return "\(Int((load * 100).rounded()))%"
     }
 
-    /// A processor is worth a glance sooner than a disk is, so these thresholds
-    /// are its own. The colours are not: see `ReadingLevel`.
+    /// The accent until 90% of the processor is in use, then red. The rule
+    /// and the number are shared with every full-scale readout: see
+    /// `ReadingLevel`.
     private var tint: Color {
-        theme.color(for: .of(monitor.load ?? 0, caution: 0.6, danger: 0.85))
+        theme.color(for: .of(share: monitor.load ?? 0))
     }
 }
