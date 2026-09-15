@@ -800,9 +800,16 @@ public final class NotchWindowController {
         scrollMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.scrollWheel]) { [weak self] event in
             MainActor.assumeIsolated { self?.handleScroll(event) }
         }
+        // The same events, seen from inside the app — which is where scrolling
+        // the open panel arrives. The gesture handler reads the original; the
+        // panel's own scroll view is handed a calmed copy (`PanelScroll`).
         localScrollMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { [weak self] event in
-            MainActor.assumeIsolated { self?.handleScroll(event) }
-            return event
+            let overPanel = MainActor.assumeIsolated { () -> Bool in
+                self?.handleScroll(event)
+                guard let self, self.state.isExpanded else { return false }
+                return self.panelAnchor.contains(NSEvent.mouseLocation)
+            }
+            return overPanel ? PanelScroll.calmed(event) : event
         }
 
         // A click away from the panel closes it.

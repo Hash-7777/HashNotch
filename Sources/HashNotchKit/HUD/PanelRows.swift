@@ -142,3 +142,40 @@ package struct TopHold: NSViewRepresentable {
         }
     }
 }
+
+/// How far the panel's rows move for a swipe.
+///
+/// macOS scrolls every view by the distance the fingers travelled, with
+/// momentum after. That is right for a document hundreds of rows long; in a
+/// panel that is only a few rows taller than the screen allows, an ordinary
+/// flick carried the list to its end before the eye could follow it. Over the
+/// panel the distance is scaled down — the same gesture, the same momentum and
+/// the same rhythm, over less ground — so the list glides rather than jumps.
+package enum PanelScroll {
+    package static let factor: Double = 0.5
+
+    /// The event with its vertical distance scaled by `factor`. Every field
+    /// macOS reads a scroll's distance from is scaled together, so a trackpad,
+    /// a mouse wheel and the momentum after a flick all slow alike; the phase
+    /// fields are untouched, so a flick still coasts and settles.
+    ///
+    /// The order the fields are written in matters. They are linked: writing
+    /// the line count recalculates the point distance from it, so writing
+    /// points first and lines after quietly undid the scaling (a 10-point step
+    /// came out as 8, not 5). Lines, then the fine-grained value, then points
+    /// last leaves each where it was put.
+    package static func calmed(_ event: NSEvent) -> NSEvent {
+        guard let source = event.cgEvent, let copy = source.copy() else { return event }
+        let lines = source.getIntegerValueField(.scrollWheelEventDeltaAxis1)
+        if lines != 0 {
+            // A wheel's click is one line; halving it must not round to none.
+            copy.setIntegerValueField(.scrollWheelEventDeltaAxis1,
+                                      value: Int64((Double(lines) * factor).rounded(.awayFromZero)))
+        }
+        let fixed = source.getDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1)
+        copy.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1, value: fixed * factor)
+        let point = Double(source.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
+        copy.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: Int64((point * factor).rounded()))
+        return NSEvent(cgEvent: copy) ?? event
+    }
+}

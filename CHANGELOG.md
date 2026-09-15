@@ -38,7 +38,9 @@ All notable changes to HashNotch are recorded here.
   so the rows keep their place. It always opens with the first row fully in
   view. A panel that fits looks exactly as it did. While
   it scrolls, a two-finger swipe up over the rows scrolls them; a swipe up on
-  the notch still closes the panel.
+  the notch still closes the panel. Scrolling it is calmer than elsewhere on
+  the Mac: the same swipe moves the rows half as far, with the same glide
+  after it, so a short list does not fly to its end.
 - **The cover on the strip sits inside it.** It filled the strip to within a
   point of its bottom edge, and its drop shadow — invisible on black — showed
   only where it spilled below the strip onto the desktop. The cover is smaller

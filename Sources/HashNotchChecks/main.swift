@@ -6804,6 +6804,56 @@ check("a panel that has just opened shows its first row, not a few points below 
           guard let offset = scrollOffsetAfterOpening() else { return false }
           return abs(offset) < 0.5
       })
+// Calmer scrolling over the panel: the same gesture moves the list half as
+// far. Held against the real AppKit scroll view the panel builds, fed real
+// scroll events, raw and calmed, and measured by how far the list travelled.
+@MainActor func scrolledDistance(calm: Bool) -> CGFloat? {
+    let host = NSHostingView(rootView: PanelRows(maxHeight: 200) {
+        Color.clear.frame(width: 120, height: 900)
+    })
+    let window = NSWindow(contentRect: NSRect(x: 400, y: 300, width: 120, height: 200),
+                          styleMask: .borderless, backing: .buffered, defer: false)
+    window.contentView = host
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil) }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    func scrollViews(in view: NSView) -> [NSScrollView] {
+        (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
+    }
+    guard let scroll = scrollViews(in: host).first else { return nil }
+    let before = scroll.contentView.bounds.origin.y
+    // Twenty-point steps without a gesture phase. A real trackpad's phased
+    // gesture cannot be synthesised — a scroll view ignores one that no finger
+    // made — and a phase-less step under about ten points is dropped outright,
+    // so smaller steps would make the calmed half look like nothing at all.
+    for _ in 0..<10 {
+        guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1,
+                               wheel1: -20, wheel2: 0, wheel3: 0),
+              let event = NSEvent(cgEvent: cg) else { return nil }
+        scroll.scrollWheel(with: calm ? PanelScroll.calmed(event) : event)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+    }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    return scroll.contentView.bounds.origin.y - before
+}
+check("an ordinary scroll moves the panel's list the distance scrolled",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return scrolledDistance(calm: false).map { abs($0 - 200) < 1 } ?? false
+      })
+check("a calmed one moves it half as far",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return scrolledDistance(calm: true).map { abs($0 - 100) < 1 } ?? false
+      })
+check("a mouse wheel's single click still moves it rather than rounding to nothing",
+      {
+          guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1,
+                                 wheel1: -1, wheel2: 0, wheel3: 0),
+                let event = NSEvent(cgEvent: cg),
+                let calmed = PanelScroll.calmed(event).cgEvent else { return false }
+          return calmed.getIntegerValueField(.scrollWheelEventDeltaAxis1) == -1
+      }())
 check("a panel that scrolls shows no scroll bar",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }
