@@ -294,9 +294,27 @@ public final class NotchWindowController {
         islandTop: CGFloat,
         screenFrame: CGRect
     ) -> CGFloat {
-        let available = max(0, islandTop - screenFrame.minY - panelBottomMargin)
+        let available = NotchState.panelRoom(islandTop: islandTop, screenFrame: screenFrame)
         let wanted = measured ?? provisionalExpandedHeight
         return min(wanted, available)
+    }
+
+    /// Whether the open panel is at its ceiling — which is when its rows
+    /// scroll inside it rather than fitting.
+    package static func panelScrolls(measured: CGFloat?, islandTop: CGFloat, screenFrame: CGRect) -> Bool {
+        guard let measured else { return false }
+        return measured >= NotchState.panelRoom(islandTop: islandTop, screenFrame: screenFrame) - 1
+    }
+
+    /// Whether a two-finger swipe up closes the open panel.
+    ///
+    /// On the notch, always. Over the rest of the panel, only while the panel
+    /// fits: once its rows scroll, the same swipe is how somebody reaches the
+    /// rows below, and closing the panel under their fingers would make those
+    /// rows unreachable again.
+    package static func swipeUpCloses(onNotch: Bool, onPanel: Bool, panelScrolls: Bool) -> Bool {
+        if onNotch { return true }
+        return onPanel && !panelScrolls
     }
 
     /// The region that keeps the panel open, for a panel of a given height.
@@ -831,8 +849,14 @@ public final class NotchWindowController {
             lastSwipe = Date()
             openPanel()
         } else if state.isExpanded, !fingersDown {
-            guard expandedHoverRect.contains(location)
-                || collapsedHoverRect.contains(location) else { return }
+            let scrolls = Self.panelScrolls(
+                measured: lastExpandedHeight, islandTop: islandTop, screenFrame: screenFrame
+            )
+            guard Self.swipeUpCloses(
+                onNotch: collapsedHoverRect.contains(location),
+                onPanel: expandedHoverRect.contains(location),
+                panelScrolls: scrolls
+            ) else { return }
             lastSwipe = Date()
             state.setExpanded(false)
         }

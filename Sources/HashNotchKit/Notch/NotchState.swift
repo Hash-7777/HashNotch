@@ -24,6 +24,10 @@ public final class NotchState: ObservableObject {
     @Published public private(set) var liveHeight: CGFloat = 0
     @Published public private(set) var expandedWidth: CGFloat = 0
     @Published public private(set) var expandedHeight: CGFloat = 460
+    /// How tall the open panel may be on this display: the room below the
+    /// island, less a margin at the bottom. The panel's rows scroll inside it
+    /// when they would not fit, rather than running off the screen.
+    @Published public private(set) var panelRoom: CGFloat = .greatestFiniteMagnitude
 
     public init(geometry: NotchGeometry) {
         apply(geometry: geometry)
@@ -54,6 +58,7 @@ public final class NotchState: ObservableObject {
         // hover zone (the panel itself sizes to its content).
         expandedWidth = max(width + 120, 300)
         expandedHeight = 460
+        panelRoom = Self.panelRoom(islandTop: geometry.islandTop, screenFrame: geometry.screenFrame)
 
         // Compact-live: content hugs the notch — a small art tile on the left,
         // a title on the right — like the iPhone's compact Dynamic Island.
@@ -94,6 +99,17 @@ public final class NotchState: ObservableObject {
     /// which reads as a thing that is happening; the idle silhouette had
     /// nothing to justify it.
     public static let minimumContentHeight: CGFloat = 28
+
+    /// The room below the island for the open panel.
+    ///
+    /// ONE calculation, used by the window, the keep-open zone and the panel's
+    /// own rows. The window used to be capped here while the panel inside it
+    /// was not, so a panel with enough indicators switched on laid itself out
+    /// taller than the screen and the window simply cut it off: the last rows
+    /// were unreachable, with nothing to scroll.
+    package static func panelRoom(islandTop: CGFloat, screenFrame: CGRect) -> CGFloat {
+        max(0, islandTop - screenFrame.minY - NotchWindowController.panelBottomMargin)
+    }
 
     /// How much room is left below the notch for the coloured line — and it is
     /// room for the LINE, not black.

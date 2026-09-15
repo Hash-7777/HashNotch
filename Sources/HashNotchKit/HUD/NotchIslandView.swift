@@ -544,10 +544,10 @@ struct NotchIslandView: View {
     private var expandedIsland: some View {
         VStack(spacing: 0) {
             notchShoulders
-            expandedContent
-                .padding(.top, 16)
+            PanelRows(maxHeight: rowsRoom) { expandedContent }
+                .padding(.top, Self.rowsTopPadding)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 18)
+                .padding(.bottom, Self.rowsBottomPadding)
         }
             .opacity(panelRevealed ? 1 : 0)
             .frame(width: state.expandedWidth, alignment: .top)
@@ -598,6 +598,17 @@ struct NotchIslandView: View {
                 // still plainly a surface — it has its own fill and a hairline
                 // along its edge.
             )
+    }
+
+    private static let rowsTopPadding: CGFloat = 16
+    private static let rowsBottomPadding: CGFloat = 18
+
+    /// The height the rows may take before they scroll: the room below the
+    /// island, less the band beside the notch and the panel's own padding, so
+    /// the whole panel — not just its rows — ends above the bottom of the
+    /// screen. Floored so a tiny display still shows a usable window of rows.
+    private var rowsRoom: CGFloat {
+        max(160, state.panelRoom - state.notchHeight - Self.rowsTopPadding - Self.rowsBottomPadding)
     }
 
     private func pillShape(radius: CGFloat) -> NotchShape {

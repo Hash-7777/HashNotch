@@ -5142,6 +5142,46 @@ check(
             ).isFinite
         )
 
+        // The panel's rows are held to the same room the window is, from the
+        // same calculation — the window was capped while the rows were not, so
+        // a long enough panel ran off the screen with nothing to scroll.
+        check(
+            "the panel's room is the one calculation the window uses",
+            NotchState.panelRoom(islandTop: top, screenFrame: screen)
+                == top - screen.minY - NotchWindowController.panelBottomMargin
+        )
+        let room = NotchState.panelRoom(islandTop: top, screenFrame: screen)
+        check(
+            "a panel shorter than the room does not scroll",
+            !NotchWindowController.panelScrolls(measured: room - 40, islandTop: top, screenFrame: screen)
+        )
+        check(
+            "a panel at the room's full height does",
+            NotchWindowController.panelScrolls(measured: room, islandTop: top, screenFrame: screen)
+        )
+        check(
+            "and one never measured is not assumed to",
+            !NotchWindowController.panelScrolls(measured: nil, islandTop: top, screenFrame: screen)
+        )
+        // Swiping up closes the panel — except over rows that scroll, where the
+        // same swipe is how the lower rows are reached.
+        check(
+            "a swipe up on the notch always closes the panel",
+            NotchWindowController.swipeUpCloses(onNotch: true, onPanel: true, panelScrolls: true)
+        )
+        check(
+            "one over a panel that fits closes it",
+            NotchWindowController.swipeUpCloses(onNotch: false, onPanel: true, panelScrolls: false)
+        )
+        check(
+            "one over a panel that scrolls scrolls it instead",
+            !NotchWindowController.swipeUpCloses(onNotch: false, onPanel: true, panelScrolls: true)
+        )
+        check(
+            "and one somewhere else does nothing",
+            !NotchWindowController.swipeUpCloses(onNotch: false, onPanel: false, panelScrolls: false)
+        )
+
         // Settings hangs off the panel's right edge, sharing its top edge so
         // the two read as one surface rather than as a window that happened to
         // appear nearby.
@@ -6573,6 +6613,45 @@ check(
         return abs(thin * 2 - thick) < 0.001
     }()
 )
+
+// MARK: - The panel's rows scroll instead of running off the screen
+//
+// Laid out for real, through a hosting view, rather than argued about: rows
+// taller than the room come back exactly as tall as the room (and scroll),
+// rows that fit come back at their own height with nothing added.
+@MainActor func rowsHeight(content: CGFloat, room: CGFloat) -> CGFloat {
+    let host = NSHostingView(rootView: PanelRows(maxHeight: room) {
+        Color.clear.frame(width: 120, height: content)
+    })
+    return host.fittingSize.height
+}
+check("rows taller than the room are held to it",
+      MainActor.assumeIsolated { abs(rowsHeight(content: 900, room: 300) - 300) < 0.5 })
+check("rows that fit keep their own height",
+      MainActor.assumeIsolated { abs(rowsHeight(content: 180, room: 300) - 180) < 0.5 })
+
+// Those two hold the panel's outer height, which comes out the same whether the
+// rows scroll or merely spill past the frame. What decides between the two is
+// the room being OFFERED to the choice: asked only for an ideal height, every
+// option fits and the non-scrolling one always wins. So the mechanism is held
+// directly — two stand-ins of different widths, and the width that comes back
+// says which one was chosen.
+// The checks run on macOS 13 and later (CI's oldest image is 15); on anything
+// older there is no ViewThatFits to hold, and the answer is the one expected.
+@MainActor func chosenWidth(firstHeight: CGFloat, room: CGFloat) -> CGFloat {
+    guard #available(macOS 13.0, *) else { return firstHeight > room ? 50 : 120 }
+    let host = NSHostingView(rootView: CappedHeight(maxHeight: room) {
+        ViewThatFits(in: .vertical) {
+            Color.clear.frame(width: 120, height: firstHeight)
+            Color.clear.frame(width: 50, height: 10)
+        }
+    })
+    return host.fittingSize.width
+}
+check("offered the room, rows that do not fit give way to the scrolling choice",
+      MainActor.assumeIsolated { chosenWidth(firstHeight: 900, room: 300) == 50 })
+check("and rows that fit keep the plain one",
+      MainActor.assumeIsolated { chosenWidth(firstHeight: 200, room: 300) == 120 })
 
 // MARK: - Where the settings window may be dragged from
 //
