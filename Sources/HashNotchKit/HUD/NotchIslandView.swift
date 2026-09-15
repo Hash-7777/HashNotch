@@ -16,6 +16,10 @@ struct NotchIslandView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var settings: SettingsStore
     @ObservedObject var presence: LivePresence
+    /// Watched, not merely held: the rows inside the panel are told through the
+    /// environment whether it is resizing, and an environment value only
+    /// reaches them if this view redraws when it changes.
+    @ObservedObject var panelMotion: PanelMotion
     let registry: FeatureRegistry
     let context: FeatureContext
     /// Reports the island's rendered size so the controller can keep the
@@ -259,11 +263,20 @@ struct NotchIslandView: View {
                     ))
             }
         }
+        .environment(\.panelIsResizing, panelMotion.isResizing)
         .background(
             GeometryReader { geo in
                 Color.clear
                     .onAppear { onIslandSize?(geo.size) }
-                    .onChange(of: geo.size) { size in onIslandSize?(size) }
+                    .onChange(of: geo.size) { size in
+                        // Whatever changed the island's height — a feature
+                        // appearing, a notice arriving — the figures hold still
+                        // until it has settled. A feature that knows in advance
+                        // says so before the change (see `PanelMotion`); this
+                        // catches everything that does not.
+                        panelMotion.beginResize(for: 0.6 * motionScale)
+                        onIslandSize?(size)
+                    }
             }
         )
         // Opening springs overshoot slightly for the water-drop wobble; closing

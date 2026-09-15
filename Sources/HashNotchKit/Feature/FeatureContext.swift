@@ -19,6 +19,11 @@ public final class FeatureContext {
     /// against this instead of running around the clock.
     public let visibility: PanelVisibility
 
+    /// Told when something is about to change the panel's height, so the
+    /// figures inside it hold their digits still while the rows move. A
+    /// feature that resizes the panel says so; see `PanelMotion`.
+    public let panelMotion: PanelMotion
+
     /// What happened while nobody was looking, once there is anything to say.
     ///
     /// The core fills this in; one feature draws it. Neither the features that
@@ -71,12 +76,14 @@ public final class FeatureContext {
         theme: Theme = .default,
         settings: SettingsStore,
         presence: LivePresence? = nil,
-        visibility: PanelVisibility? = nil
+        visibility: PanelVisibility? = nil,
+        panelMotion: PanelMotion? = nil
     ) {
         self.baseTheme = theme
         self.settings = settings
         self.presence = presence ?? LivePresence()
         self.visibility = visibility ?? PanelVisibility()
+        self.panelMotion = panelMotion ?? PanelMotion()
         self.away = AwayReport()
     }
 }

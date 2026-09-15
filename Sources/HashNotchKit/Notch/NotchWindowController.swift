@@ -189,6 +189,7 @@ public final class NotchWindowController {
             state: state,
             settings: context.settings,
             presence: context.presence,
+            panelMotion: context.panelMotion,
             registry: registry,
             context: context,
             // Weak at the OUTER closure. The view keeps this closure for as

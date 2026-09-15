@@ -6829,6 +6829,33 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// While the panel changes size, its figures hold their digits still.
+//
+// A rolling figure is drawn as its own moving piece, laid out where it was when
+// the number changed. That is right when the number is the only thing moving
+// and wrong when its row is moving too: stopping a focus stretch slid every row
+// up, and each reading that happened to change in the same tick was left in
+// mid-air over another row until it caught up. The window is timed, so what is
+// held here is the window: it opens before the change, it closes after it, and
+// a second change extends it rather than ending it early.
+@MainActor func panelMotionStates() -> (begun: Bool, extended: Bool, cleared: Bool) {
+    let motion = PanelMotion()
+    motion.beginResize(for: 0.2)
+    let begun = motion.isResizing
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+    motion.beginResize(for: 0.6)
+    // Past the first window, well inside the second.
+    RunLoop.main.run(until: Date().addingTimeInterval(0.25))
+    let extended = motion.isResizing
+    // Past the second, with room to spare on a slower machine.
+    RunLoop.main.run(until: Date().addingTimeInterval(0.8))
+    return (begun, extended, !motion.isResizing)
+}
+let panelMotion = MainActor.assumeIsolated { panelMotionStates() }
+check("a panel about to change size says so before it does", panelMotion.begun)
+check("a second change extends that, rather than ending it early", panelMotion.extended)
+check("and it is over once the change has settled", panelMotion.cleared)
+
 check("a panel that has just opened shows its first row, not a few points below it",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }

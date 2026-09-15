@@ -81,12 +81,24 @@ public extension View {
     /// Used on every live readout in the app — speeds, percentages, token
     /// counts, temperatures — which is why it is worth a name of its own
     /// rather than fifteen copies of the same availability check.
-    @ViewBuilder
+    ///
+    /// It holds still while the panel is changing size. See `PanelMotion`.
     func rollingDigits() -> some View {
+        modifier(RollingDigits())
+    }
+}
+
+/// The odometer roll, and the one thing that switches it off: a panel that is
+/// changing size under the figure. See `PanelMotion` for why.
+struct RollingDigits: ViewModifier {
+    @Environment(\.panelIsResizing) private var resizing
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
         if #available(macOS 13, *) {
-            self.contentTransition(.numericText())
+            content.contentTransition(resizing ? .identity : .numericText())
         } else {
-            self
+            content
         }
     }
 }

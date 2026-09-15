@@ -68,6 +68,9 @@ struct FocusDetailView: View {
     @ObservedObject var engine: FocusEngine
     @ObservedObject var settings: SettingsStore
     let theme: Theme
+    /// Told before the panel's height changes, so every reading in the panel
+    /// holds its digits still while the rows move. See `PanelMotion`.
+    let panelMotion: PanelMotion
 
     /// Everything here is scaled by the Motion setting and by what this macOS
     /// can draw in time, like every other animation in the app. A page that
@@ -143,6 +146,9 @@ struct FocusDetailView: View {
     /// Making the change inside the animation carries it to every row the
     /// change moves.
     private func withPanel(_ change: () -> Void) {
+        // Said first, and in the same turn as the change, so the rows are
+        // already holding their digits when they start to move.
+        panelMotion.beginResize(for: 0.7 * motion)
         withAnimation(resize) { change() }
     }
 

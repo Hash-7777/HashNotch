@@ -68,7 +68,12 @@ All notable changes to HashNotch are recorded here.
   new place at once, and on stopping they jumped up into space the timer was
   still fading out of, so for a moment the two were drawn over each other. The
   rows now slide with the section, the timer leaves before they reach it, and
-  it arrives only once they have made room.
+  it arrives only once they have made room. The readings hold still as well:
+  a figure that changes rolls its digits, drawn where it stood when the number
+  changed, so any reading that happened to change in that same tick was left
+  hanging over another row until it caught up — the panel looked as though it
+  had come apart. While the panel is changing size, a figure that changes
+  simply changes.
 - **The focus settings show their numbers.** Each length and the number of
   rounds before a long rest now sits beside its buttons. The figures were
   written as the buttons' own label, which the layout hides, so the rounds row

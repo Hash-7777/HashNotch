@@ -63,7 +63,12 @@ public final class FocusFeature: NotchFeature {
     }
 
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
-        AnyView(FocusDetailView(engine: engine, settings: context.settings, theme: context.theme))
+        AnyView(FocusDetailView(
+            engine: engine,
+            settings: context.settings,
+            theme: context.theme,
+            panelMotion: context.panelMotion
+        ))
     }
 
     public func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage? {
