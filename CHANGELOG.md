@@ -69,6 +69,9 @@ All notable changes to HashNotch are recorded here.
   was a button for something done once. Connecting is the one-line installer
   in the README, as it was before the page existed, and when an installed hook
   falls behind the app, the notice in the panel still offers to update it.
+- **The focus section is a row shorter.** With nothing running, the week's
+  sentence sits on the left and the Start button on the right, in one row,
+  instead of the button taking a row of its own above the text.
 - **A new AirPods mark.** Each earbud is one continuous outline — a round head
   running straight down into its stem — instead of a circle on a stick, and the
   two stems stand far enough apart to stay separate at panel size.
