@@ -82,7 +82,7 @@ struct FocusDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             // The heading and the button that starts a stretch share one line,
             // the way a row's name and its value do; the week sits under them
             // as one quiet line.
@@ -90,7 +90,7 @@ struct FocusDetailView: View {
                 NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
                 Spacer(minLength: 8)
                 if engine.session == nil {
-                    FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true) {
+                    FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true, slim: true) {
                         engine.begin(.work)
                     }
                     .fixedSize()
@@ -161,13 +161,15 @@ struct FocusDetailView: View {
     /// much focus is behind you. No second section, no marks, and no word
     /// anybody has to be taught.
     ///
-    /// One thin line, never two: it is a footnote to the row above it.
+    /// One thin line, never two, centred under the heading and the button: it
+    /// is a footnote to the row above it, and sits close under it.
     private var weekLine: some View {
         Text(FocusHistoryMath.weekText(engine.history, today: engine.tally))
-            .font(.system(size: 9))
+            .font(.system(size: 8.5))
             .foregroundStyle(theme.subtitleColor)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
+            .frame(maxWidth: .infinity, alignment: .center)
     }
 
 }
@@ -176,22 +178,27 @@ struct FocusButton: View {
     let title: String
     let theme: Theme
     var filled: Bool = false
+    /// A lower, narrower pill, for a button that shares a line with a
+    /// heading: at full height it made the heading's line taller than the
+    /// heading.
+    var slim: Bool = false
     let action: () -> Void
     @State private var hovered = false
 
-    init(_ title: String, theme: Theme, filled: Bool = false, action: @escaping () -> Void) {
+    init(_ title: String, theme: Theme, filled: Bool = false, slim: Bool = false, action: @escaping () -> Void) {
         self.title = title
         self.theme = theme
         self.filled = filled
+        self.slim = slim
         self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .font(.system(size: slim ? 9 : 10, weight: .semibold))
+                .padding(.horizontal, slim ? 8 : 10)
+                .padding(.vertical, slim ? 2.5 : 5)
                 .background(
                     Capsule().fill(
                         filled
