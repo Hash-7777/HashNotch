@@ -6816,7 +6816,12 @@ check("a panel that has just opened shows its first row, not a few points below 
     window.contentView = host
     window.orderFrontRegardless()
     defer { window.orderOut(nil) }
-    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    // Past the opening hold before the first step. `TopHold` puts any offset
+    // of a few points back to the top while a new panel settles, and a
+    // calmed first step is exactly that small: scrolled any sooner, the list
+    // was pulled back whenever the hold looked before the second step came,
+    // which on a slower machine was every time.
+    RunLoop.main.run(until: Date().addingTimeInterval(TopHold.window + 0.3))
     func scrollViews(in view: NSView) -> [NSScrollView] {
         (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
     }
