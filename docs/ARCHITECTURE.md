@@ -26,6 +26,7 @@ FeatureCall
 FeatureThermal
 FeatureCPU
 FeatureMemory
+FeaturePower
 FeatureStorage
 
 HashNotch         The executable. The only place features are wired together.

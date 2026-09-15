@@ -39,6 +39,7 @@ public enum NotchIcon: String, CaseIterable, Sendable {
     case focus
     case airpods
     case activities
+    case power
 }
 
 /// One piece of a mark: a path, and whether it is drawn as a line or as a
@@ -127,7 +128,23 @@ public enum NotchIconGeometry {
         case .focus: return focus
         case .airpods: return airpods
         case .activities: return activities
+        case .power: return power
         }
+    }
+
+    /// A bolt, for the power the whole Mac is drawing. Drawn solid, like the
+    /// thermometer: an outlined bolt at nine points closes up into a zigzag
+    /// line, and the shape is only a bolt while it has a body.
+    private static var power: [NotchIconPart] {
+        var bolt = Path()
+        bolt.move(to: CGPoint(x: 62, y: 6))
+        bolt.addLine(to: CGPoint(x: 20, y: 57))
+        bolt.addLine(to: CGPoint(x: 46, y: 57))
+        bolt.addLine(to: CGPoint(x: 38, y: 94))
+        bolt.addLine(to: CGPoint(x: 80, y: 43))
+        bolt.addLine(to: CGPoint(x: 54, y: 43))
+        bolt.closeSubpath()
+        return [NotchIconPart(path: bolt, style: .fill)]
     }
 
     /// A chip with legs on all four sides and a core in the middle. The core is

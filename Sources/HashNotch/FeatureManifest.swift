@@ -14,6 +14,7 @@ import FeatureCall
 import FeatureStorage
 import FeatureCPU
 import FeatureMemory
+import FeaturePower
 
 /// The one and only place features are turned on or off.
 ///
@@ -45,6 +46,7 @@ enum FeatureManifest {
             TokensFeature(),
             NetworkFeature(),
             BatteryFeature(),
+            PowerFeature(),
             AirPodsFeature(),
             CallFeature(),
             ThermalFeature(),

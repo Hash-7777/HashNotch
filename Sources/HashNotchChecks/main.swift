@@ -15,6 +15,7 @@ import FeatureThermal
 import FeatureStorage
 import FeatureCPU
 import FeatureMemory
+import FeaturePower
 import FeatureTimer
 import FeatureFocus
 
@@ -3695,7 +3696,9 @@ MainActor.assumeIsolated {
             // Focus runs for as long as a block does, so it sits with the
             // things that are ongoing rather than with the announcements.
             "focus",
-            "network", "battery", "airpods",
+            // Power sits beside the battery: it is the other half of the same
+            // question, what the Mac is running on and how hard.
+            "network", "battery", "power", "airpods",
             "tokens", "thermal", "memory", "cpu",
             "timer", "storage",
         ]
@@ -4804,6 +4807,88 @@ check(
         "the low-battery alert wears the same red as every other high reading",
         BatteryFeature.tint(for: .lowBattery(8)) == Theme.danger
     )
+
+    // ── Power: what the whole Mac is drawing ───────────────────────────────
+    //
+    // The figure comes from the SMC's live system total first, then from the
+    // battery controller's telemetry in milliwatts, and from the battery's own
+    // voltage and current only when both are missing and the battery is the
+    // one supplying everything. The registry hands out
+    // unsigned numbers, so a negative value arrives as an enormous one; it has
+    // to be refused, not shown as a Mac drawing a petawatt.
+    check(
+        "the SMC's live total is the figure when it answers",
+        PowerReader.watts(smcSystemTotal: 6.22, telemetry: ["SystemLoad": NSNumber(value: 6_202)],
+                          batteryMillivolts: nil, batteryMilliamps: nil) == 6.22
+    )
+    check(
+        "an SMC answer of nothing, or of nonsense, falls through to the controller",
+        PowerReader.watts(smcSystemTotal: 0, telemetry: ["SystemLoad": NSNumber(value: 6_202)],
+                          batteryMillivolts: nil, batteryMilliamps: nil) == 6.202
+            && PowerReader.watts(smcSystemTotal: .nan, telemetry: ["SystemLoad": NSNumber(value: 6_202)],
+                                 batteryMillivolts: nil, batteryMilliamps: nil) == 6.202
+            && PowerReader.watts(smcSystemTotal: 50_000, telemetry: ["SystemLoad": NSNumber(value: 6_202)],
+                                 batteryMillivolts: nil, batteryMilliamps: nil) == 6.202
+    )
+    check(
+        "without the SMC, the whole Mac's draw is read from the controller's telemetry, in watts",
+        PowerReader.watts(telemetry: ["SystemLoad": NSNumber(value: 7_132)],
+                          batteryMillivolts: nil, batteryMilliamps: nil) == 7.132
+    )
+    check(
+        "telemetry wins over the battery's own current when both are there",
+        PowerReader.watts(telemetry: ["SystemLoad": NSNumber(value: 9_000)],
+                          batteryMillivolts: 12_000, batteryMilliamps: -500) == 9.0
+    )
+    check(
+        "without telemetry, a battery running down gives the draw from volts and amps",
+        abs((PowerReader.watts(telemetry: nil, batteryMillivolts: 12_000, batteryMilliamps: -900) ?? 0) - 10.8) < 0.0001
+    )
+    check(
+        "a charging battery is not the whole Mac, so it gives no figure",
+        PowerReader.watts(telemetry: nil, batteryMillivolts: 12_000, batteryMilliamps: 1_500) == nil
+    )
+    check(
+        "and nothing to read means no figure rather than zero",
+        PowerReader.watts(telemetry: [:], batteryMillivolts: nil, batteryMilliamps: nil) == nil
+    )
+    check(
+        "a negative value that arrived unsigned is refused",
+        PowerReader.watts(telemetry: ["SystemLoad": NSNumber(value: UInt64.max - 4)],
+                          batteryMillivolts: nil, batteryMilliamps: nil) == nil
+    )
+    check(
+        "so is a draw no Mac could make",
+        PowerReader.watts(telemetry: ["SystemLoad": NSNumber(value: 2_000_000)],
+                          batteryMillivolts: nil, batteryMilliamps: nil) == nil
+    )
+    // Red at 90% of what the charger can give — the same share as every other
+    // readout — and never on battery, where there is no limit to be near.
+    check("27 W on a 30 W charger is red", PowerLevel.level(watts: 27, chargerWatts: 30) == .danger)
+    check("26.9 W on it is not", PowerLevel.level(watts: 26.9, chargerWatts: 30) == .normal)
+    check("on battery the draw is never red", PowerLevel.level(watts: 60, chargerWatts: nil) == .normal)
+    check(
+        "on the charger the graph is measured against the charger's rating",
+        PowerScale.ceiling(history: [5, 8], chargerWatts: 30) == 30
+    )
+    check(
+        "unless the Mac has drawn more than that, which it can for a moment",
+        PowerScale.ceiling(history: [5, 35], chargerWatts: 30) == 35
+    )
+    check(
+        "on battery a quiet Mac is not drawn as though it were flat out",
+        PowerScale.ceiling(history: [2, 3], chargerWatts: nil) == PowerScale.minimumCeilingWatts
+    )
+    check(
+        "and a busy one keeps room above its peak",
+        PowerScale.ceiling(history: [20], chargerWatts: nil) == 25
+    )
+    check(
+        "the graph's values stay between the floor and the ceiling",
+        PowerScale.normalised([0, 15, 40], chargerWatts: 30).allSatisfy { $0 >= 0 && $0 <= 1 }
+    )
+    check("a draw under a hundred watts keeps its tenth", PowerFormat.watts(7.132) == "7.1 W")
+    check("and one above it is whole watts", PowerFormat.watts(112.4) == "112 W")
 
     // The sentence Settings shows about this used to be written out beside the
     // page rather than taken from the measurement, and it went on saying the

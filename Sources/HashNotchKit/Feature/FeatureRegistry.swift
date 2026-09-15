@@ -44,15 +44,15 @@ public final class FeatureRegistry {
     /// then what you asked it to do. Now playing and activities first because
     /// they change constantly and are why the panel gets opened; downloads next
     /// as the other thing that arrives on its own. Then the machine's vital
-    /// signs — connection, battery, what is in your ears. Then the figures you
-    /// read rather than watch: tokens, temperatures, memory, processor. Timer
+    /// signs — connection, battery and the power it is feeding, what is in
+    /// your ears. Then the figures you read rather than watch: tokens, temperatures, memory, processor. Timer
     /// and disk last, because a timer is set and forgotten and a disk changes
     /// over weeks.
     ///
     /// Only a starting point — every one of them can be dragged anywhere.
     public static let defaultOrder: [String] = [
         "call", "media", "activities", "downloads", "away", "focus",
-        "network", "battery", "airpods",
+        "network", "battery", "power", "airpods",
         "tokens", "thermal", "memory", "cpu",
         "timer", "storage",
     ]

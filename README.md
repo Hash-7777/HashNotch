@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-1071%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1071 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1090%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1090 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -61,6 +61,8 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Battery** — a real battery filled to the level it is actually at, the way the one in your menu bar is, with time left, time to full, adapter wattage and Low Power Mode. Capped at 80% for its health? It counts down to *that*, not to a full charge it will never reach.
 
+**Power** — how many watts the whole Mac is using right now, on battery or on the charger, with the last half-minute graphed underneath. On the charger, the top of the graph is the charger's own limit, and the figure turns red at 90% of it — the point where the battery starts helping out even though you are plugged in.
+
 **Processor and memory** — how hard your Mac is working, in the same figures Activity Monitor shows.
 
 **Temperatures** — the real sensors inside your Mac, not an estimate. On Apple Silicon it reads the on-die sensors; on every other Mac it reads the System Management Controller, so an Intel MacBook gets real readings too.
@@ -89,7 +91,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 1071 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1090 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
