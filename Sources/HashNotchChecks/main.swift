@@ -6710,28 +6710,52 @@ check("rows taller than the room are held to it",
 check("rows that fit keep their own height",
       MainActor.assumeIsolated { abs(rowsHeight(content: 180, room: 300) - 180) < 0.5 })
 
-// Those two hold the panel's outer height, which comes out the same whether the
-// rows scroll or merely spill past the frame. What decides between the two is
-// the room being OFFERED to the choice: asked only for an ideal height, every
-// option fits and the non-scrolling one always wins. So the mechanism is held
-// directly — two stand-ins of different widths, and the width that comes back
-// says which one was chosen.
-// The checks run on macOS 13 and later (CI's oldest image is 15); on anything
-// older there is no ViewThatFits to hold, and the answer is the one expected.
-@MainActor func chosenWidth(firstHeight: CGFloat, room: CGFloat) -> CGFloat {
-    guard #available(macOS 13.0, *) else { return firstHeight > room ? 50 : 120 }
-    let host = NSHostingView(rootView: CappedHeight(maxHeight: room) {
-        ViewThatFits(in: .vertical) {
-            Color.clear.frame(width: 120, height: firstHeight)
-            Color.clear.frame(width: 50, height: 10)
+// The rows stay the same rows when they outgrow the room and fit again.
+//
+// They used to be two copies, a plain one and a scrolling one, swapped as the
+// height crossed the room — and a swap in the middle of an animation threw the
+// rows about: stopping a focus stretch on a full panel had them land on top of
+// one another before they settled. Counted by the real AppKit view inside a
+// row: a row that is rebuilt makes a new one.
+@MainActor func rowViewsMade() -> Int {
+    final class Count { var made = 0 }
+    struct Marker: NSViewRepresentable {
+        let count: Count
+        func makeNSView(context: Context) -> NSView { count.made += 1; return NSView() }
+        func updateNSView(_ view: NSView, context: Context) {}
+    }
+    final class Height: ObservableObject { @Published var tall = false }
+    struct Rows: View {
+        @ObservedObject var height: Height
+        let count: Count
+        var body: some View {
+            PanelRows(maxHeight: 300) {
+                VStack(spacing: 0) {
+                    Marker(count: count).frame(width: 120, height: 20)
+                    Color.clear.frame(width: 120, height: height.tall ? 900 : 100)
+                }
+            }
         }
-    })
-    return host.fittingSize.width
+    }
+    let count = Count(), height = Height()
+    let host = NSHostingView(rootView: Rows(height: height, count: count))
+    let window = NSWindow(contentRect: NSRect(x: 400, y: 300, width: 120, height: 300),
+                          styleMask: .borderless, backing: .buffered, defer: false)
+    window.contentView = host
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil) }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    for tall in [true, false] {
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { height.tall = tall }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+    }
+    return count.made
 }
-check("offered the room, rows that do not fit give way to the scrolling choice",
-      MainActor.assumeIsolated { chosenWidth(firstHeight: 900, room: 300) == 50 })
-check("and rows that fit keep the plain one",
-      MainActor.assumeIsolated { chosenWidth(firstHeight: 200, room: 300) == 120 })
+check("a row stays the same row when the rows outgrow the room and fit again",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return rowViewsMade() == 1
+      })
 
 // No scroll bar, whatever System Settings says. With "Show scroll bars:
 // Always" — the setting on any Mac with a mouse attached, by default — a bar

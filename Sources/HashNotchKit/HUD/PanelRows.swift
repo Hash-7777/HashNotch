@@ -7,13 +7,28 @@ import SwiftUI
 /// The window was already capped at the room below the island, but the rows
 /// inside it were not, so with enough indicators switched on the panel laid
 /// itself out past the bottom of the screen and the window cut it off: the
-/// last rows could not be reached at all. This asks the rows how tall they
-/// want to be against the room there is, and only when they will not fit does
-/// it put them in a scroll view. A panel that fits is drawn exactly as before,
-/// with nothing to scroll and no scroll bar.
+/// last rows could not be reached at all.
+///
+/// The rows are always inside one scroll view, sized to them: exactly as tall
+/// as the rows when they fit, with scrolling switched off and no fade, and
+/// exactly as tall as the room when they do not.
+///
+/// It used to be two copies of the rows — a plain one, and a scrolling one
+/// swapped in when the rows would not fit. A swap is a new set of views, and it
+/// happened in the middle of whatever animation had changed the height. Stopping
+/// a focus stretch did it every time on a full panel: the timer came out, the
+/// rows fitted again, the plain copy took over, and its rows flew in from
+/// where they had last been laid out, landing on top of one another before
+/// they settled. One scroll view that only changes size has nothing to swap, so
+/// every row is the same row before, during and after, and simply moves.
 package struct PanelRows<Content: View>: View {
     let maxHeight: CGFloat
     @ViewBuilder let content: () -> Content
+
+    /// The rows' own height, measured, which is what decides whether they
+    /// scroll. The scroll view's size does not wait for it — `CappedHeight`
+    /// sizes it in the same pass — so a frame behind costs nothing.
+    @State private var rowsHeight: CGFloat = 0
 
     package init(maxHeight: CGFloat, @ViewBuilder content: @escaping () -> Content) {
         self.maxHeight = maxHeight
@@ -25,25 +40,24 @@ package struct PanelRows<Content: View>: View {
     /// at their end so the last one can scroll clear of it.
     static var fade: CGFloat { 14 }
 
+    /// Whether the rows are taller than the room. Half a point of slack, so
+    /// rows that fit exactly are not tipped into scrolling by rounding.
+    private var scrolls: Bool { rowsHeight > maxHeight + 0.5 }
+
     package var body: some View {
         if #available(macOS 13.0, *) {
-            CappedHeight(maxHeight: maxHeight) {
-                ViewThatFits(in: .vertical) {
-                    content()
-                    scrolling
-                }
-            }
+            CappedHeight(maxHeight: maxHeight) { scrollView }
         } else {
-            // macOS 12 has neither ViewThatFits nor custom layouts, so the rows
-            // are held to the room and anything past it is cut rather than
-            // drawn off the screen. Every system since scrolls instead.
+            // macOS 12 has no custom layouts, so the rows are held to the room
+            // and anything past it is cut rather than drawn off the screen.
+            // Every system since scrolls instead.
             content()
                 .frame(maxHeight: maxHeight, alignment: .top)
                 .clipped()
         }
     }
 
-    /// The rows, scrolling, with no scroll bar.
+    /// The rows, in a scroll view with no scroll bar.
     ///
     /// A bar is a column of its own. With "Show scroll bars: Always" set in
     /// System Settings — and whenever a mouse is connected, which is macOS's
@@ -53,6 +67,11 @@ package struct PanelRows<Content: View>: View {
     /// whatever that setting says. The fade at the bottom is what says there is
     /// more, and the two-finger scroll is what reaches it.
     ///
+    /// Rows that fit cannot be scrolled at all. The scroll view is exactly their
+    /// height, so there is nowhere to go, and switching it off also stops the
+    /// trackpad's rubber band from pulling a panel that fits away from its
+    /// edges.
+    ///
     /// The panel is built afresh each time it opens, so the scroll view starts
     /// at the top — and the opening then moved it. The panel drops in with a
     /// springy stretch, and that animation left the scroll view a few points
@@ -60,34 +79,42 @@ package struct PanelRows<Content: View>: View {
     /// wobble), so the top of the first row opened cut off. `TopHold` keeps it
     /// at the top until the opening has settled.
     @available(macOS 13.0, *)
-    private var scrolling: some View {
+    private var scrollView: some View {
         ScrollView(.vertical, showsIndicators: false) {
             content()
-                .padding(.bottom, Self.fade)
+                .background(GeometryReader { geo in
+                    Color.clear
+                        .onAppear { rowsHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { rowsHeight = $0 }
+                })
+                .padding(.bottom, scrolls ? Self.fade : 0)
                 .background(alignment: .top) { TopHold().frame(height: 0) }
         }
         .scrollIndicators(.never)
+        .scrollDisabled(!scrolls)
         // The fade is a mask on the scroll view itself. A gradient overlay was
         // tried in its place and did not show in use, and timing the two gave
         // the same cost per scroll step, so the mask, which does show, stays.
+        // Rows that fit keep the mask with nothing faded, rather than losing
+        // it, so the view is never rebuilt around them.
         .mask(
             VStack(spacing: 0) {
                 Color.black
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [.black, scrolls ? .clear : .black],
+                               startPoint: .top, endPoint: .bottom)
                     .frame(height: Self.fade)
             }
         )
     }
 }
 
-/// Proposes exactly `maxHeight` to its one child and sizes itself to whatever
-/// the child then chooses, never taller.
+/// Sizes its one child — the rows' scroll view — to the child's own height,
+/// never taller than `maxHeight`.
 ///
-/// This is what makes `ViewThatFits` able to answer at all. Left to itself the
-/// panel is asked for its IDEAL height — nothing above it has a height to
-/// offer — and against an unlimited height everything fits, so the first,
-/// non-scrolling choice would win every time. Given the room as a real
-/// proposal, the rows either fit it or they do not.
+/// A scroll view on its own takes every point it is offered, and nothing above
+/// the panel has a height to offer it, so it has to be told. Its ideal height
+/// is the height of what it holds, so asking for that and holding it to the
+/// room gives rows that fit their own height and rows that do not the room.
 @available(macOS 13.0, *)
 package struct CappedHeight: Layout {
     let maxHeight: CGFloat
@@ -96,7 +123,7 @@ package struct CappedHeight: Layout {
 
     package func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard let child = subviews.first else { return .zero }
-        let size = child.sizeThatFits(ProposedViewSize(width: proposal.width, height: maxHeight))
+        let size = child.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil))
         return CGSize(width: size.width, height: min(size.height, maxHeight))
     }
 
