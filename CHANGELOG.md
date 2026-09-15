@@ -13,6 +13,11 @@ All notable changes to HashNotch are recorded here.
   the panel on a display scaled too small for any window to fit beside it. The
   tabs make that possible: the page you are on shows its icon and name, every
   other page shows its icon, and each name is on its tooltip.
+- **The focus settings show their numbers.** Each length and the number of
+  rounds before a long rest now sits beside its buttons. The figures were
+  written as the buttons' own label, which the layout hides, so the rounds row
+  showed two arrows and no number at all. It also says what it counts: "4
+  rounds of work, then a long rest."
 
 ### Changed
 

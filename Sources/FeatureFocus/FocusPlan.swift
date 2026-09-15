@@ -52,6 +52,13 @@ public struct FocusPlan: Codable, Equatable, Sendable {
     public static let longBreakRange: ClosedRange<Int> = 5...60
     public static let worksBeforeLongBreakRange: ClosedRange<Int> = 2...8
 
+    /// What the rounds setting says under its name: the number, in a sentence
+    /// that says what it counts. A figure on its own beside two arrows does not
+    /// say whether it is rounds, minutes, or rests.
+    public static func roundsDetail(_ rounds: Int) -> String {
+        "\(rounds) round\(rounds == 1 ? "" : "s") of work, then a long rest."
+    }
+
     public var clamped: FocusPlan {
         FocusPlan(
             workMinutes: min(max(workMinutes, Self.workRange.lowerBound), Self.workRange.upperBound),

@@ -33,20 +33,12 @@ struct FocusSettingsView: View {
                 SettingDivider()
                 SettingRow(
                     "Rounds before a long rest",
-                    detail: "How many rounds of work come first."
+                    detail: FocusPlan.roundsDetail(engine.plan.worksBeforeLongBreak)
                 ) {
-                    Stepper(
-                        value: Binding(
-                            get: { engine.plan.worksBeforeLongBreak },
-                            set: { var plan = engine.plan; plan.worksBeforeLongBreak = $0; engine.setPlan(plan) }
-                        ),
-                        in: FocusPlan.worksBeforeLongBreakRange
-                    ) {
-                        Text("\(engine.plan.worksBeforeLongBreak)")
-                            .foregroundStyle(theme.textColor)
-                            .monospacedDigit()
-                    }
-                    .labelsHidden()
+                    countStepper(
+                        value: engine.plan.worksBeforeLongBreak,
+                        range: FocusPlan.worksBeforeLongBreakRange
+                    ) { var plan = engine.plan; plan.worksBeforeLongBreak = $0; engine.setPlan(plan) }
                 }
             }
 
@@ -73,12 +65,32 @@ struct FocusSettingsView: View {
         set: @escaping (Int) -> Void
     ) -> some View {
         SettingRow(title, detail: "\(value) minutes.") {
-            Stepper(value: Binding(get: { value }, set: set), in: range) {
-                Text("\(value)")
-                    .foregroundStyle(theme.textColor)
-                    .monospacedDigit()
-            }
-            .labelsHidden()
+            countStepper(value: value, range: range, set: set)
+        }
+    }
+
+    /// The number, then the buttons that change it.
+    ///
+    /// The number is drawn beside the stepper rather than as its label. A
+    /// stepper's label is exactly what `.labelsHidden()` removes, so written as
+    /// a label the figure never appeared at all — the rounds row showed two
+    /// arrows and no number, and the minute rows only got away with it because
+    /// their descriptions repeat the value.
+    private func countStepper(
+        value: Int,
+        range: ClosedRange<Int>,
+        set: @escaping (Int) -> Void
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text("\(value)")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(theme.textColor)
+                .monospacedDigit()
+                .frame(minWidth: 22, alignment: .trailing)
+                .rollingDigits()
+                .animation(.snappy, value: value)
+            Stepper("", value: Binding(get: { value }, set: set), in: range)
+                .labelsHidden()
         }
     }
 }

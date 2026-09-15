@@ -3608,6 +3608,11 @@ MainActor.assumeIsolated {
         }()
     )
 
+    check(
+        "the rounds setting names its number and what it counts",
+        FocusPlan.roundsDetail(4) == "4 rounds of work, then a long rest."
+    )
+    check("one round is a round, not one rounds", FocusPlan.roundsDetail(1).hasPrefix("1 round of work"))
     check("the countdown reads as minutes and seconds", FocusClock.text(65) == "1:05")
     check("and grows an hours field only when there are hours", FocusClock.text(3_725) == "1:02:05")
     check("a countdown cannot go negative", FocusClock.text(-30) == "0:00")
