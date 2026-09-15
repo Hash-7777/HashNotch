@@ -91,9 +91,10 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that.
 - **Storage in one row.** "Storage", what is free and how full share a line
   above the bar, instead of a heading, a line of figures and the bar.
-- **A shorter internet graph.** 16 points tall instead of 26. It shows the
-  shape of traffic against its own recent peak, so the extra height measured
-  nothing.
+- **Shorter graphs.** The internet, processor and memory graphs are 16 points
+  tall instead of 26. They show the shape of the last half-minute at a glance,
+  and at the old height three of them were most of what pushed the panel past
+  the bottom of a laptop screen.
 - **AirPods in one row.** "AirPods  L 95%  R 94%", with the case when it is
   docked, instead of a heading and a row for each part. A level turns red at
   10%, the same point as the Mac's own battery.

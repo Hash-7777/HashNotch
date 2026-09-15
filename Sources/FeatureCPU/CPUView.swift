@@ -27,7 +27,7 @@ struct CPUDetailView: View {
             }
             if style != .number {
                 Sparkline(values: monitor.history, tint: tint, showsScale: true)
-                    .frame(width: Panel.rowWidth, height: 26)
+                    .frame(width: Panel.rowWidth, height: Panel.graphHeight)
             }
         }
         .animation(.snappy, value: monitor.load)

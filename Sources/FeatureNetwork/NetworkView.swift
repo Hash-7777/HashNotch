@@ -15,8 +15,6 @@ struct NetworkDetailView: View {
     let style: NetworkStyle
     let period: NetworkUsagePeriod
 
-    private static let graphHeight: CGFloat = 16
-
     var body: some View {
         // Speed, then the shape of the last half-minute, then the total. The
         // graph belongs directly under the numbers it is a picture of; the
@@ -29,12 +27,7 @@ struct NetworkDetailView: View {
                     Sparkline(values: scaled(monitor.upHistory), tint: theme.upColor)
                     Sparkline(values: scaled(monitor.downHistory), tint: theme.downColor)
                 }
-                // Shorter than the processor's and memory's. This graph shows
-                // the shape of traffic — a burst, a lull — against its own
-                // recent peak rather than against a fixed ceiling, so height
-                // buys it nothing to measure; the section beneath it already
-                // carries two more rows.
-                .frame(width: Panel.rowWidth, height: Self.graphHeight)
+                .frame(width: Panel.rowWidth, height: Panel.graphHeight)
             }
             used
             byApp

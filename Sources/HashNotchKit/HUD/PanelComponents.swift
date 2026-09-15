@@ -5,6 +5,11 @@ import SwiftUI
 public enum Panel {
     /// Standard width for a detail row, so values line up across features.
     public static let rowWidth: CGFloat = 260
+    /// How tall a readout's graph is — the processor's, memory's and the
+    /// internet's alike. A graph under a row is the shape of the last
+    /// half-minute, read at a glance; at 26 points three of them were most of
+    /// the reason the panel ran past the bottom of a laptop screen.
+    public static let graphHeight: CGFloat = 16
 }
 
 /// Uppercase, muted section title, with the section's own mark in front of it.
