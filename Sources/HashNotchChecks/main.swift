@@ -4509,6 +4509,23 @@ check(
     check("part download", DownloadsMonitor.isPartFileName("photo.jpg.download"))
     check("part part", DownloadsMonitor.isPartFileName("archive.zip.part"))
     check("finished not part", !DownloadsMonitor.isPartFileName("movie.mp4"))
+    // One row for the pair: each earbud as a letter, then the case.
+    check(
+        "a pair reads as L and R, then the case",
+        AirPodsSummary.items(for: AirPodsBattery(left: 95, right: 94, caseLevel: 60, single: nil))
+            == [.init(label: "L", percent: 95), .init(label: "R", percent: 94), .init(label: "Case", percent: 60)]
+    )
+    check(
+        "a model with one battery shows its level with no letter",
+        AirPodsSummary.items(for: AirPodsBattery(left: nil, right: nil, caseLevel: nil, single: 80))
+            == [.init(label: "", percent: 80)]
+    )
+    check(
+        "one earbud out of the case shows just that one",
+        AirPodsSummary.items(for: AirPodsBattery(left: 95, right: nil, caseLevel: nil, single: nil))
+            == [.init(label: "L", percent: 95)]
+    )
+    check("an earbud turns red at 10%, like the Mac's battery", AirPodsSummary.isLow(10) && !AirPodsSummary.isLow(11))
     check("finished pdf not part", !DownloadsMonitor.isPartFileName("report.pdf"))
 
     // AirPods: parse battery out of `system_profiler SPBluetoothDataType`, only

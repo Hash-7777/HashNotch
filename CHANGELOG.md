@@ -75,6 +75,9 @@ All notable changes to HashNotch are recorded here.
 - **The focus section is a row shorter.** With nothing running, the week's
   sentence sits on the left and the Start button on the right, in one row,
   instead of the button taking a row of its own above the text.
+- **AirPods in one row.** "AirPods  L 95%  R 94%", with the case when it is
+  docked, instead of a heading and a row for each part. A level turns red at
+  10%, the same point as the Mac's own battery.
 - **A new AirPods mark.** Each earbud is one continuous outline — a round head
   running straight down into its stem — instead of a circle on a stick, and the
   two stems stand far enough apart to stay separate at panel size.

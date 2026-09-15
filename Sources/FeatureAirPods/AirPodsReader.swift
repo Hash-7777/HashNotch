@@ -27,6 +27,42 @@ public struct AirPodsBattery: Equatable {
     }
 }
 
+/// What the panel's one AirPods row says, in order: each earbud as "L" and "R",
+/// the case when it is docked, and a single level with no letter for a model
+/// that only reports one.
+///
+/// One row rather than a heading and a row per part. Three rows of three words
+/// each took the height of a paragraph to say three numbers.
+package enum AirPodsSummary {
+    package struct Item: Equatable {
+        package let label: String
+        package let percent: Int
+
+        package init(label: String, percent: Int) {
+            self.label = label
+            self.percent = percent
+        }
+    }
+
+    package static func items(for battery: AirPodsBattery) -> [Item] {
+        var items: [Item] = []
+        if let single = battery.single, battery.left == nil, battery.right == nil {
+            items.append(Item(label: "", percent: single))
+        } else {
+            if let left = battery.left { items.append(Item(label: "L", percent: left)) }
+            if let right = battery.right { items.append(Item(label: "R", percent: right)) }
+        }
+        if let caseLevel = battery.caseLevel { items.append(Item(label: "Case", percent: caseLevel)) }
+        return items
+    }
+
+    /// Where a level turns red: the same 10% the Mac's own battery uses, and
+    /// no amber step before it.
+    package static let lowPercent = 10
+
+    package static func isLow(_ percent: Int) -> Bool { percent <= lowPercent }
+}
+
 /// Reads AirPods battery from macOS. The battery lines only appear while the
 /// device is CONNECTED, so a disconnected pair yields an empty result and the
 /// feature quietly shows nothing. System-provided data only — no private APIs,

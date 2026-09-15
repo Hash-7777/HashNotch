@@ -1,51 +1,31 @@
 import SwiftUI
 import HashNotchKit
 
-/// Expanded detail: AirPods battery as clean rows that match the panel — Left,
-/// Right, and Case while a pair is connected; nothing when it isn't.
+/// Expanded detail: AirPods battery as one row — L, R and Case side by side
+/// while a pair is connected; nothing when it isn't. See `AirPodsSummary`.
 struct AirPodsDetailView: View {
     @ObservedObject var monitor: AirPodsMonitor
     let theme: Theme
 
     var body: some View {
         if let battery = monitor.battery, !battery.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
-                NotchSectionHeader("AIRPODS", icon: .airpods, theme: theme)
-                if let single = battery.single, battery.left == nil, battery.right == nil {
-                    row("AirPods", single)
-                } else {
-                    if let left = battery.left { row("Left", left) }
-                    if let right = battery.right { row("Right", right) }
+            NotchRow("AirPods", icon: .airpods, theme: theme) {
+                HStack(spacing: 10) {
+                    ForEach(AirPodsSummary.items(for: battery), id: \.label) { item in
+                        HStack(spacing: 3) {
+                            if !item.label.isEmpty {
+                                Text(item.label)
+                                    .foregroundStyle(theme.subtitleColor)
+                            }
+                            Text("\(item.percent)%")
+                                .foregroundStyle(AirPodsSummary.isLow(item.percent) ? Theme.danger : theme.textColor)
+                                .monospacedDigit()
+                                .rollingDigits()
+                        }
+                        .animation(.snappy, value: item.percent)
+                    }
                 }
-                if let caseLevel = battery.caseLevel { row("Case", caseLevel) }
             }
-        }
-    }
-
-    private func row(_ label: String, _ percent: Int) -> some View {
-        NotchRow(label, theme: theme) {
-            HStack(spacing: 5) {
-                Image(systemName: symbol(for: percent))
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(percent <= 20 ? theme.upColor : theme.downColor)
-                Text("\(percent)%")
-                    .foregroundStyle(theme.textColor)
-                    .monospacedDigit()
-                    .rollingDigits()
-            }
-        }
-        .animation(.snappy, value: percent)
-    }
-
-    /// A battery glyph that fills with the level, like the iPhone. Uses the same
-    /// short SF Symbol names the Mac battery readout uses.
-    private func symbol(for percent: Int) -> String {
-        switch percent {
-        case ..<13: return "battery.0"
-        case ..<38: return "battery.25"
-        case ..<63: return "battery.50"
-        case ..<88: return "battery.75"
-        default: return "battery.100"
         }
     }
 }
