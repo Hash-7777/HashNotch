@@ -450,8 +450,10 @@ public final class MediaMonitor: ObservableObject {
 
     private func refresh() {
         guard let reader else { return }
-        reader.fetch { snapshot in
-            Task { @MainActor [weak self] in self?.receive(snapshot) }
+        // Weak at the outer closure, where the reader holds it; weak only on
+        // the inner task left the outer one holding `self` strongly anyway.
+        reader.fetch { [weak self] snapshot in
+            Task { @MainActor in self?.receive(snapshot) }
         }
     }
 

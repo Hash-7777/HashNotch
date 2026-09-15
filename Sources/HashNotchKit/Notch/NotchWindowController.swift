@@ -186,8 +186,14 @@ public final class NotchWindowController {
             presence: context.presence,
             registry: registry,
             context: context,
-            onIslandSize: { size in
-                Task { @MainActor [weak self] in self?.islandSizeChanged(size) }
+            // Weak at the OUTER closure. The view keeps this closure for as
+            // long as it lives, and the view lives inside this controller's own
+            // window — so a strong capture here is a loop that keeps every
+            // controller the app ever built, including each one a display
+            // change throws away. Weak only on the inner task did nothing: the
+            // outer closure had already captured `self` strongly to hand it on.
+            onIslandSize: { [weak self] size in
+                Task { @MainActor in self?.islandSizeChanged(size) }
             }
         )
 
