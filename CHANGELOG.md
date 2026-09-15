@@ -81,10 +81,10 @@ All notable changes to HashNotch are recorded here.
   while a song played. A stretch is the thing you sat down to do, so it now wins
   over the song beneath it — and still gives way for a few seconds to anything
   that has just happened, such as a finished download or a low battery.
-- **The focus section is two rows shorter.** The Start button sits on the
-  heading's line as a slim pill, and the week's sentence is one thin line
-  centred close beneath it, instead
-  of a heading, a row for the button, and the sentence below that.
+- **Focus is one row.** Its mark and name sit on the left like every other
+  row, with the week's sentence as a quiet line under the name, and a tinted
+  "▶ 25 min" button on the right in place of a solid block of colour. It was a
+  heading, a row for the button and the sentence below that.
 - **Storage in one row.** "Storage", what is free and how full share a line
   above the bar, instead of a heading, a line of figures and the bar.
 - **A shorter internet graph.** 16 points tall instead of 26. It shows the

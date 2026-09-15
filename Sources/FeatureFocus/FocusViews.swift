@@ -82,27 +82,37 @@ struct FocusDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // The heading and the button that starts a stretch share one line,
-            // the way a row's name and its value do; the week sits under them
-            // as one quiet line.
-            HStack(alignment: .center, spacing: 10) {
-                NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
+        VStack(alignment: .leading, spacing: 8) {
+            // One row, laid out the way every other row in the panel is: the
+            // mark and the name on the left with the week as a quiet second
+            // line under the name, and the one thing to press on the right.
+            // Everything shares the left edge; nothing floats in the middle.
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Self.markGap) {
+                        // The same grey as every other row's name and mark, so
+                        // this reads as one of the panel's rows, not a heading.
+                        NotchIconView(.focus, size: Self.markSize, color: theme.subtitleColor)
+                        Text("Focus")
+                            .foregroundStyle(theme.subtitleColor)
+                    }
+                    if engine.session == nil {
+                        weekLine
+                    }
+                }
                 Spacer(minLength: 8)
                 if engine.session == nil {
-                    FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true, slim: true) {
+                    FocusStartButton(minutes: engine.plan.workMinutes, theme: theme) {
                         engine.begin(.work)
                     }
-                    .fixedSize()
                     .transition(.opacity)
                 }
             }
 
             if let session = engine.session {
                 running(session)
+                weekLine
             }
-
-            weekLine
 
             if engine.session == nil, engine.alertsAllowed == false {
                 // Never promise what will not happen.
@@ -161,44 +171,81 @@ struct FocusDetailView: View {
     /// much focus is behind you. No second section, no marks, and no word
     /// anybody has to be taught.
     ///
-    /// One thin line, never two, centred under the heading and the button: it
-    /// is a footnote to the row above it, and sits close under it.
+    /// One thin line, never two, starting under the word "Focus" rather than
+    /// under its mark, so the name and its footnote read as one label.
     private var weekLine: some View {
         Text(FocusHistoryMath.weekText(engine.history, today: engine.tally))
-            .font(.system(size: 8.5))
-            .foregroundStyle(theme.subtitleColor)
+            .font(.system(size: 9))
+            // A step quieter than the name above it, so the two read as a
+            // name and its footnote rather than as two labels.
+            .foregroundStyle(theme.subtitleColor.opacity(0.75))
             .lineLimit(1)
             .minimumScaleFactor(0.85)
-            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.leading, Self.markSize + Self.markGap)
     }
 
+    /// The mark at the row's own text size, as every row in the panel draws it.
+    private static let markSize: CGFloat = 11
+    private static let markGap: CGFloat = 6
+
+}
+
+/// The one control of an idle focus section: start a stretch.
+///
+/// Tinted rather than filled — the accent at low strength behind the accent
+/// itself, with a thin edge — the way the system draws a button that belongs to
+/// a row rather than one that owns the screen. A solid block of colour was the
+/// loudest thing in the panel for a control that is used a few times a day.
+struct FocusStartButton: View {
+    let minutes: Int
+    let theme: Theme
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 7.5, weight: .bold))
+                Text("\(minutes) min")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(theme.accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+            .background(Capsule().fill(theme.accent.opacity(hovered ? 0.26 : 0.16)))
+            .overlay(Capsule().strokeBorder(theme.accent.opacity(0.32), lineWidth: 0.5))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .help("Start a \(minutes)-minute focus stretch")
+        .animation(.easeOut(duration: 0.15), value: hovered)
+        .onHover { hovered = $0 }
+    }
 }
 
 struct FocusButton: View {
     let title: String
     let theme: Theme
     var filled: Bool = false
-    /// A lower, narrower pill, for a button that shares a line with a
-    /// heading: at full height it made the heading's line taller than the
-    /// heading.
-    var slim: Bool = false
     let action: () -> Void
     @State private var hovered = false
 
-    init(_ title: String, theme: Theme, filled: Bool = false, slim: Bool = false, action: @escaping () -> Void) {
+    init(_ title: String, theme: Theme, filled: Bool = false, action: @escaping () -> Void) {
         self.title = title
         self.theme = theme
         self.filled = filled
-        self.slim = slim
         self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: slim ? 9 : 10, weight: .semibold))
-                .padding(.horizontal, slim ? 8 : 10)
-                .padding(.vertical, slim ? 2.5 : 5)
+                .font(.system(size: 10, weight: .semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
                 .background(
                     Capsule().fill(
                         filled
