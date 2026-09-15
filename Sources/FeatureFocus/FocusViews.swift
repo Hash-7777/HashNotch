@@ -87,6 +87,13 @@ struct FocusDetailView: View {
             // mark and the name on the left with the week as a quiet second
             // line under the name, and the one thing to press on the right.
             // Everything shares the left edge; nothing floats in the middle.
+            //
+            // The same row whether a stretch is running or not. Only the
+            // button leaves it and only the timer is added below it, so
+            // starting and stopping move nothing that stays on screen. The
+            // week line used to jump from under the name to under the timer,
+            // which is one thing vanishing and another appearing somewhere
+            // else in the middle of the panel resizing.
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: Self.markGap) {
@@ -96,14 +103,12 @@ struct FocusDetailView: View {
                         Text("Focus")
                             .foregroundStyle(theme.subtitleColor)
                     }
-                    if engine.session == nil {
-                        weekLine
-                    }
+                    weekLine
                 }
                 Spacer(minLength: 8)
                 if engine.session == nil {
                     FocusStartButton(minutes: engine.plan.workMinutes, theme: theme) {
-                        engine.begin(.work)
+                        withPanel { engine.begin(.work) }
                     }
                     .transition(.opacity)
                 }
@@ -111,7 +116,6 @@ struct FocusDetailView: View {
 
             if let session = engine.session {
                 running(session)
-                weekLine
             }
 
             if engine.session == nil, engine.alertsAllowed == false {
@@ -123,8 +127,23 @@ struct FocusDetailView: View {
             }
         }
         .frame(width: Panel.rowWidth, alignment: .leading)
-        .animation(.spring(response: 0.42 * motion, dampingFraction: 0.86), value: engine.session?.block)
+        .animation(resize, value: engine.session?.block)
         .animation(.spring(response: 0.5 * motion, dampingFraction: 0.8), value: engine.tally.finishedWork)
+    }
+
+    private var resize: Animation { .spring(response: 0.42 * motion, dampingFraction: 0.86) }
+
+    /// Start, stop and skip, with the whole panel moving as one.
+    ///
+    /// The animation modifier above only reaches this section's own contents.
+    /// Starting or stopping changes the section's height, and every row below
+    /// it moves by that much — with no animation at all, so they jumped to
+    /// their new places at once while the timer was still fading out where it
+    /// had been, and for a moment the two were drawn on top of each other.
+    /// Making the change inside the animation carries it to every row the
+    /// change moves.
+    private func withPanel(_ change: () -> Void) {
+        withAnimation(resize) { change() }
     }
 
     // MARK: While a block runs
@@ -160,11 +179,17 @@ struct FocusDetailView: View {
             Spacer(minLength: 0)
 
             VStack(spacing: 5) {
-                FocusButton("Skip", theme: theme) { engine.skip() }
-                FocusButton("Stop", theme: theme) { engine.giveUp() }
+                FocusButton("Skip", theme: theme) { withPanel { engine.skip() } }
+                FocusButton("Stop", theme: theme) { withPanel { engine.giveUp() } }
             }
         }
-        .transition(.opacity.combined(with: .offset(y: -4)))
+        // It arrives once the rows below have mostly made room for it, and
+        // leaves before they come back up, so it is never drawn over them.
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .offset(y: -4))
+                .animation(.easeOut(duration: 0.22 * motion).delay(0.16 * motion)),
+            removal: .opacity.animation(.easeOut(duration: 0.10 * motion))
+        ))
     }
 
     /// One sentence, always there, saying the only thing worth saying: how
@@ -172,7 +197,8 @@ struct FocusDetailView: View {
     /// anybody has to be taught.
     ///
     /// One thin line, never two, starting under the word "Focus" rather than
-    /// under its mark, so the name and its footnote read as one label.
+    /// under its mark, so the name and its footnote read as one label. It stays
+    /// there while a stretch runs.
     private var weekLine: some View {
         Text(FocusHistoryMath.weekText(engine.history, today: engine.tally))
             .font(.system(size: 9))

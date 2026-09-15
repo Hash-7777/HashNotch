@@ -63,6 +63,12 @@ All notable changes to HashNotch are recorded here.
   settings window, Cancel and the red confirm button shared the row with the
   description and the confirm read "Reset appear…". They now appear on a line
   of their own beneath it.
+- **Starting and stopping focus move the whole panel together.** Only the
+  focus section's own contents were animated. Every row below it jumped to its
+  new place at once, and on stopping they jumped up into space the timer was
+  still fading out of, so for a moment the two were drawn over each other. The
+  rows now slide with the section, the timer leaves before they reach it, and
+  it arrives only once they have made room.
 - **The focus settings show their numbers.** Each length and the number of
   rounds before a long rest now sits beside its buttons. The figures were
   written as the buttons' own label, which the layout hides, so the rounds row
@@ -91,7 +97,9 @@ All notable changes to HashNotch are recorded here.
 - **Focus is one row.** Its mark and name sit on the left like every other
   row, with the week's sentence as a quiet line under the name, and a tinted
   "▶ 25 min" button on the right in place of a solid block of colour. It was a
-  heading, a row for the button and the sentence below that.
+  heading, a row for the button and the sentence below that. The row stays
+  as it is while a stretch runs, sentence included; only the button goes, and
+  the timer appears beneath it.
 - **Storage in one row.** "Storage", what is free and how full share a line
   above the bar, instead of a heading, a line of figures and the bar.
 - **Shorter graphs.** The internet, processor and memory graphs are 16 points
