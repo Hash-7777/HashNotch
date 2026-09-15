@@ -6751,37 +6751,58 @@ check("and rows that fit keep the plain one",
     guard let scroller = scrollViews(in: host).first else { return nil }
     return scroller.hasVerticalScroller && scroller.verticalScroller?.isHidden == false
 }
-// Opening always starts at the first row. The panel's view outlives each
-// opening, so without this a panel reopened wherever it was last left. Scroll
-// the real AppKit scroll view down, close the panel, and read where it is.
-@MainActor func scrollOffsetAfterClosing() -> CGFloat? {
-    func rows(open: Bool) -> PanelRows<some View> {
-        PanelRows(maxHeight: 200, isOpen: open) { Color.clear.frame(width: 120, height: 900) }
+// Opening always shows the first row. The panel is built afresh on every
+// opening and drops in with a springy stretch, and that animation left the new
+// scroll view a few points down its list, so the top of the first row opened
+// cut off. Opened here the way the panel opens — the same transition, the same
+// spring — and read where the real AppKit scroll view settled.
+@MainActor func scrollOffsetAfterOpening() -> CGFloat? {
+    final class Toggle: ObservableObject { @Published var show = false }
+    struct Opening: View {
+        @ObservedObject var toggle: Toggle
+        var body: some View {
+            // The panel's shape: a band beside the notch, then the rows, on
+            // black, dropping in as one piece.
+            VStack(spacing: 0) {
+                if toggle.show {
+                    VStack(spacing: 0) {
+                        Color.gray.frame(height: 28)
+                        PanelRows(maxHeight: 400) {
+                            VStack(spacing: 0) {
+                                Color.red.frame(width: 260, height: 40)
+                                Color.blue.frame(width: 260, height: 900)
+                            }
+                        }
+                    }
+                    .frame(width: 300)
+                    .background(Color.black)
+                    .transition(.drop(widthRatio: 0.5, heightRatio: 0.04, anchor: .top, arrivesOpaque: true))
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
     }
-    let host = NSHostingView(rootView: rows(open: true))
-    host.frame = NSRect(x: 0, y: 0, width: 120, height: 200)
-    let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: true)
+    let toggle = Toggle()
+    let host = NSHostingView(rootView: Opening(toggle: toggle))
+    if #available(macOS 13.0, *) { host.sizingOptions = [] }
+    let window = NSWindow(contentRect: NSRect(x: 400, y: 300, width: 300, height: 430),
+                          styleMask: .borderless, backing: .buffered, defer: false)
     window.contentView = host
-    host.layoutSubtreeIfNeeded()
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil) }
+    withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) { toggle.show = true }
+    RunLoop.main.run(until: Date().addingTimeInterval(TopHold.window + 0.4))
     func scrollViews(in view: NSView) -> [NSScrollView] {
         (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
     }
-    guard let scroll = scrollViews(in: host).first else { return nil }
-    scroll.contentView.scroll(to: NSPoint(x: 0, y: 300))
-    scroll.reflectScrolledClipView(scroll.contentView)
-    guard abs(scroll.contentView.bounds.origin.y) > 1 else { return nil }
-    host.rootView = rows(open: false)
-    for _ in 0..<5 {
-        host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
-    }
-    return scroll.contentView.bounds.origin.y
+    return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
-check("a panel closed while scrolled down opens again at the top",
+check("a panel that has just opened shows its first row, not a few points below it",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }
-          guard let offset = scrollOffsetAfterClosing() else { return false }
-          return abs(offset) < 1
+          guard let offset = scrollOffsetAfterOpening() else { return false }
+          return abs(offset) < 0.5
       })
 check("a panel that scrolls shows no scroll bar",
       MainActor.assumeIsolated {

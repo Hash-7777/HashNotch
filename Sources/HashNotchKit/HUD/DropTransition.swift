@@ -60,7 +60,7 @@ extension AnyTransition {
     /// notch is not translucent for a third of a second. Growing it at full
     /// black says that; fading it in says a window is appearing. Going out
     /// still fades, because retreating INTO the notch is helped by softening.
-    static func drop(
+    package static func drop(
         widthRatio: CGFloat,
         heightRatio: CGFloat,
         anchor: UnitPoint,

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The panel's rows, as tall as they are — or, when that is taller than the
@@ -12,19 +13,12 @@ import SwiftUI
 /// with nothing to scroll and no scroll bar.
 package struct PanelRows<Content: View>: View {
     let maxHeight: CGFloat
-    /// Whether the panel is open. Each time it closes, the rows go back to the
-    /// top, so the next opening starts at the first row rather than wherever
-    /// the last one was left.
-    let isOpen: Bool
     @ViewBuilder let content: () -> Content
 
-    package init(maxHeight: CGFloat, isOpen: Bool = true, @ViewBuilder content: @escaping () -> Content) {
+    package init(maxHeight: CGFloat, @ViewBuilder content: @escaping () -> Content) {
         self.maxHeight = maxHeight
-        self.isOpen = isOpen
         self.content = content
     }
-
-    private static var topID: String { "panel-rows-top" }
 
     /// How much of the bottom of a scrolling panel fades out — a hint that
     /// there is more below. The rows gain the same amount of room
@@ -59,25 +53,20 @@ package struct PanelRows<Content: View>: View {
     /// whatever that setting says. The fade at the bottom is what says there is
     /// more, and the two-finger scroll is what reaches it.
     ///
-    /// The panel's view outlives each opening, so a scroll position would carry
-    /// over and a panel could open halfway down its own list. It is reset when
-    /// the panel CLOSES rather than when it opens: done then, the jump happens
-    /// while nothing is on screen, and the opening itself never moves.
+    /// The panel is built afresh each time it opens, so the scroll view starts
+    /// at the top — and the opening then moved it. The panel drops in with a
+    /// springy stretch, and that animation left the scroll view a few points
+    /// down its own list (measured: 2.5 points, every time, before the settle
+    /// wobble), so the top of the first row opened cut off. `TopHold` keeps it
+    /// at the top until the opening has settled.
     @available(macOS 13.0, *)
     private var scrolling: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: 0).id(Self.topID)
-                    content()
-                        .padding(.bottom, Self.fade)
-                }
-            }
-            .scrollIndicators(.never)
-            .onChange(of: isOpen) { open in
-                if !open { proxy.scrollTo(Self.topID, anchor: .top) }
-            }
+        ScrollView(.vertical, showsIndicators: false) {
+            content()
+                .padding(.bottom, Self.fade)
+                .background(alignment: .top) { TopHold().frame(height: 0) }
         }
+        .scrollIndicators(.never)
         // The fade is a mask on the scroll view itself. A gradient overlay was
         // tried in its place and did not show in use, and timing the two gave
         // the same cost per scroll step, so the mask, which does show, stays.
@@ -116,5 +105,40 @@ package struct CappedHeight: Layout {
             at: bounds.origin,
             proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
         )
+    }
+}
+
+/// Holds a freshly opened scroll view at its top while the panel's opening
+/// animation settles.
+///
+/// It only ever undoes a drift — a scroll position within `drift` points of
+/// the top. Anything further is somebody scrolling, and a panel that fought a
+/// finger to stay at the top would be worse than the drift it prevents.
+package struct TopHold: NSViewRepresentable {
+    /// Long enough for the opening spring and its settle to finish.
+    package static let window: TimeInterval = 1.2
+    package static let drift: CGFloat = 12
+
+    package func makeNSView(context: Context) -> NSView { HoldView() }
+    package func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class HoldView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard window != nil else { return }
+            for delay in stride(from: 0.03, through: TopHold.window, by: 0.03) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.holdAtTop()
+                }
+            }
+        }
+
+        private func holdAtTop() {
+            guard let scroll = enclosingScrollView else { return }
+            let y = scroll.contentView.bounds.origin.y
+            guard y != 0, abs(y) <= TopHold.drift else { return }
+            scroll.contentView.scroll(to: NSPoint(x: scroll.contentView.bounds.origin.x, y: 0))
+            scroll.reflectScrolledClipView(scroll.contentView)
+        }
     }
 }
