@@ -63,6 +63,9 @@ All notable changes to HashNotch are recorded here.
   was a button for something done once. Connecting is the one-line installer
   in the README, as it was before the page existed, and when an installed hook
   falls behind the app, the notice in the panel still offers to update it.
+- **A new AirPods mark.** Each earbud is one continuous outline — a round head
+  running straight down into its stem — instead of a circle on a stick, and the
+  two stems stand far enough apart to stay separate at panel size.
 - **A reading turns red when it is running high, and not before.** The
   processor, memory and the disk wear your accent colour until they reach 90%
   of their scale, then turn red. There is no amber step in between any more:

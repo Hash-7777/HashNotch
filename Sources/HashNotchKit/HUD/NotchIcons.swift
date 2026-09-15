@@ -428,19 +428,52 @@ public enum NotchIconGeometry {
         return parts
     }
 
-    /// Two buds, stems down.
+    /// A pair of earbuds, drawn as the real thing is shaped: a round head whose
+    /// inner edge runs straight down into the stem, ending in a rounded tip —
+    /// one continuous outline each, so it reads as an object rather than as a
+    /// circle with a stick attached. The pair mirror each other with their
+    /// stems on the inside, the way they sit in the case, and far enough apart
+    /// that the two stems never ink into one bar at panel size.
     private static var airpods: [NotchIconPart] {
-        var parts: [NotchIconPart] = []
-        for x in [28.0, 72.0] {
-            parts.append(NotchIconPart(
-                path: Path(ellipseIn: CGRect(x: x - 16, y: 14, width: 32, height: 32)),
-                style: .stroke(strokeWeight)))
-            var stem = Path()
-            stem.move(to: CGPoint(x: x, y: 46))
-            stem.addLine(to: CGPoint(x: x, y: 84))
-            parts.append(NotchIconPart(path: stem, style: .stroke(strokeWeight)))
+        [bud(mirrored: false), bud(mirrored: true)].map {
+            NotchIconPart(path: $0, style: .stroke(strokeWeight))
         }
-        return parts
+    }
+
+    /// One earbud's outline on the grid; the right one is the left mirrored.
+    private static func bud(mirrored: Bool) -> Path {
+        let head = CGPoint(x: 25, y: 30)
+        let radius: CGFloat = 16
+        // The stem's inner edge is the head's own tangent, so the two are one
+        // line; its outer edge meets the head further round.
+        let inner = head.x + radius          // 41
+        let outer: CGFloat = 28
+        let tipCentre = CGPoint(x: (inner + outer) / 2, y: 81.5)
+        let tipRadius = (inner - outer) / 2  // 6.5
+        let meet = sqrt(radius * radius - (outer - head.x) * (outer - head.x))
+        let startAngle = atan2(meet, outer - head.x)   // where the outer edge meets the head
+
+        var points: [CGPoint] = [CGPoint(x: inner, y: head.y), CGPoint(x: inner, y: tipCentre.y)]
+        // The rounded tip, from the inner edge round the bottom to the outer.
+        for step in 1...12 {
+            let a = CGFloat(step) / 12 * .pi
+            points.append(CGPoint(x: tipCentre.x + tipRadius * cos(a), y: tipCentre.y + tipRadius * sin(a)))
+        }
+        points.append(CGPoint(x: outer, y: head.y + meet))
+        // Round the head the long way, from the outer edge back to the tangent.
+        let sweep = 2 * .pi - startAngle
+        for step in 1...40 {
+            let a = startAngle + CGFloat(step) / 40 * sweep
+            points.append(CGPoint(x: head.x + radius * cos(a), y: head.y + radius * sin(a)))
+        }
+
+        var path = Path()
+        for (index, point) in points.enumerated() {
+            let placed = mirrored ? CGPoint(x: grid - point.x, y: point.y) : point
+            if index == 0 { path.move(to: placed) } else { path.addLine(to: placed) }
+        }
+        path.closeSubpath()
+        return path
     }
 
     /// A pulse. What this section carries is things happening, one after
