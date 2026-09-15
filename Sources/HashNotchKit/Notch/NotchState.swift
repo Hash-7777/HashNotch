@@ -18,7 +18,7 @@ public final class NotchState: ObservableObject {
 
     @Published public private(set) var collapsedWidth: CGFloat = 0
     @Published public private(set) var collapsedHeight: CGFloat = 0
-    @Published public private(set) var liveLeadingWidth: CGFloat = 56
+    @Published public private(set) var liveLeadingWidth: CGFloat = NotchState.liveLeadingSlot
     @Published public private(set) var liveTrailingWidth: CGFloat = 170
     @Published public private(set) var liveWidth: CGFloat = 0
     @Published public private(set) var liveHeight: CGFloat = 0
@@ -67,7 +67,7 @@ public final class NotchState: ObservableObject {
         // breathing room) — the pill hugs the actual content within it, and
         // this max only sizes the positioning box, the hover zone, and the
         // window so a fully-scrolling long title is always covered.
-        liveLeadingWidth = 56
+        liveLeadingWidth = Self.liveLeadingSlot
         liveTrailingWidth = 170
         liveWidth = width + liveLeadingWidth + liveTrailingWidth
         liveHeight = height + Self.liveLip
@@ -99,6 +99,26 @@ public final class NotchState: ObservableObject {
     /// which reads as a thing that is happening; the idle silhouette had
     /// nothing to justify it.
     public static let minimumContentHeight: CGFloat = 28
+
+    /// The strip's side left of the notch, which holds one small picture: the
+    /// album cover, an app's icon, an activity's mark.
+    ///
+    /// Built from its three parts rather than picked. It was a flat 56, which
+    /// left twenty points of dead black between the strip's rounded end and a
+    /// 20-point cover — the strip reaching well past what it was holding.
+    ///
+    /// - `liveNotchGap`: how far the picture sits from the hardware, the
+    ///   iPhone's hug.
+    /// - `liveLeadingContent`: room for the widest picture any feature puts
+    ///   there, the activity mark at 21 points, with a point to spare.
+    /// - `liveOuterMargin`: black between the picture and the strip's rounded
+    ///   end. The end's corner radius is 14 on a 28-point strip, so 4 points up
+    ///   from the bottom — where a 20-point picture's corner sits — the curve
+    ///   has cut in about 4.2 points. Eight clears it with room.
+    public static let liveNotchGap: CGFloat = 6
+    public static let liveLeadingContent: CGFloat = 22
+    public static let liveOuterMargin: CGFloat = 8
+    public static var liveLeadingSlot: CGFloat { liveNotchGap + liveLeadingContent + liveOuterMargin }
 
     /// The room below the island for the open panel.
     ///

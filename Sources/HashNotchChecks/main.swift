@@ -4729,13 +4729,33 @@ check(
     ))
     let anchor = stripState.notchAnchorInLiveStrip
     // The notch's centre sits at leading + half the notch, within the whole
-    // strip — here 56 + 78 of 382.
-    let expectedAnchor = (56.0 + 78.0) / 382.0
+    // strip — leading, the 156-point notch and the 170-point trailing side.
+    let leadingSlot = NotchState.liveLeadingSlot
+    let expectedAnchor = (leadingSlot + 78.0) / (leadingSlot + 156.0 + 170.0)
     check("the strip anchors on the notch", abs(anchor - expectedAnchor) < 0.001)
     check("which is left of the strip's own centre", anchor < 0.5)
     check(
         "the anchor lands inside the notch",
-        anchor * stripState.liveWidth > 56 && anchor * stripState.liveWidth < 56 + 156
+        anchor * stripState.liveWidth > leadingSlot && anchor * stripState.liveWidth < leadingSlot + 156
+    )
+    // The side left of the notch holds one small picture and nothing else.
+    // It was a flat 56, which left twenty points of dead black beyond a
+    // 20-point cover.
+    check(
+        "the strip's left side is the picture plus its two margins, and no more",
+        stripState.liveLeadingWidth == NotchState.liveNotchGap + NotchState.liveLeadingContent + NotchState.liveOuterMargin
+            && stripState.liveLeadingWidth < 56
+    )
+    check(
+        "with room for the widest picture a feature puts there, the 21-point activity mark",
+        NotchState.liveLeadingContent >= 21
+    )
+    // The strip's rounded end cuts in as it nears the bottom. A 20-point
+    // picture centred in a 28-point strip has its lower corner 4 points up,
+    // where a 14-point radius has cut in 14 - sqrt(14² - 10²) ≈ 4.2 points.
+    check(
+        "and the margin at the strip's rounded end clears its curve",
+        NotchState.liveOuterMargin > 14 - (14.0 * 14.0 - 10.0 * 10.0).squareRoot()
     )
     check(
         "a drop starts exactly as wide as the notch",

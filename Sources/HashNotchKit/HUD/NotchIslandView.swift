@@ -629,7 +629,7 @@ struct NotchIslandView: View {
                 if let feature = liveFeature,
                    let view = feature.makeCompactLeadingView(context: context) { view }
             }
-            .padding(.trailing, 6)
+            .padding(.trailing, NotchState.liveNotchGap)
             .frame(width: state.liveLeadingWidth, alignment: .trailing)
 
             Color.clear.frame(width: state.notchWidth, height: state.notchHeight)
