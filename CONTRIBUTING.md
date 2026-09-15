@@ -25,6 +25,12 @@ swift run HashNotchChecks # must pass, all of them
 Both are the gate, and they are yours to run — nothing catches a broken push for
 you.
 
+On Command Line Tools 27.0, run both with `SDKROOT` pointing at the macOS 26.5
+SDK (see the README's developer section): the default macOS 27 SDK makes
+SwiftUI's `@State` a macro whose plugin those tools do not ship. Read the first
+build's output for warnings; the linker's `search path … not found` line is the
+toolchain's, not the code's.
+
 The same two commands run again on GitHub (`.github/workflows/build.yml`) for
 every **push to main** and every **pull request**, and on demand from the
 Actions tab. This repository is public, so GitHub's hosted runners cost nothing

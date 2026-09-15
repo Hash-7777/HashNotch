@@ -18,8 +18,46 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/build/HashNotch.app"
 IDENTITY="${CODESIGN_IDENTITY:--}"
 
+BUILD_LOG="$(mktemp -t hashnotch-build)"
+trap 'rm -f "$BUILD_LOG"' EXIT
+
+build_release() {
+  swift build -c release --package-path "$ROOT" --product HashNotch 2>&1 | tee "$BUILD_LOG"
+}
+
+# The macOS 27 SDK declares SwiftUI's `@State` as a macro, and the Command Line
+# Tools 27.0 that ship it do not include the plugin that expands it. Every
+# SwiftUI view with state then fails to compile, on a toolchain that is
+# otherwise fine — so a machine with only the Command Line Tools cannot build
+# this app against its own default SDK.
+#
+# When the build fails for exactly that reason, and nobody chose an SDK, it is
+# retried once against the newest OLDER SDK installed beside the default one,
+# and says so. Any other failure is reported as it is. Setting SDKROOT yourself
+# always wins.
 echo "Building release binary…"
-swift build -c release --package-path "$ROOT" --product HashNotch
+if ! build_release; then
+  if [ -z "${SDKROOT:-}" ] && grep -q "plugin for module 'SwiftUIMacros' not found" "$BUILD_LOG"; then
+    DEFAULT_SDK="$(cd "$(xcrun --sdk macosx --show-sdk-path)" && pwd -P)"
+    FALLBACK=""
+    for sdk in "$(dirname "$DEFAULT_SDK")"/MacOSX[0-9]*.[0-9]*.sdk; do
+      [ -d "$sdk" ] && [ ! -L "$sdk" ] && [ "$sdk" != "$DEFAULT_SDK" ] || continue
+      FALLBACK="$(printf '%s\n%s\n' "$FALLBACK" "$sdk" | sed '/^$/d' | sort -V | tail -1)"
+    done
+    if [ -z "$FALLBACK" ]; then
+      echo "This toolchain cannot expand SwiftUI's @State macro, and no older macOS SDK is installed to build against." >&2
+      exit 1
+    fi
+    echo
+    echo "The default SDK ($(basename "$DEFAULT_SDK")) needs a SwiftUI macro plugin these"
+    echo "Command Line Tools do not include. Building against $(basename "$FALLBACK") instead."
+    echo
+    export SDKROOT="$FALLBACK"
+    build_release
+  else
+    exit 1
+  fi
+fi
 BIN_DIR="$(swift build -c release --package-path "$ROOT" --show-bin-path)"
 
 echo "Assembling app bundle…"

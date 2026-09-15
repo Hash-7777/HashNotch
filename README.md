@@ -233,6 +233,8 @@ swift run HashNotchChecks # run the checks
 ./scripts/build_app.sh      # assemble the .app
 ```
 
+With Command Line Tools 27.0, the default macOS 27 SDK cannot compile SwiftUI on its own: its `@State` is a macro whose plugin those tools do not include. `build_app.sh` notices that exact failure and builds against the newest older SDK installed beside it. For the other commands, name that SDK yourself — for example `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk swift build`.
+
 Every capability is a self-contained module. The core knows how to draw an island and how to talk to a feature through one protocol — it never knows what any feature *does*, so adding or removing one touches a single line:
 
 ```mermaid
