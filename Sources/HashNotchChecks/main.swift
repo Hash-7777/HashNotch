@@ -559,6 +559,28 @@ MainActor.assumeIsolated {
         "a rate of zero is paused, not absent",
         NowPlayingDirect.snapshot(from: mediaInfo(rate: 0))?.isPlaying == false
     )
+    check(
+        "a rate of zero is reported, so it is believed as it stands",
+        NowPlayingDirect.snapshot(from: mediaInfo(rate: 0))?.rateReported == true
+    )
+    // A missing rate is the case that hid songs: a player can leave the key out
+    // while playing, and the snapshot has to say so rather than pass it off as
+    // a rate of zero, so the reader knows to ask the system's own flag.
+    check(
+        "a missing rate is marked as missing, not as zero",
+        NowPlayingDirect.snapshot(from: mediaInfo(rate: nil))?.rateReported == false
+    )
+
+    // An unanswered look is not an empty one. A helper that timed out says
+    // nothing about the music, so a showing track survives a few of them in a
+    // row — and only a few, so a helper that has stopped answering for good
+    // does not keep a finished song on screen.
+    check("a first unanswered look keeps the track", MediaMonitor.keepsShowing(afterUnansweredLooks: 1))
+    check("so does a second", MediaMonitor.keepsShowing(afterUnansweredLooks: 2))
+    check(
+        "the third in a row clears it",
+        !MediaMonitor.keepsShowing(afterUnansweredLooks: MediaMonitor.unansweredLooksBeforeClearing)
+    )
     // A live stream reports no length. Dividing a progress bar by it gives
     // either a full bar or a crash, so it is treated as having none — which the
     // panel already knows how to draw.

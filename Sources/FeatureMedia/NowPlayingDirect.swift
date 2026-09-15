@@ -34,7 +34,10 @@ package final class NowPlayingDirect {
     package struct Snapshot {
         package let title: String
         package let artist: String?
-        package let isPlaying: Bool
+        package var isPlaying: Bool
+        /// Whether the dictionary carried a playback rate at all. A missing
+        /// rate is not a rate of zero — see `read(on:completion:)`.
+        package let rateReported: Bool
         /// Where the track was at `elapsedAt` — the player's own figure, not a
         /// position worked out from it.
         package let elapsed: Double?
@@ -53,11 +56,13 @@ package final class NowPlayingDirect {
     private typealias SetElapsedFn = @convention(c) (Double) -> Void
     private typealias GetClientFn = @convention(c) (DispatchQueue, @escaping (AnyObject?) -> Void) -> Void
     private typealias ClientBundleFn = @convention(c) (AnyObject?) -> Unmanaged<CFString>?
+    private typealias IsPlayingFn = @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
 
     private let getInfo: GetInfoFn
     private let setElapsed: SetElapsedFn?
     private let getClient: GetClientFn?
     private let clientBundle: ClientBundleFn?
+    private let appIsPlaying: IsPlayingFn?
 
     /// Nil when MediaRemote is not where it is expected, or does not export the
     /// call. Every use site treats that as "fall back", never as a failure.
@@ -72,6 +77,8 @@ package final class NowPlayingDirect {
             .map { unsafeBitCast($0, to: GetClientFn.self) }
         clientBundle = dlsym(handle, "MRNowPlayingClientGetBundleIdentifier")
             .map { unsafeBitCast($0, to: ClientBundleFn.self) }
+        appIsPlaying = dlsym(handle, "MRMediaRemoteGetNowPlayingApplicationIsPlaying")
+            .map { unsafeBitCast($0, to: IsPlayingFn.self) }
     }
 
     /// Asks which app is playing. Answers with nil rather than failing.
@@ -103,10 +110,21 @@ package final class NowPlayingDirect {
     ///
     /// Never blocks: this is the callback form of the API, so a slow or absent
     /// answer costs nothing. A caller that gets nil should try the fallback.
+    ///
+    /// A dictionary with no playback rate at all is asked one more question:
+    /// whether the system considers the playing app to be playing. A player can
+    /// leave the rate out while it plays, and reading that as paused hid a song
+    /// that had just started, since a paused track at 0:00 has not earned a
+    /// place on the notch.
     func read(on queue: DispatchQueue, completion: @escaping (Snapshot?) -> Void) {
+        let appIsPlaying = self.appIsPlaying
         getInfo(queue) { info in
-            guard let info else { completion(nil); return }
-            completion(Self.snapshot(from: info))
+            guard let info, var snapshot = Self.snapshot(from: info) else { completion(nil); return }
+            guard !snapshot.rateReported, let appIsPlaying else { completion(snapshot); return }
+            appIsPlaying(queue) { playing in
+                snapshot.isPlaying = playing
+                completion(snapshot)
+            }
         }
     }
 
@@ -135,7 +153,8 @@ package final class NowPlayingDirect {
         // progress bar by it produces either a crash or a full bar. Treated as
         // "no duration", which the panel already knows how to draw.
         let duration = number("Duration").flatMap { $0 > 0 ? $0 : nil }
-        let isPlaying = (number("PlaybackRate") ?? 0) > 0
+        let rate = number("PlaybackRate")
+        let isPlaying = (rate ?? 0) > 0
 
         // The player's own pair, handed on untouched: where the track was, and
         // WHEN it was there. Both, together, or neither is any use.
@@ -159,6 +178,7 @@ package final class NowPlayingDirect {
             title: title,
             artist: string("Artist"),
             isPlaying: isPlaying,
+            rateReported: rate != nil,
             elapsed: elapsed,
             elapsedAt: elapsedAt ?? now,
             duration: duration,

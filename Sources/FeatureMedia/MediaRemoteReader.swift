@@ -163,6 +163,19 @@ final class MediaRemoteReader {
       const bundle = $.NSBundle.bundleWithPath('/System/Library/PrivateFrameworks/MediaRemote.framework/');
       bundle.load;
       const cls = $.NSClassFromString('MRNowPlayingRequest');
+      // Which app the system says owns the session. Used below only to let
+      // Spotify or Music keep a track whose title the two sides spell
+      // differently for a moment, never to decide what is shown.
+      let owner = null;
+      if (cls) {
+        try {
+          const path = cls.localNowPlayingPlayerPath;
+          if (path && !path.isNil()) {
+            const client = path.client;
+            if (client && !client.isNil()) owner = ObjC.unwrap(client.bundleIdentifier);
+          }
+        } catch (e) {}
+      }
       if (cls) {
         const item = cls.localNowPlayingItem;
         if (item && !item.isNil()) {
@@ -172,7 +185,19 @@ final class MediaRemoteReader {
             title = s('kMRMediaRemoteNowPlayingInfoTitle');
             artist = s('kMRMediaRemoteNowPlayingInfoArtist');
             const rate = s('kMRMediaRemoteNowPlayingInfoPlaybackRate');
-            playing = rate ? (rate > 0) : false;
+            if (rate === null || rate === undefined) {
+              // No rate at all is not the same as a rate of zero. A player can
+              // leave the key out while it is playing, and reading that as
+              // "paused" hid a song that had just started, since a paused track
+              // at 0:00 has not earned a place. The system's own playing flag
+              // answers the question the missing key does not.
+              try {
+                const flag = ObjC.unwrap(cls.localIsPlaying);
+                playing = (typeof flag === 'boolean') ? flag : false;
+              } catch (e) { playing = false; }
+            } else {
+              playing = rate > 0;
+            }
             elapsed = s('kMRMediaRemoteNowPlayingInfoElapsedTime');
             // WHEN that position was true. Without it the position is just a
             // number that was right at some unknown moment, and anchoring it to
@@ -195,9 +220,13 @@ final class MediaRemoteReader {
       // was stopped outright. Two players CAN both be playing; the system knows
       // which one you turned to last, and that is the one to show.
       //
-      // So both states now ask the same question: does the system either name
-      // this track, or name nothing at all? Claiming a PAUSED track still keeps
-      // its artwork and routes resume through Spotify's own scripting, which is
+      // So both states now ask the same question: does the system name this
+      // track, name nothing at all, or name Spotify as the app that owns the
+      // session? The last covers a song change, when the system's title and
+      // Spotify's can disagree for a moment — without it the new song fell to
+      // the system's reading, which can carry no rate, and was hidden as a
+      // track nobody had played. Claiming a PAUSED track still keeps its
+      // artwork and routes resume through Spotify's own scripting, which is
       // what makes the play button work.
       try {
         const sp = Application('Spotify');
@@ -205,7 +234,7 @@ final class MediaRemoteReader {
           const st = String(sp.playerState());
           if (st === 'playing' || st === 'paused') {
             const spName = sp.currentTrack.name();
-            if (!title || title === spName) {
+            if (!title || title === spName || owner === 'com.spotify.client') {
               source = 'spotify';
               if (artIsCurrent(spName)) {
                 artUnchanged = true;
@@ -229,8 +258,9 @@ final class MediaRemoteReader {
           if (st === 'playing' || st === 'paused') {
             const muName = mu.currentTrack.name();
             // Same rule as Spotify, for the same reason: claim the slot only
-            // when the system names this track or names nothing.
-            if (!title || title === muName) {
+            // when the system names this track, names nothing, or names Music
+            // as the app it belongs to.
+            if (!title || title === muName || owner === 'com.apple.Music') {
               source = 'music';
               elapsed = mu.playerPosition();
               duration = mu.currentTrack.duration();
@@ -344,10 +374,23 @@ final class MediaRemoteReader {
     /// Whether the playhead can be moved on this machine.
     var canSeek: Bool { direct?.canSeek ?? false }
 
+    /// What one look found.
+    ///
+    /// "Nothing is playing" and "the question went unanswered" are different
+    /// facts, and they used to be the same nil. A helper that timed out, would
+    /// not start, or printed something unreadable says nothing at all about the
+    /// music — but it counted as an empty reading, and two of those in a row
+    /// took a playing track off the notch.
+    package enum FetchResult: Equatable {
+        case track(NowPlaying)
+        case nothing
+        case noAnswer
+    }
+
     /// Fetches the current track; completion is called on a background queue.
     /// If the previous fetch is still running (osascript stalled on a permission
     /// dialog), this poll is skipped instead of queueing up behind it.
-    func fetch(_ completion: @escaping (NowPlaying?) -> Void) {
+    func fetch(_ completion: @escaping (FetchResult) -> Void) {
         stateLock.lock()
         let busy = inFlight
         if !busy { inFlight = true }
@@ -364,7 +407,7 @@ final class MediaRemoteReader {
         }
 
         direct.read(on: queue) { [weak self] snapshot in
-            guard let self else { completion(nil); return }
+            guard let self else { completion(.noAnswer); return }
             guard let snapshot else {
                 // The system knows of no track. Fall back rather than conclude:
                 // this is also what an unexpected macOS would look like, and
@@ -377,7 +420,7 @@ final class MediaRemoteReader {
                 self.stateLock.lock()
                 self.inFlight = false
                 self.stateLock.unlock()
-                completion(NowPlaying(
+                completion(.track(NowPlaying(
                     title: snapshot.title,
                     artist: snapshot.artist,
                     isPlaying: snapshot.isPlaying,
@@ -387,14 +430,14 @@ final class MediaRemoteReader {
                     duration: snapshot.duration,
                     fetchedAt: Date(),
                     elapsedAt: snapshot.elapsedAt
-                ))
+                )))
             }
         }
     }
 
     /// The original subprocess route, now only reached when the direct read is
     /// unavailable or has nothing.
-    private func finishSubprocessFetch(_ completion: @escaping (NowPlaying?) -> Void) {
+    private func finishSubprocessFetch(_ completion: @escaping (FetchResult) -> Void) {
         let result = run()
         stateLock.lock()
         inFlight = false
@@ -517,7 +560,7 @@ final class MediaRemoteReader {
         )
     }
 
-    private func run() -> NowPlaying? {
+    private func run() -> FetchResult {
         // Withhold the remembered title when a fruitless lookup is due another
         // try, which is the one way the script is allowed to ask the browsers
         // about a title it has already seen.
@@ -538,7 +581,7 @@ final class MediaRemoteReader {
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
 
-        do { try process.run() } catch { return nil }
+        do { try process.run() } catch { return .noAnswer }
 
         // Watchdog: kill the subprocess if it exceeds the timeout, so a stalled
         // osascript can never wedge the media queue.
@@ -552,10 +595,13 @@ final class MediaRemoteReader {
         process.waitUntilExit()
         watchdog.cancel()
 
-        guard let payload = try? JSONDecoder().decode(Payload.self, from: data),
-              let title = payload.title, !title.isEmpty else {
-            return nil
+        // Killed, failed, or said something unreadable: no answer, which is
+        // not the same as an answer of "nothing".
+        guard process.terminationStatus == 0,
+              let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
+            return .noAnswer
         }
+        guard let title = payload.title, !title.isEmpty else { return .nothing }
 
         let source = payload.source.flatMap(MediaSource.init(rawValue:)) ?? .other
         // Record the lookup for this title whenever one actually ran — hit or
@@ -570,7 +616,7 @@ final class MediaRemoteReader {
         // changed it did none of the work to produce it again, and neither do
         // we.
         let artwork = artworkNow(for: title, payload: payload)
-        return NowPlaying(
+        return .track(NowPlaying(
             title: title,
             artist: payload.artist,
             isPlaying: payload.playing ?? false,
@@ -587,7 +633,7 @@ final class MediaRemoteReader {
             elapsedAt: source == .other
                 ? payload.elapsedAt.map { Date(timeIntervalSince1970: $0) }
                 : nil
-        )
+        ))
     }
 
     /// The artwork to publish with THIS snapshot — never a download.

@@ -17,6 +17,15 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **A playing song stays on the notch.** Three ways a track that was playing
+  could leave the notch are closed. A look at what is playing that went
+  unanswered — the helper timed out or failed — counted as "nothing is
+  playing", and two in a row took the song away; now it keeps the song and asks
+  again, and only half a minute of silence clears it. A player that leaves out
+  its play speed was read as paused, which hid a song that had just started at
+  0:00; the system's own playing flag now answers that. And at a song change,
+  when macOS and Spotify or Music briefly disagree about the title, the player
+  keeps the notch as long as macOS says it owns the session.
 - **Settings opens beside the panel, not over it.** On a laptop display there
   are only about 425 points to the right of the panel, and the settings window
   kept its full width and was pushed back over the readouts it was opened to

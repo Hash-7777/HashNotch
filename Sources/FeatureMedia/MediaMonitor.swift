@@ -114,6 +114,11 @@ public final class MediaMonitor: ObservableObject {
     /// paused item lapses out of the now-playing session and comes back, so one
     /// of these is noise rather than news.
     private var emptyReadings = 0
+    /// Consecutive looks that got no answer at all — the helper timed out,
+    /// would not start, or printed something unreadable. Counted apart from
+    /// empty readings, because a question nobody answered says nothing about
+    /// what is playing.
+    private var unansweredLooks = 0
     /// The title of the track that has earned the strip by actually being
     /// played. Held for the current track only, and dropped the moment the
     /// title changes, so nothing inherits another track's standing.
@@ -452,8 +457,8 @@ public final class MediaMonitor: ObservableObject {
         guard let reader else { return }
         // Weak at the outer closure, where the reader holds it; weak only on
         // the inner task left the outer one holding `self` strongly anyway.
-        reader.fetch { [weak self] snapshot in
-            Task { @MainActor in self?.receive(snapshot) }
+        reader.fetch { [weak self] result in
+            Task { @MainActor in self?.receive(result) }
         }
     }
 
@@ -473,7 +478,31 @@ public final class MediaMonitor: ObservableObject {
     /// notch clears on the very next look. Any reading WITH a track is taken
     /// immediately — this only ever delays the disappearance, never the
     /// arrival.
-    private func receive(_ snapshot: NowPlaying?) {
+    private func receive(_ result: MediaRemoteReader.FetchResult) {
+        let snapshot: NowPlaying?
+        switch result {
+        case .noAnswer:
+            // No answer is not an answer of "nothing". Keep what is showing
+            // and ask again soon — but not forever: a helper that never
+            // answers again must not leave a finished song on the notch for
+            // the rest of the day.
+            unansweredLooks += 1
+            guard nowPlaying != nil,
+                  Self.keepsShowing(afterUnansweredLooks: unansweredLooks) else {
+                if nowPlaying != nil { apply(nil) }
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.refresh()
+            }
+            return
+        case .nothing:
+            unansweredLooks = 0
+            snapshot = nil
+        case .track(let track):
+            unansweredLooks = 0
+            snapshot = track
+        }
         if snapshot == nil, nowPlaying != nil {
             emptyReadings += 1
             guard emptyReadings >= Self.emptyReadingsBeforeClearing else {
@@ -494,6 +523,17 @@ public final class MediaMonitor: ObservableObject {
     /// playing. Two, because one is the flicker and two in a row has never been
     /// observed on a track that is still there.
     private static let emptyReadingsBeforeClearing = 2
+
+    /// How many unanswered looks in a row a showing track survives. Each can
+    /// take up to the helper's ten-second timeout, so this is about half a
+    /// minute of silence — longer than any stall seen while a player loads its
+    /// next song, short enough that a helper that has stopped answering for
+    /// good does not keep a song on screen that ended long ago.
+    package nonisolated static let unansweredLooksBeforeClearing = 3
+
+    package nonisolated static func keepsShowing(afterUnansweredLooks count: Int) -> Bool {
+        count < unansweredLooksBeforeClearing
+    }
 
     private func apply(_ snapshot: NowPlaying?) {
         // Keep a track — playing OR paused, any source — for as long as it has
