@@ -1279,7 +1279,18 @@ private struct ResetRow: View {
     @State private var asking = false
 
     var body: some View {
-        SettingRow(title, detail: detail) {
+        VStack(alignment: .trailing, spacing: 10) {
+            SettingRow(title, detail: detail) {
+                if !asking {
+                    Button("Reset") { asking = true }
+                        .buttonStyle(.bordered)
+                }
+            }
+            // The question gets a line of its own under the description. Beside
+            // it, two buttons took the row's room from the words and the
+            // confirm button's own label was cut short — "Reset appear…" on the
+            // one button whose words matter most, in a window that narrows to
+            // stay beside the panel.
             if asking {
                 HStack(spacing: 6) {
                     Button("Cancel") { asking = false }
@@ -1291,11 +1302,11 @@ private struct ResetRow: View {
                     .buttonStyle(.borderedProminent)
                     .tint(.red)
                 }
-            } else {
-                Button("Reset") { asking = true }
-                    .buttonStyle(.bordered)
+                .fixedSize()
+                .transition(.opacity)
             }
         }
+        .animation(.easeOut(duration: 0.15), value: asking)
     }
 }
 
