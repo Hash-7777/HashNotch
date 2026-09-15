@@ -1,5 +1,6 @@
 import Foundation
 import IOKit
+import HashNotchKit
 
 /// Reads temperatures from the System Management Controller.
 ///
@@ -23,56 +24,6 @@ import IOKit
 /// from two threads at once, and `ThermalMonitor` has a serial queue for exactly
 /// this.
 package final class SMCThermal: @unchecked Sendable {
-    // MARK: The SMC's own request block
-    //
-    // The layout has to match the kernel's byte for byte. It is easy to get
-    // wrong in a way that looks like the hardware refusing you: an early
-    // version of this was three bytes short, because C places the field after a
-    // struct at its STRIDE and Swift places it at its SIZE, and the SMC
-    // answered every call with a bad-argument error.
-
-    private struct Version {
-        var major: UInt8 = 0, minor: UInt8 = 0, build: UInt8 = 0, reserved: UInt8 = 0
-        var release: UInt16 = 0
-    }
-
-    private struct Limits {
-        var version: UInt16 = 0, length: UInt16 = 0
-        var cpuPLimit: UInt32 = 0, gpuPLimit: UInt32 = 0, memPLimit: UInt32 = 0
-    }
-
-    /// Nine bytes of fields in a four-aligned struct, which C pads to twelve.
-    /// The padding is spelled out because Swift will not add it.
-    private struct KeyInfo {
-        var dataSize: UInt32 = 0
-        var dataType: UInt32 = 0
-        var dataAttributes: UInt8 = 0
-        var pad0: UInt8 = 0, pad1: UInt8 = 0, pad2: UInt8 = 0
-    }
-
-    private struct Param {
-        var key: UInt32 = 0
-        var version = Version()
-        var limits = Limits()
-        var keyInfo = KeyInfo()
-        var result: UInt8 = 0
-        var status: UInt8 = 0
-        var data8: UInt8 = 0
-        var data32: UInt32 = 0
-        var bytes: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                    UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                    UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                    UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8) =
-            (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    }
-
-    /// The three commands used, and the one selector they go through.
-    private static let selector: UInt32 = 2
-    private static let readBytes: UInt8 = 5
-    private static let readIndex: UInt8 = 8
-    private static let readKeyInfo: UInt8 = 9
-
     /// How many keys are walked at most while discovering.
     ///
     /// A ceiling rather than a limit: this Mac reports about sixteen hundred,
@@ -87,43 +38,29 @@ package final class SMCThermal: @unchecked Sendable {
     /// the machine is the whole of what the panel shows.
     package static let sensorLimit = 48
 
-    private let connection: io_connect_t
+    /// The request plumbing lives in the core (`SMCConnection`), because this
+    /// is not the only feature that reads the SMC.
+    private let smc: SMCConnection
     /// Discovered once. Each read then costs one call per key rather than
     /// three, because what the key is and how big it is cannot change.
-    private var sensors: [(key: UInt32, name: String, info: KeyInfo)] = []
+    private var sensors: [(key: UInt32, name: String, info: SMCConnection.KeyInfo)] = []
 
     package init?() {
-        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"))
-        guard service != 0 else { return nil }
-        var connection: io_connect_t = 0
-        let opened = IOServiceOpen(service, mach_task_self_, 0, &connection)
-        IOObjectRelease(service)
-        guard opened == kIOReturnSuccess, connection != 0 else { return nil }
-        self.connection = connection
+        guard let smc = SMCConnection() else { return nil }
+        self.smc = smc
         discover()
-        if sensors.isEmpty {
-            IOServiceClose(connection)
-            return nil
-        }
+        if sensors.isEmpty { return nil }
     }
-
-    deinit { IOServiceClose(connection) }
 
     /// Every temperature this Mac reports, by its raw key.
     package func read() -> [(name: String, celsius: Double)] {
         var results: [(String, Double)] = []
         results.reserveCapacity(sensors.count)
         for sensor in sensors {
-            var request = Param()
-            request.key = sensor.key
-            request.keyInfo = sensor.info
-            request.data8 = Self.readBytes
-            guard let answer = call(&request) else { continue }
-            guard let celsius = Self.celsius(
-                type: Self.text(fromKey: sensor.info.dataType),
-                size: sensor.info.dataSize,
-                bytes: Self.array(answer.bytes)
-            ) else { continue }
+            guard let bytes = smc.bytes(for: sensor.key, info: sensor.info),
+                  let celsius = Self.celsius(
+                    type: sensor.info.type, size: sensor.info.dataSize, bytes: bytes)
+            else { continue }
             results.append((sensor.name, celsius))
         }
         return results
@@ -132,62 +69,26 @@ package final class SMCThermal: @unchecked Sendable {
     // MARK: Discovery
 
     private func discover() {
-        guard let total = keyCount(), total > 0 else { return }
+        guard let total = smc.keyCount(), total > 0 else { return }
         for index in 0..<min(Int(total), Self.keyCeiling) {
-            var byIndex = Param()
-            byIndex.data8 = Self.readIndex
-            byIndex.data32 = UInt32(index)
-            guard let named = call(&byIndex) else { continue }
-            let name = Self.text(fromKey: named.key)
+            guard let key = smc.key(at: UInt32(index)) else { continue }
+            let name = Self.text(fromKey: key)
             // Temperatures only. Every other key on the SMC is a fan, a
             // voltage, a current or something this app has no business reading.
             guard name.hasPrefix("T") else { continue }
 
-            var info = Param()
-            info.key = named.key
-            info.data8 = Self.readKeyInfo
-            guard let described = call(&info) else { continue }
+            guard let described = smc.info(for: key) else { continue }
 
             // A key is kept only if it answers with a plausible temperature
             // right now. That is what keeps the list to sensors that exist and
             // work on THIS Mac, rather than to a list of names off another one.
-            var value = Param()
-            value.key = named.key
-            value.keyInfo = described.keyInfo
-            value.data8 = Self.readBytes
-            guard let answer = call(&value),
-                  Self.celsius(
-                    type: Self.text(fromKey: described.keyInfo.dataType),
-                    size: described.keyInfo.dataSize,
-                    bytes: Self.array(answer.bytes)) != nil
+            guard let bytes = smc.bytes(for: key, info: described),
+                  Self.celsius(type: described.type, size: described.dataSize, bytes: bytes) != nil
             else { continue }
 
-            sensors.append((named.key, name, described.keyInfo))
+            sensors.append((key, name, described))
             if sensors.count >= Self.sensorLimit { return }
         }
-    }
-
-    private func keyCount() -> UInt32? {
-        var request = Param()
-        request.key = Self.key(fromText: "#KEY")
-        request.data8 = Self.readKeyInfo
-        guard let described = call(&request) else { return nil }
-        request.keyInfo = described.keyInfo
-        request.data8 = Self.readBytes
-        guard let answer = call(&request) else { return nil }
-        let bytes = Self.array(answer.bytes)
-        guard bytes.count >= 4 else { return nil }
-        return (UInt32(bytes[0]) << 24) | (UInt32(bytes[1]) << 16)
-             | (UInt32(bytes[2]) << 8) | UInt32(bytes[3])
-    }
-
-    private func call(_ input: inout Param) -> Param? {
-        var output = Param()
-        var size = MemoryLayout<Param>.stride
-        let result = IOConnectCallStructMethod(
-            connection, Self.selector, &input, MemoryLayout<Param>.stride, &output, &size)
-        guard result == kIOReturnSuccess, output.result == 0 else { return nil }
-        return output
     }
 
     // MARK: Plain arithmetic, so the checks can reach it
@@ -214,23 +115,10 @@ package final class SMCThermal: @unchecked Sendable {
 
     /// The four characters of a key, which is how the SMC names everything.
     package static func text(fromKey key: UInt32) -> String {
-        let bytes = [UInt8((key >> 24) & 0xff), UInt8((key >> 16) & 0xff),
-                     UInt8((key >> 8) & 0xff), UInt8(key & 0xff)]
-        return String(decoding: bytes, as: UTF8.self)
+        SMCConnection.text(fromKey: key)
     }
 
     package static func key(fromText text: String) -> UInt32 {
-        var value: UInt32 = 0
-        for byte in text.utf8.prefix(4) { value = (value << 8) | UInt32(byte) }
-        return value
-    }
-
-    private static func array(
-        _ bytes: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                  UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                  UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
-                  UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)
-    ) -> [UInt8] {
-        withUnsafeBytes(of: bytes) { Array($0) }
+        SMCConnection.key(fromText: text)
     }
 }
