@@ -75,6 +75,8 @@ All notable changes to HashNotch are recorded here.
 - **The focus section is a row shorter.** With nothing running, the week's
   sentence sits on the left and the Start button on the right, in one row,
   instead of the button taking a row of its own above the text.
+- **Storage in one row.** "Storage", what is free and how full share a line
+  above the bar, instead of a heading, a line of figures and the bar.
 - **A shorter internet graph.** 16 points tall instead of 26. It shows the
   shape of traffic against its own recent peak, so the extra height measured
   nothing.

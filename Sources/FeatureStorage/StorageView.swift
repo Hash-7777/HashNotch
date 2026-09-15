@@ -9,26 +9,32 @@ struct StorageDetailView: View {
     var body: some View {
         if let usage = monitor.usage {
             VStack(alignment: .leading, spacing: 7) {
-                // "STORAGE", not the volume's name. Almost every Mac's startup
+                // One row, then the bar: the name, what is free, and how full
+                // — the same arrangement as every other row in the panel. It
+                // was a heading, a line of figures and the bar, three lines
+                // where two say the same.
+                //
+                // "Storage", not the volume's name. Almost every Mac's startup
                 // disk is still called Macintosh HD, which names the hardware
                 // rather than the thing being reported and reads as a label
                 // nobody got round to changing.
-                NotchSectionHeader("STORAGE", icon: .storage, theme: theme)
-
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(usage.percentUsed)%")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(theme.textColor)
-                        .monospacedDigit()
-                        .rollingDigits()
-                    Text("full")
-                        .font(.system(size: 9))
-                        .foregroundStyle(theme.subtitleColor)
-                    Spacer(minLength: 8)
-                    Text("\(Formatters.bytes(usage.freeBytes)) free")
-                        .font(.system(size: 9))
-                        .foregroundStyle(theme.subtitleColor)
-                        .monospacedDigit()
+                NotchRow("Storage", icon: .storage, theme: theme) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("\(Formatters.bytes(usage.freeBytes)) free")
+                            .font(.system(size: 9))
+                            .foregroundStyle(theme.subtitleColor)
+                            .monospacedDigit()
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("\(usage.percentUsed)%")
+                                .foregroundStyle(theme.textColor)
+                                .monospacedDigit()
+                                .rollingDigits()
+                            Text("full")
+                                .font(.system(size: 9))
+                                .foregroundStyle(theme.subtitleColor)
+                        }
+                        .layoutPriority(1)
+                    }
                 }
 
                 bar(usage)
