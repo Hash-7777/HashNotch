@@ -20,9 +20,10 @@ public final class FocusFeature: NotchFeature {
     public let id = "focus"
     public let title = "Focus"
 
-    /// It holds the strip for as long as a block runs, which is the ordinary
-    /// case for something in progress rather than something announcing itself.
-    public let livePriority = LivePriority.ongoing
+    /// It holds the strip for as long as a block runs, ahead of music: a
+    /// stretch is what somebody sat down to do, and the song is the background
+    /// to it. Announcements still take the strip over it for their few seconds.
+    public let livePriority = LivePriority.session
 
     private let engine = FocusEngine()
     private var context: FeatureContext?

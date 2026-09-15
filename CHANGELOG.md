@@ -74,6 +74,11 @@ All notable changes to HashNotch are recorded here.
   was a button for something done once. Connecting is the one-line installer
   in the README, as it was before the page existed, and when an installed hook
   falls behind the app, the notice in the panel still offers to update it.
+- **A running focus stretch takes the strip from music.** Both used to count
+  as simply ongoing, and music was first in line, so the countdown never showed
+  while a song played. A stretch is the thing you sat down to do, so it now wins
+  over the song beneath it — and still gives way for a few seconds to anything
+  that has just happened, such as a finished download or a low battery.
 - **The focus section is a row shorter.** With nothing running, the week's
   sentence sits on the left and the Start button on the right, in one row,
   instead of the button taking a row of its own above the text.

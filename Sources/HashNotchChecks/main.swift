@@ -386,6 +386,17 @@ MainActor.assumeIsolated {
     )
     check("an announcement outranks something merely ongoing", LivePriority.announcement > LivePriority.ongoing)
     check("waiting on you outranks an announcement", LivePriority.needsYou > LivePriority.announcement)
+    // A focus stretch is the thing somebody sat down to do, so it takes the
+    // strip from the song playing under it — and still gives way to anything
+    // that just happened.
+    check(
+        "a running focus stretch takes the strip from music",
+        MainActor.assumeIsolated { FocusFeature().livePriority } > LivePriority.ongoing
+    )
+    check(
+        "but an announcement still takes it from a focus stretch",
+        LivePriority.announcement > MainActor.assumeIsolated { FocusFeature().livePriority }
+    )
 
     // Island sizing: collapsed matches the notch, expanded is larger.
     let state = NotchState(geometry: NotchGeometry(

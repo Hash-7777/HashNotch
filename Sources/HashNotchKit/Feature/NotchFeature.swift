@@ -210,6 +210,11 @@ public extension NotchFeature {
 public enum LivePriority {
     /// Something that is simply still true — music, a running timer.
     public static let ongoing = 0
+    /// A session somebody started and is working to — a focus stretch. It is
+    /// ongoing too, but it is the thing they sat down to do: the song is the
+    /// background to it, so while a stretch runs the strip shows the stretch.
+    /// Anything that just happened still takes the strip over it.
+    public static let session = 10
     /// Something that just happened and will leave on its own.
     public static let announcement = 20
     /// Something that has stopped and is waiting on the user.
