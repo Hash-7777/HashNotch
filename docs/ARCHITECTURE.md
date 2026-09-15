@@ -15,6 +15,8 @@ HashNotchKit      Core framework. Notch detection, the overlay window, the
 FeatureMedia      One self-contained feature each. Every feature module depends
 FeatureActivities only on HashNotchKit — never on another feature.
 FeatureDownloads
+FeatureAway
+FeatureFocus
 FeatureTimer
 FeatureTokens
 FeatureNetwork
@@ -26,7 +28,7 @@ FeatureCPU
 FeatureMemory
 FeatureStorage
 
-HashNotch       The executable. The only place features are wired together.
+HashNotch         The executable. The only place features are wired together.
                   Depends on the core + every feature it enables.
 
 HashNotchChecks   Framework-free checks for the core and the parsers, runnable

@@ -63,6 +63,14 @@ received. Program names and byte counts, nothing else — not what any of them
 connected to, which this app cannot see. Switching the setting off deletes it
 rather than leaving it in place unread.
 
+The focus cycle and the timer keep what they need to survive the screen
+sleeping and the app quitting, in the same place: the lengths you chose, the
+moment a running stretch or countdown ends, and — for focus — a short record of
+the last seven days, which is a date, the time you spent focused and how many
+rounds you finished, and nothing about what you were doing. That record is
+about you rather than the Mac, so the opening window names it, and Settings →
+Focus deletes it with one button.
+
 It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.
 
@@ -165,14 +173,16 @@ as a privacy one.
 - **Your Downloads folder** — macOS protects it, so the first time the download
   notice looks there, macOS asks. Deny it and every other feature keeps
   working; you simply get no "download finished" notice.
-- **Notifications** — asked the first time you start the timer, so it can post
-  a banner when the timer ends. The alert is handed to macOS when the timer
+- **Notifications** — asked the first time you start the timer or a focus
+  stretch, so it can post a banner when either ends. What follows is said of the
+  timer; a focus stretch is handed over the same way. The alert is handed to macOS when the timer
   starts, rather than posted by the app when it notices the countdown reach zero
   — that is what makes it arrive on time when the display has gone to sleep, and
   it means one pending alert sits with the system until it fires or you cancel
   the timer, including if you quit HashNotch in between. Cancelling the timer
-  takes it back. Deny the permission and the timer chimes instead, and the panel
-  says so rather than leaving you to notice that no banner ever came.
+  takes it back. Deny the permission and the timer and the focus cycle chime
+  instead, and the panel says so rather than leaving you to notice that no
+  banner ever came.
 
 - **Accessibility** — asked **only if you turn on "Control video in your
   browser"**, and never otherwise. It is off by default. macOS gates pressing

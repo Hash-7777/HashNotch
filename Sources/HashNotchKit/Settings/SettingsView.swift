@@ -1051,13 +1051,18 @@ public struct SettingsView: View {
                     "An indicator switched off is never started — it reads nothing and asks for nothing. Switching one off stops the work, not just the display."
                 )
                 SettingDivider()
-                // The one reading here that is about YOU rather than about the
-                // machine, so it is named on this page rather than left to be
-                // discovered. It needs no permission from macOS, which is
-                // exactly why it would otherwise never be mentioned anywhere.
+                // The records here that are about YOU rather than about the
+                // machine, so they are named on this page rather than left to
+                // be discovered. Neither needs permission from macOS, which is
+                // exactly why they would otherwise never be mentioned anywhere.
                 PrivacyLine(
-                    "The one thing it learns about you",
+                    "The two things it keeps about you",
                     "Everything else here reads counters about the hardware. Naming the programs that used the most data reads which programs you run, which is a fact about you rather than about the Mac — so it has its own switch on the General page, and off means the tool that answers it is never run. It is Apple's own nettop, the one Activity Monitor uses: it asks for byte totals per program and gets no address, site or port back, so this app cannot see where any of it went. What it records — program names and byte counts — never leaves the Mac, and switching it off deletes it."
+                )
+                SettingDivider()
+                PrivacyLine(
+                    "Your focus week",
+                    "The focus cycle keeps the last seven days: a date, the time you spent focused and how many rounds you finished — never what you were working on, which this app has no way of knowing. It stays on this Mac, and the Focus page deletes it with one button."
                 )
             }
 
@@ -1099,9 +1104,9 @@ public struct SettingsView: View {
                 PermissionRow(
                     icon: "bell",
                     name: "Notifications",
-                    asked: "First time you start a timer.",
-                    why: "To post a banner when the timer reaches zero.",
-                    ifDenied: "The timer still chimes and still shows \"Time's up\" at the notch."
+                    asked: "First time you start a timer or a focus stretch.",
+                    why: "To post a banner when either one ends, even with the screen asleep.",
+                    ifDenied: "Both still chime, and the timer still shows \"Time's up\" at the notch."
                 )
                 SettingDivider()
                 PermissionRow(
