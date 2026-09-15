@@ -21,6 +21,14 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **Liquid Glass on macOS 26 and 27.** Every frosted surface — the panel when
+  "Frosted glass" is chosen, the settings window, the opening window and the
+  quit confirmation — is now drawn with the system's own Liquid Glass. It
+  follows macOS 27's transparency setting, from clear to tinted, and Reduce
+  Transparency, the same as the system's own panels. The dark wash under the
+  text stays, so the panel reads over a white document as it did. The notch and
+  the strip beside it stay solid black so they still look like the hardware.
+  Earlier macOS keeps the frosted look it had.
 - **Settings has no Agents page.** Its one control, connecting Claude Code,
   was a button for something done once. Connecting is the one-line installer
   in the README, as it was before the page existed, and when an installed hook

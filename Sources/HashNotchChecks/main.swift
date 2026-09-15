@@ -6487,6 +6487,20 @@ check(
     "the frosted background never offers to move the window",
     SteadyVisualEffectView().mouseDownCanMoveWindow == false
 )
+// On macOS 26 and later the same surface is Liquid Glass, and the glass view
+// is held to the same rule. Before 26 the view does not exist and the frosted
+// one above is what draws — so the check passes there by having nothing to
+// ask, and is written as one check either way so the count the README states is
+// the same on every system that runs it.
+check(
+    "and neither does the Liquid Glass one that replaces it on macOS 26 and later",
+    {
+        if #available(macOS 26.0, *) {
+            return SteadyGlassEffectView().mouseDownCanMoveWindow == false
+        }
+        return true
+    }()
+)
 check(
     "nor does the surface the settings are drawn on",
     PanelHostingView(rootView: Text("")).mouseDownCanMoveWindow == false
