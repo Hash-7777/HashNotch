@@ -22,7 +22,7 @@ struct AirPodsDetailView: View {
                                 .monospacedDigit()
                                 .rollingDigits()
                         }
-                        .animation(.snappy, value: item.percent)
+                        .figureAnimation(.snappy, value: item.percent)
                     }
                 }
             }

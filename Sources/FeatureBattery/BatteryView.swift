@@ -160,8 +160,8 @@ struct BatteryDetailView: View {
 
             if showsLowPowerRow { lowPowerRow }
         }
-        .animation(.snappy, value: monitor.percentage)
-        .animation(.snappy, value: monitor.isLowPowerMode)
+        .figureAnimation(.snappy, value: monitor.percentage)
+        .figureAnimation(.snappy, value: monitor.isLowPowerMode)
     }
 
     /// Low Power Mode, by whichever route the user has chosen.

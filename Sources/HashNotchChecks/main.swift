@@ -6856,6 +6856,35 @@ check("a panel about to change size says so before it does", panelMotion.begun)
 check("a second change extends that, rather than ending it early", panelMotion.extended)
 check("and it is over once the change has settled", panelMotion.cleared)
 
+// Nothing in the panel may animate a figure's own change on its own curve.
+//
+// `animation(_:value:)` animates everything about the view it is on, the view's
+// PLACE included — and a figure's place belongs to the row around it. A reading
+// that changed while its row was moving therefore travelled on its own curve
+// and ended up over some other row until the two agreed again. Every live
+// figure goes through `figureAnimation(_:value:)`, which drops the animation
+// while the panel is resizing; this holds that nothing has drifted back to the
+// plain modifier.
+check(
+    "every live figure's own animation is the panel's, not SwiftUI's plain one",
+    {
+        let views = (try? FileManager.default.subpathsOfDirectory(atPath: "Sources")) ?? []
+        let panelViews = views.filter {
+            $0.hasSuffix("View.swift") || $0.hasSuffix("Glyph.swift")
+        }.filter { $0.hasPrefix("Feature") && !$0.contains("SettingsView") }
+        for file in panelViews {
+            guard let text = try? String(contentsOfFile: "Sources/" + file, encoding: .utf8) else { continue }
+            for line in text.split(separator: "\n") where line.contains(".animation(.snappy") {
+                // The one kind that is not a figure: a disclosure the user
+                // opened, whose whole point is that the layout moves.
+                guard !line.contains("figureAnimation"), !line.contains("Expanded") else { continue }
+                return false
+            }
+        }
+        return true
+    }()
+)
+
 check("a panel that has just opened shows its first row, not a few points below it",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }

@@ -118,7 +118,7 @@ struct NetworkUsedView: View {
                 .foregroundStyle(theme.textColor)
                 .monospacedDigit()
                 .rollingDigits()
-                .animation(.snappy, value: bytes)
+                .figureAnimation(.snappy, value: bytes)
                 .lineLimit(1)
                 // And if it still will not fit — a month of traffic, a warning
                 // mark and a reset button all on one row — it gives up a fifth
@@ -215,6 +215,6 @@ struct NetworkAppRow: View {
         }
         .frame(width: Panel.rowWidth, height: NetworkUsedMath.breakdownRowHeight)
         .help("\(Formatters.bytes(Int64(clamping: app.received))) came down, \(Formatters.bytes(Int64(clamping: app.sent))) went up")
-        .animation(.snappy, value: app.total)
+        .figureAnimation(.snappy, value: app.total)
     }
 }

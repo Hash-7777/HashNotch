@@ -75,6 +75,20 @@ public enum SystemGeneration: Sendable {
 /// Anything an older system genuinely cannot do is handled where it lives and
 /// says so out loud, the way "Open at Login" does.
 public extension View {
+    /// `animation(_:value:)` for a live figure, held while the panel is
+    /// changing size.
+    ///
+    /// SwiftUI's own modifier animates EVERYTHING about the view it is on when
+    /// the value changes — including where the view is, which is decided by
+    /// whatever is around it. So a reading that changed in the same instant
+    /// its row moved slid on its own curve while the row moved on the panel's,
+    /// and ended up somewhere over a different row until the two agreed again.
+    /// While the panel is resizing the change is not animated at all, so the
+    /// figure simply travels with its row. See `PanelMotion`.
+    func figureAnimation<V: Equatable>(_ animation: Animation, value: V) -> some View {
+        modifier(FigureAnimation(animation: animation, value: value))
+    }
+
     /// Rolls digits like an odometer when the number changes, on systems that
     /// can. Elsewhere the number simply changes, which is what it always did.
     ///
@@ -85,6 +99,28 @@ public extension View {
     /// It holds still while the panel is changing size. See `PanelMotion`.
     func rollingDigits() -> some View {
         modifier(RollingDigits())
+    }
+}
+
+/// The animation a figure's own change runs on, and the case where it runs on
+/// none: a panel that is moving the figure's row at the same time.
+struct FigureAnimation<V: Equatable>: ViewModifier {
+    @Environment(\.panelIsResizing) private var resizing
+    let animation: Animation
+    let value: V
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if resizing {
+            // No animation of its own — NOT `animation(nil, value:)`, which is
+            // an instruction of its own: it makes the change instant, and the
+            // figure then jumps to where its row is going while the row is
+            // still on its way. Carrying no animation at all leaves the figure
+            // to the transaction moving the panel, which is its row's.
+            content
+        } else {
+            content.animation(animation, value: value)
+        }
     }
 }
 

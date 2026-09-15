@@ -288,7 +288,7 @@ struct NetworkDetailView: View {
                 .foregroundStyle(theme.textColor)
                 .monospacedDigit()
                 .rollingDigits()
-                .animation(.snappy, value: bytes)
+                .figureAnimation(.snappy, value: bytes)
         }
     }
 
@@ -308,7 +308,7 @@ struct NetworkDetailView: View {
                 .foregroundStyle(theme.textColor)
                 .monospacedDigit()
                 .rollingDigits()
-                .animation(.snappy, value: rate)
+                .figureAnimation(.snappy, value: rate)
             Text("MB/s")
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(theme.subtitleColor)

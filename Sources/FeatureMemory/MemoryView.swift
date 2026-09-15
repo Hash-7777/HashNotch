@@ -23,7 +23,7 @@ struct MemoryDetailView: View {
                     .frame(width: Panel.rowWidth, height: Panel.graphHeight)
             }
         }
-        .animation(.snappy, value: monitor.snapshot?.usedBytes)
+        .figureAnimation(.snappy, value: monitor.snapshot?.usedBytes)
     }
 
     /// How much of how much. The total is worth carrying: 12 GB in use means

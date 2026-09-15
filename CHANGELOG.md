@@ -73,7 +73,8 @@ All notable changes to HashNotch are recorded here.
   changed, so any reading that happened to change in that same tick was left
   hanging over another row until it caught up — the panel looked as though it
   had come apart. While the panel is changing size, a figure that changes
-  simply changes.
+  simply changes, and it travels with its row instead of on a curve of its
+  own.
 - **The focus settings show their numbers.** Each length and the number of
   rounds before a long rest now sits beside its buttons. The figures were
   written as the buttons' own label, which the layout hides, so the rounds row

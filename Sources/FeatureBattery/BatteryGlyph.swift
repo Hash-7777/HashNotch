@@ -99,9 +99,9 @@ struct BatteryGlyph: View {
         }
         // The charge slides to a new level rather than jumping to it, which is
         // what makes it read as a quantity rather than as a redraw.
-        .animation(.snappy, value: percentage)
-        .animation(.snappy, value: state)
-        .animation(.snappy, value: isLowPowerMode)
+        .figureAnimation(.snappy, value: percentage)
+        .figureAnimation(.snappy, value: state)
+        .figureAnimation(.snappy, value: isLowPowerMode)
         .accessibilityLabel(accessibilityText)
     }
 

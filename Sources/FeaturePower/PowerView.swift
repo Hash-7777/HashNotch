@@ -14,7 +14,7 @@ struct PowerDetailView: View {
                 .rollingDigits()
         }
         .help(helpText)
-        .animation(.snappy, value: monitor.watts)
+        .figureAnimation(.snappy, value: monitor.watts)
     }
 
     private var tint: Color {

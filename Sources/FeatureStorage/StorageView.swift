@@ -40,7 +40,7 @@ struct StorageDetailView: View {
                 bar(usage)
             }
             .frame(width: Panel.rowWidth, alignment: .leading)
-            .animation(.snappy, value: usage.percentUsed)
+            .figureAnimation(.snappy, value: usage.percentUsed)
         }
     }
 

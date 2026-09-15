@@ -30,7 +30,7 @@ struct CPUDetailView: View {
                     .frame(width: Panel.rowWidth, height: Panel.graphHeight)
             }
         }
-        .animation(.snappy, value: monitor.load)
+        .figureAnimation(.snappy, value: monitor.load)
     }
 
     /// A dash until there are two readings to compare. Better than a confident

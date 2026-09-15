@@ -71,7 +71,7 @@ struct TokensDetailView: View {
             }
         }
         .help(tooltip)
-        .animation(.snappy, value: monitor.today.total)
+        .figureAnimation(.snappy, value: monitor.today.total)
     }
 
     /// What the row says when asked rather than at a glance: where the figure
@@ -121,6 +121,6 @@ struct TokensDetailView: View {
                 .monospacedDigit()
                 .rollingDigits()
         }
-        .animation(.snappy, value: value)
+        .figureAnimation(.snappy, value: value)
     }
 }

@@ -61,7 +61,7 @@ struct ThermalDetailView: View {
                             }
                         }
                     }
-                    .animation(.snappy, value: sensor.celsius)
+                    .figureAnimation(.snappy, value: sensor.celsius)
                 }
             }
         }
