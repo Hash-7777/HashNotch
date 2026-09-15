@@ -6633,6 +6633,30 @@ check("offered the room, rows that do not fit give way to the scrolling choice",
 check("and rows that fit keep the plain one",
       MainActor.assumeIsolated { chosenWidth(firstHeight: 200, room: 300) == 120 })
 
+// No scroll bar, whatever System Settings says. With "Show scroll bars:
+// Always" — the setting on any Mac with a mouse attached, by default — a bar
+// took its own column inside the panel and pushed the rows sideways. Asked of
+// the real AppKit scroll view the panel builds, not of the SwiftUI modifier.
+@MainActor func panelScrollerShown() -> Bool? {
+    let host = NSHostingView(rootView: PanelRows(maxHeight: 200) {
+        Color.clear.frame(width: 120, height: 900)
+    })
+    host.frame = NSRect(x: 0, y: 0, width: 120, height: 200)
+    let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: true)
+    window.contentView = host
+    host.layoutSubtreeIfNeeded()
+    func scrollViews(in view: NSView) -> [NSScrollView] {
+        (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
+    }
+    guard let scroller = scrollViews(in: host).first else { return nil }
+    return scroller.hasVerticalScroller && scroller.verticalScroller?.isHidden == false
+}
+check("a panel that scrolls shows no scroll bar",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return panelScrollerShown() == false
+      })
+
 // MARK: - Where the settings window may be dragged from
 //
 // A borderless panel has no title bar, so it is told it may be moved by its

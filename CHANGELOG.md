@@ -29,9 +29,10 @@ All notable changes to HashNotch are recorded here.
   indicators switched on, the panel laid itself out taller than the room below
   the notch and the bottom rows were simply cut off, with no way to reach them.
   It now stops above the bottom of the screen and its rows scroll, with a soft
-  fade to say there is more. A panel that fits looks exactly as it did. While it
-  scrolls, a two-finger swipe up over the rows scrolls them; a swipe up on the
-  notch still closes the panel.
+  fade to say there is more — and no scroll bar, whatever System Settings says,
+  so the rows keep their place. A panel that fits looks exactly as it did. While
+  it scrolls, a two-finger swipe up over the rows scrolls them; a swipe up on
+  the notch still closes the panel.
 - **The cover on the strip sits inside it.** It filled the strip to within a
   point of its bottom edge, and its drop shadow — invisible on black — showed
   only where it spilled below the strip onto the desktop. The cover is smaller

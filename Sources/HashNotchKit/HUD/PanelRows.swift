@@ -42,11 +42,22 @@ package struct PanelRows<Content: View>: View {
         }
     }
 
+    /// The rows, scrolling, with no scroll bar.
+    ///
+    /// A bar is a column of its own. With "Show scroll bars: Always" set in
+    /// System Settings — and whenever a mouse is connected, which is macOS's
+    /// default for that setting — it is drawn inside the panel beside the rows,
+    /// takes their room and pushes them sideways, and a panel built to look like
+    /// part of the hardware grows a grey gutter down one side. `.never` holds
+    /// whatever that setting says. The fade at the bottom is what says there is
+    /// more, and the two-finger scroll is what reaches it.
+    @available(macOS 13.0, *)
     private var scrolling: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        ScrollView(.vertical, showsIndicators: false) {
             content()
                 .padding(.bottom, Self.fade)
         }
+        .scrollIndicators(.never)
         .mask(
             VStack(spacing: 0) {
                 Color.black
