@@ -25,6 +25,11 @@ All notable changes to HashNotch are recorded here.
   0:00; the system's own playing flag now answers that. And at a song change,
   when macOS and Spotify or Music briefly disagree about the title, the player
   keeps the notch as long as macOS says it owns the session.
+- **The panel stops above the Dock.** Its height limit was measured to the
+  screen's physical bottom edge, so a long panel was drawn over the Dock. It is
+  now measured to where macOS says the usable screen ends, which is the top of
+  the Dock when it sits along the bottom and the screen's edge when it is hidden
+  or on a side.
 - **A long panel scrolls instead of running off the screen.** With enough
   indicators switched on, the panel laid itself out taller than the room below
   the notch and the bottom rows were simply cut off, with no way to reach them.

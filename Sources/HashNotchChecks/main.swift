@@ -5131,6 +5131,50 @@ check(
                 == top - screen.minY - NotchWindowController.panelBottomMargin
         )
         let room = NotchState.panelRoom(islandTop: top, screenFrame: screen)
+
+        // The Dock. The room used to run to the screen's physical bottom, so a
+        // long panel was drawn over the Dock; it now ends where macOS says the
+        // usable area does.
+        let laptopScreen = CGRect(x: 0, y: 0, width: 1280, height: 832)
+        let docked = NotchGeometry(
+            screenFrame: laptopScreen,
+            notchRect: CGRect(x: 562, y: 804, width: 156, height: 28),
+            hasNotch: true,
+            usableBottom: 44
+        )
+        check("with the Dock along the bottom, the panel's room starts above it", docked.roomFrame.minY == 44)
+        check("and still reaches the top of the screen", docked.roomFrame.maxY == laptopScreen.maxY)
+        check(
+            "so the panel's ceiling is measured from the Dock, not the screen's edge",
+            NotchState.panelRoom(islandTop: docked.islandTop, screenFrame: docked.roomFrame)
+                == 832 - 44 - NotchWindowController.panelBottomMargin
+        )
+        check(
+            "and the island's own state takes that ceiling, not the screen's",
+            MainActor.assumeIsolated { NotchState(geometry: docked).panelRoom }
+                == 832 - 44 - NotchWindowController.panelBottomMargin
+        )
+        check(
+            "a hidden Dock gives the room back",
+            NotchGeometry(screenFrame: laptopScreen, notchRect: docked.notchRect, hasNotch: true)
+                .roomFrame == laptopScreen
+        )
+        check(
+            "a nonsense usable area is held inside the screen",
+            NotchGeometry(screenFrame: laptopScreen, notchRect: docked.notchRect, hasNotch: true,
+                          usableBottom: 5_000).usableBottom == laptopScreen.maxY
+                && NotchGeometry(screenFrame: laptopScreen, notchRect: docked.notchRect, hasNotch: true,
+                                 usableBottom: -50).usableBottom == laptopScreen.minY
+        )
+        check(
+            "a position correction keeps the Dock where it is",
+            { var nudge = IslandAdjustment(); nudge.vertical = 10
+              return nudge.applied(to: docked).usableBottom == 44 }()
+        )
+        check(
+            "and a display with no notch knows where its Dock is too",
+            NotchGeometry.notchless(screenFrame: laptopScreen, menuBarHeight: 24, usableBottom: 60).usableBottom == 60
+        )
         check(
             "a panel shorter than the room does not scroll",
             !NotchWindowController.panelScrolls(measured: room - 40, islandTop: top, screenFrame: screen)

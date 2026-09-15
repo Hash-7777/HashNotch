@@ -24,17 +24,33 @@ public struct NotchGeometry {
     /// The y coordinate the island hangs from: the screen's top edge when there
     /// is a notch to match, the bottom of the menu bar when there is not.
     public let islandTop: CGFloat
+    /// Where the screen's usable area ends at the bottom: the top of the Dock
+    /// when it sits along the bottom edge, the screen's own edge when it is
+    /// hidden or on a side. macOS's `visibleFrame`, which is the answer to
+    /// "where may a window go" — the panel stopping at the screen's physical
+    /// edge drew it over the Dock.
+    public let usableBottom: CGFloat
 
     public init(
         screenFrame: CGRect,
         notchRect: CGRect,
         hasNotch: Bool,
-        islandTop: CGFloat? = nil
+        islandTop: CGFloat? = nil,
+        usableBottom: CGFloat? = nil
     ) {
         self.screenFrame = screenFrame
         self.notchRect = notchRect
         self.hasNotch = hasNotch
         self.islandTop = islandTop ?? screenFrame.maxY
+        self.usableBottom = min(max(usableBottom ?? screenFrame.minY, screenFrame.minY), screenFrame.maxY)
+    }
+
+    /// The part of the screen the open panel may use: the whole screen above
+    /// the Dock. Its top is the screen's own top, so everything measured from
+    /// there — the island, the hover zones — is unchanged.
+    public var roomFrame: CGRect {
+        CGRect(x: screenFrame.minX, y: usableBottom,
+               width: screenFrame.width, height: screenFrame.maxY - usableBottom)
     }
 
     /// How wide the drawn island is when there is no notch to copy. Narrow
@@ -69,7 +85,8 @@ public struct NotchGeometry {
                 screenFrame: frame,
                 notchRect: notchRect,
                 hasNotch: true,
-                islandTop: frame.maxY
+                islandTop: frame.maxY,
+                usableBottom: screen.visibleFrame.minY
             )
         }
 
@@ -90,7 +107,11 @@ public struct NotchGeometry {
         // one part of it macOS never uses: app menus sit hard left, status items
         // hard right. The PANEL still opens below the menu bar, so nothing that
         // drops down ever covers a menu.
-        return notchless(screenFrame: frame, menuBarHeight: menuBarHeight(for: screen))
+        return notchless(
+            screenFrame: frame,
+            menuBarHeight: menuBarHeight(for: screen),
+            usableBottom: screen.visibleFrame.minY
+        )
     }
 
     /// The stand-in island for a display with no notch.
@@ -99,7 +120,11 @@ public struct NotchGeometry {
     /// without an NSScreen — the previous checks built a geometry by hand and
     /// asserted things about it, which tested the fixture rather than the rule
     /// and would have passed no matter what this did.
-    package static func notchless(screenFrame frame: CGRect, menuBarHeight bar: CGFloat) -> NotchGeometry {
+    package static func notchless(
+        screenFrame frame: CGRect,
+        menuBarHeight bar: CGFloat,
+        usableBottom: CGFloat? = nil
+    ) -> NotchGeometry {
         let height = min(max(bar, notchlessMinHeight), notchlessMaxHeight)
         let notchRect = CGRect(
             x: frame.midX - notchlessWidth / 2,
@@ -111,7 +136,8 @@ public struct NotchGeometry {
             screenFrame: frame,
             notchRect: notchRect,
             hasNotch: false,
-            islandTop: frame.maxY
+            islandTop: frame.maxY,
+            usableBottom: usableBottom
         )
     }
 

@@ -58,7 +58,7 @@ public final class NotchState: ObservableObject {
         // hover zone (the panel itself sizes to its content).
         expandedWidth = max(width + 120, 300)
         expandedHeight = 460
-        panelRoom = Self.panelRoom(islandTop: geometry.islandTop, screenFrame: geometry.screenFrame)
+        panelRoom = Self.panelRoom(islandTop: geometry.islandTop, screenFrame: geometry.roomFrame)
 
         // Compact-live: content hugs the notch — a small art tile on the left,
         // a title on the right — like the iPhone's compact Dynamic Island.

@@ -28,6 +28,10 @@ public final class NotchWindowController {
     // slider changes live.
     private var collapsedHoverRect: CGRect = .zero
     private var expandedHoverRect: CGRect = .zero
+    /// The screen as far as the overlay may use it: the whole display above
+    /// the Dock (`NotchGeometry.roomFrame`). Every height here — the panel's
+    /// ceiling, the window, the keep-open zone — is measured against it, so none
+    /// of them can reach down over the Dock.
     private var screenFrame: CGRect
     private var notchRect: CGRect
     /// The y coordinate the island hangs from — the screen's top edge on a
@@ -163,6 +167,7 @@ public final class NotchWindowController {
         let geometry = adjustment.applied(to: measured)
 
         self.state = NotchState(geometry: geometry)
+        self.screenFrame = geometry.roomFrame
         self.notchRect = geometry.notchRect
         self.islandTop = geometry.islandTop
         self.displayKey = screen.map { NotchGeometry.displayKey(for: $0) }
@@ -460,7 +465,7 @@ public final class NotchWindowController {
     }
 
     private func apply(geometry: NotchGeometry) {
-        screenFrame = geometry.screenFrame
+        screenFrame = geometry.roomFrame
         notchRect = geometry.notchRect
         islandTop = geometry.islandTop
         state.apply(geometry: geometry)

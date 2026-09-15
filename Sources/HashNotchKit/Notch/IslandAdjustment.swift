@@ -75,7 +75,8 @@ public struct IslandAdjustment: Codable, Equatable, Sendable {
             screenFrame: geometry.screenFrame,
             notchRect: adjusted,
             hasNotch: geometry.hasNotch,
-            islandTop: geometry.islandTop - safe.vertical
+            islandTop: geometry.islandTop - safe.vertical,
+            usableBottom: geometry.usableBottom
         )
     }
 }
