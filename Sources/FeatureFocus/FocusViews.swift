@@ -82,14 +82,34 @@ struct FocusDetailView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
+        VStack(alignment: .leading, spacing: 8) {
+            // The heading and the button that starts a stretch share one line,
+            // the way a row's name and its value do; the week sits under them
+            // as one quiet line.
+            HStack(alignment: .center, spacing: 10) {
+                NotchSectionHeader("FOCUS", icon: .focus, theme: theme)
+                Spacer(minLength: 8)
+                if engine.session == nil {
+                    FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true) {
+                        engine.begin(.work)
+                    }
+                    .fixedSize()
+                    .transition(.opacity)
+                }
+            }
 
             if let session = engine.session {
                 running(session)
-                weekLine
-            } else {
-                idle
+            }
+
+            weekLine
+
+            if engine.session == nil, engine.alertsAllowed == false {
+                // Never promise what will not happen.
+                Text("Notifications are off. It will chime instead.")
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.subtitleColor)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(width: Panel.rowWidth, alignment: .leading)
@@ -140,39 +160,14 @@ struct FocusDetailView: View {
     /// One sentence, always there, saying the only thing worth saying: how
     /// much focus is behind you. No second section, no marks, and no word
     /// anybody has to be taught.
+    ///
+    /// One thin line, never two: it is a footnote to the row above it.
     private var weekLine: some View {
         Text(FocusHistoryMath.weekText(engine.history, today: engine.tally))
-            .font(.system(size: 10))
+            .font(.system(size: 9))
             .foregroundStyle(theme.subtitleColor)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    // MARK: While nothing runs
-
-    /// The sentence on the left and the button that starts a stretch on the
-    /// right, in one row. Stacked, the button took a row of its own above a
-    /// line of text, in a panel that has to fit everything else below it; side
-    /// by side the section is a row shorter and the button sits where a
-    /// control sits in every other row — at the end.
-    private var idle: some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                weekLine
-                if engine.alertsAllowed == false {
-                    // Never promise what will not happen.
-                    Text("Notifications are off. It will chime instead.")
-                        .font(.system(size: 9))
-                        .foregroundStyle(theme.subtitleColor)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 8)
-            FocusButton("Start \(engine.plan.workMinutes) min", theme: theme, filled: true) {
-                engine.begin(.work)
-            }
-            .fixedSize()
-        }
-        .transition(.opacity.combined(with: .offset(y: 4)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
     }
 
 }
