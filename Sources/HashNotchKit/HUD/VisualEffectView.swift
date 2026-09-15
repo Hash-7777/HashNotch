@@ -31,6 +31,7 @@ public struct VisualEffectView: NSViewRepresentable {
     }
 
     public func makeNSView(context: Context) -> NSView {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             let glass = SteadyGlassEffectView()
             glass.style = .regular
@@ -40,6 +41,7 @@ public struct VisualEffectView: NSViewRepresentable {
             glass.appearance = NSAppearance(named: .darkAqua)
             return glass
         }
+        #endif
         let view = SteadyVisualEffectView()
         view.material = material
         view.blendingMode = .behindWindow
@@ -71,7 +73,15 @@ package final class SteadyVisualEffectView: NSVisualEffectView {
 
 /// The Liquid Glass layer, held to the same rule as the frosted one: it is a
 /// surface, never a place the window can be dragged from.
+///
+/// Compiled only by a toolchain whose SDK has `NSGlassEffectView` — Swift 6.2
+/// and later ship with the macOS 26 SDK. `#available` decides what runs; it
+/// cannot make a type exist that the SDK being built against has never heard
+/// of, so an older Xcode would otherwise fail to build the app at all. Built
+/// that way, the app keeps the frosted surface on every system.
+#if compiler(>=6.2)
 @available(macOS 26.0, *)
 package final class SteadyGlassEffectView: NSGlassEffectView {
     package override var mouseDownCanMoveWindow: Bool { false }
 }
+#endif

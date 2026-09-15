@@ -6602,9 +6602,11 @@ check(
 check(
     "and neither does the Liquid Glass one that replaces it on macOS 26 and later",
     {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             return SteadyGlassEffectView().mouseDownCanMoveWindow == false
         }
+        #endif
         return true
     }()
 )
