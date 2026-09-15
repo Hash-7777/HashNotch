@@ -26,8 +26,8 @@ package struct PanelRows<Content: View>: View {
 
     private static var topID: String { "panel-rows-top" }
 
-    /// How much of the bottom of a scrolling panel fades to the panel's black —
-    /// a hint that there is more below. The rows gain the same amount of room
+    /// How much of the bottom of a scrolling panel fades out — a hint that
+    /// there is more below. The rows gain the same amount of room
     /// at their end so the last one can scroll clear of it.
     static var fade: CGFloat { 14 }
 
@@ -78,16 +78,16 @@ package struct PanelRows<Content: View>: View {
                 if !open { proxy.scrollTo(Self.topID, anchor: .top) }
             }
         }
-        // The fade is a thin gradient laid OVER the bottom of the rows, not a
-        // mask cut out of them. A mask makes every frame of scrolling render the
-        // whole list offscreen before it can be composited — the scroll view
-        // paying that on each step of a flick is what turns smooth into
-        // stepping. An overlay is one small layer that never changes.
-        .overlay(alignment: .bottom) {
-            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                .frame(height: Self.fade)
-                .allowsHitTesting(false)
-        }
+        // The fade is a mask on the scroll view itself. A gradient overlay was
+        // tried in its place and did not show in use, and timing the two gave
+        // the same cost per scroll step, so the mask, which does show, stays.
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: Self.fade)
+            }
+        )
     }
 }
 
