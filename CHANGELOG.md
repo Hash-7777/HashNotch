@@ -42,9 +42,11 @@ All notable changes to HashNotch are recorded here.
 - **The cover on the strip sits inside it.** It filled the strip to within a
   point of its bottom edge, and its drop shadow — invisible on black — showed
   only where it spilled below the strip onto the desktop. The cover is smaller
-  now, with room above and below it, and has no shadow. The strip also ends
-  closer to it: the side left of the notch was a flat 56 points and is now just
-  the picture and a margin either side, twenty points narrower.
+  now, with room above and below it, and has no shadow. It sits centred in the
+  strip's rounded end, with the same margin at the end as above and below it,
+  and the strip's corner is built around the cover's so the two curves share
+  one centre. The strip ends right after it rather than twenty-odd points of
+  black beyond.
 - **Settings opens beside the panel, not over it.** On a laptop display there
   are only about 425 points to the right of the panel, and the settings window
   kept its full width and was pushed back over the readouts it was opened to

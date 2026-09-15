@@ -18,7 +18,13 @@ public final class NotchState: ObservableObject {
 
     @Published public private(set) var collapsedWidth: CGFloat = 0
     @Published public private(set) var collapsedHeight: CGFloat = 0
-    @Published public private(set) var liveLeadingWidth: CGFloat = NotchState.liveLeadingSlot
+    @Published public private(set) var liveLeadingWidth: CGFloat = NotchState.leadingWidth(forHeight: NotchState.minimumContentHeight)
+    /// The black between a strip picture and the strip's edges — above, below,
+    /// and at the rounded end alike, so the picture sits centred in that end.
+    @Published public private(set) var liveInset: CGFloat = NotchState.inset(forHeight: NotchState.minimumContentHeight)
+    /// The strip's corner radius, concentric with the picture's: see
+    /// `cornerRadius(forHeight:)`.
+    @Published public private(set) var liveCornerRadius: CGFloat = NotchState.cornerRadius(forHeight: NotchState.minimumContentHeight)
     @Published public private(set) var liveTrailingWidth: CGFloat = 170
     @Published public private(set) var liveWidth: CGFloat = 0
     @Published public private(set) var liveHeight: CGFloat = 0
@@ -67,7 +73,9 @@ public final class NotchState: ObservableObject {
         // breathing room) — the pill hugs the actual content within it, and
         // this max only sizes the positioning box, the hover zone, and the
         // window so a fully-scrolling long title is always covered.
-        liveLeadingWidth = Self.liveLeadingSlot
+        liveLeadingWidth = Self.leadingWidth(forHeight: height)
+        liveInset = Self.inset(forHeight: height)
+        liveCornerRadius = Self.cornerRadius(forHeight: height)
         liveTrailingWidth = 170
         liveWidth = width + liveLeadingWidth + liveTrailingWidth
         liveHeight = height + Self.liveLip
@@ -100,25 +108,45 @@ public final class NotchState: ObservableObject {
     /// nothing to justify it.
     public static let minimumContentHeight: CGFloat = 28
 
-    /// The strip's side left of the notch, which holds one small picture: the
-    /// album cover, an app's icon, an activity's mark.
-    ///
-    /// Built from its three parts rather than picked. It was a flat 56, which
-    /// left twenty points of dead black between the strip's rounded end and a
-    /// 20-point cover — the strip reaching well past what it was holding.
-    ///
-    /// - `liveNotchGap`: how far the picture sits from the hardware, the
-    ///   iPhone's hug.
-    /// - `liveLeadingContent`: room for the widest picture any feature puts
-    ///   there, the activity mark at 21 points, with a point to spare.
-    /// - `liveOuterMargin`: black between the picture and the strip's rounded
-    ///   end. The end's corner radius is 14 on a 28-point strip, so 4 points up
-    ///   from the bottom — where a 20-point picture's corner sits — the curve
-    ///   has cut in about 4.2 points. Eight clears it with room.
+    /// The one small picture the strip carries left of the notch — an album
+    /// cover, an app's icon, an activity's mark — and its corners. Every
+    /// feature draws its strip picture at this size, so the strip can be built
+    /// around it exactly.
+    public static let livePictureSize: CGFloat = 20
+    public static let livePictureRadius: CGFloat = 6
+    /// How far the picture sits from the hardware: the iPhone's hug.
     public static let liveNotchGap: CGFloat = 6
-    public static let liveLeadingContent: CGFloat = 22
-    public static let liveOuterMargin: CGFloat = 8
-    public static var liveLeadingSlot: CGFloat { liveNotchGap + liveLeadingContent + liveOuterMargin }
+
+    /// The black around the picture, equal on every side that has one.
+    ///
+    /// The picture is centred in the strip's height, so above and below it
+    /// there is `(height − picture) / 2`. The same margin at the rounded end
+    /// puts it in the middle of that end rather than tucked toward the notch
+    /// with a slab of black beyond it.
+    public static func inset(forHeight height: CGFloat) -> CGFloat {
+        max(0, (height - livePictureSize) / 2)
+    }
+
+    /// The strip's corner radius: the picture's own radius plus the margin
+    /// around it.
+    ///
+    /// That is what makes the two curves concentric — one centre, the strip's
+    /// corner simply the picture's corner grown by the margin — which is the
+    /// thing that reads as made rather than placed. The strip was a fixed 14
+    /// around a 5-point corner at a lopsided margin, and the two curves visibly
+    /// disagreed at the one place they sit side by side. On a 28-point strip
+    /// this is 10, the hardware notch's own corner; on a taller notch it grows
+    /// with the margin so the picture stays centred and concentric.
+    public static func cornerRadius(forHeight height: CGFloat) -> CGFloat {
+        inset(forHeight: height) + livePictureRadius
+    }
+
+    /// The strip's side left of the notch: the gap to the hardware, the
+    /// picture, and the margin at the rounded end. Nothing else — it was a flat
+    /// 56 that reached well past what it held.
+    public static func leadingWidth(forHeight height: CGFloat) -> CGFloat {
+        liveNotchGap + livePictureSize + inset(forHeight: height)
+    }
 
     /// The room below the island for the open panel.
     ///

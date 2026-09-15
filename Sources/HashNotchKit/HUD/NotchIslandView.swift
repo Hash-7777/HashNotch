@@ -504,7 +504,7 @@ struct NotchIslandView: View {
                 // dropped panel keeps its own, because that one genuinely IS a
                 // surface hanging below the bar and reads as depth rather than
                 // as a mistake.
-                Color.black.clipShape(pillShape(radius: 14))
+                Color.black.clipShape(pillShape(radius: state.liveCornerRadius))
             )
             // The outline goes HERE, on the same view the black pill is drawn
             // behind — before the positioning frame below, never after.
@@ -525,7 +525,7 @@ struct NotchIslandView: View {
             // to light. On the shoulders it lands a quarter of a point outside
             // the black, which is nothing you can see and still reads as the
             // pill's own edge.
-            .overlay(outline(radius: 14, outset: outlineOutset(displayScale)))
+            .overlay(outline(radius: state.liveCornerRadius, outset: outlineOutset(displayScale)))
             // Room BELOW the pill for that line, and only for it. The black
             // stops at the notch; this is transparent, and the window keeps it
             // so the line and its glow are not clipped away by the window's own

@@ -24,8 +24,8 @@ struct MediaArtworkView: View {
     /// inside it, and it did not help that it carried a drop shadow: black on
     /// black shows nothing, so the only visible part of that shadow was the bit
     /// that spilled below the strip onto the desktop. Twenty leaves four points
-    /// either side, the same breathing room the activity mark beside it has.
-    private static let stripSize: CGFloat = 20
+    /// either side, and the strip's rounded end is built to match.
+    private static let stripSize = NotchState.livePictureSize
 
     @ViewBuilder
     private func artwork(_ media: NowPlaying) -> some View {
@@ -47,7 +47,9 @@ struct MediaArtworkView: View {
                     )
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        // The strip's own corner is built from this one, so the two curves share
+        // a centre — see `NotchState.cornerRadius(forHeight:)`.
+        .clipShape(RoundedRectangle(cornerRadius: NotchState.livePictureRadius, style: .continuous))
     }
 }
 

@@ -13,7 +13,7 @@ struct ActivitiesIconView: View {
 
     var body: some View {
         if let activity = monitor.activities.first {
-            ActivityMark(activity: activity, theme: theme, size: 21)
+            ActivityMark(activity: activity, theme: theme, size: NotchState.livePictureSize)
                 .id(activity.id)
                 .transition(.scale(scale: 0.4).combined(with: .opacity))
         }

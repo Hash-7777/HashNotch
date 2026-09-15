@@ -14,7 +14,7 @@ struct CallIconView: View {
                     Image(nsImage: icon)
                         .resizable()
                         .interpolation(.high)
-                        .frame(width: 20, height: 20)
+                        .frame(width: NotchState.livePictureSize, height: NotchState.livePictureSize)
                 } else {
                     // No app to show, so the symbol has to carry which thing is
                     // live. A camera on its own can never be attributed, so this
@@ -24,7 +24,7 @@ struct CallIconView: View {
                         .foregroundStyle(CallPalette.dot(
                             microphone: monitor.use?.microphone ?? false,
                             camera: monitor.use?.camera ?? false))
-                        .frame(width: 20, height: 20)
+                        .frame(width: NotchState.livePictureSize, height: NotchState.livePictureSize)
                 }
                 // The dot. Small, bright, and on the icon rather than beside it,
                 // so it reads as "this app has your microphone" rather than as a
