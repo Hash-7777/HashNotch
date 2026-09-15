@@ -50,38 +50,25 @@ public final class SettingsWindowController {
     /// close both.
     public var onDismissAll: () -> Void = {}
 
-    /// Wide enough for a full-width column of controls, narrow enough to sit
-    /// beside the panel on a laptop display — there are only about 490 points
-    /// to the right of the island on this size of screen, and a window that
-    /// does not fit beside the thing it belongs to is not attached to anything.
-    /// Tall enough that no page has to be scrolled.
-    ///
-    /// The width stayed at 460 when the page links moved from a column down the
-    /// left to a strip across the top, because the goal was never a smaller
-    /// window — it was giving the controls the 146 points the column was
-    /// spending on six words.
-    ///
-    /// The height was 580, which left even the middling pages short. 760 is
-    /// what the pages that can be finished need; the frame below still shrinks
-    /// it to fit a small display, so this is a ceiling rather than a demand.
-    ///
-    /// It does not clear every page, and the note here once said it did.
-    /// Measured at this height, the panel gives its pages 660 points, and four
-    /// of the six ask for more than that — General 1363, Privacy 2138,
-    /// Indicators 844, Appearance 748 — because three of them are pages of
-    /// prose and one grows a row per feature. Those scroll, and no window that
-    /// fits on a laptop screen was ever going to stop them.
-    /// Wide enough for the tabs the app actually ships.
-    ///
-    /// It was 460, which fitted seven. The focus page made eight, and eight
-    /// shares of 460 leave "Appearance" a point short of the smallest it may
-    /// shrink to — so it was quietly truncated. `SettingsTabs.share` is the rule
-    /// and the checks hold this width against it.
-    private static let size = CGSize(width: windowWidth, height: 760)
+    /// Tall enough that the pages that can be finished need not scroll; the
+    /// frame below still shrinks it to fit a small display, so this is a
+    /// ceiling rather than a demand. Four pages — General, Privacy, Indicators
+    /// and Appearance — ask for more than any laptop screen has and scroll.
+    private static let size = CGSize(width: preferredWidth, height: 760)
 
-    /// Package-visible so the checks can hold the tab strip against the real
-    /// width rather than against a number copied next to it.
-    package static let windowWidth: CGFloat = 500
+    /// How wide the window likes to be when there is room beside the panel.
+    package static let preferredWidth: CGFloat = 500
+    /// How narrow it may become to stay beside the panel rather than over it.
+    ///
+    /// The room to the right of the panel is whatever the screen has left: on a
+    /// 1280-point laptop display, with the panel at its usual width, about 425
+    /// points. A window that does not fit there is pushed back over the panel
+    /// it belongs to, which covers the very readouts somebody opened settings
+    /// to change. So the window takes the room there is, down to this, and the
+    /// tab strip is built to fit this width (see `SettingsTabs.requiredWidth`).
+    package static let minimumWidth: CGFloat = 360
+    /// The clearance kept from the screen's edge.
+    private static let edgeMargin: CGFloat = 12
     /// The gap between the island's edge and this one.
     private static let gap: CGFloat = 12
     /// How far it starts to the left of its resting place, so it reads as
@@ -201,15 +188,26 @@ public final class SettingsWindowController {
     // MARK: Placement
 
     /// Where it sits: hung from the same top edge as the panel, just past its
-    /// right side, and pulled back onto the display if there is not room —
-    /// better to overlap the island slightly than to run off the screen.
+    /// right side, as wide as the room there allows.
+    ///
+    /// It narrows before it overlaps. Only when even `minimumWidth` will not fit
+    /// beside the panel — a display scaled so small that no settings window
+    /// could — is it pulled back onto the screen over the island, because
+    /// running off the screen is worse still.
     package static func frame(besideAnchor anchor: CGRect, in visible: CGRect) -> NSRect {
         let height = min(size.height, max(200, anchor.maxY - visible.minY - 24))
-        var x = anchor.maxX + gap
-        if x + size.width > visible.maxX - 12 {
-            x = max(visible.minX + 12, visible.maxX - 12 - size.width)
+        let besideX = anchor.maxX + gap
+        let room = visible.maxX - edgeMargin - besideX
+        let width: CGFloat
+        let x: CGFloat
+        if room >= minimumWidth {
+            width = min(preferredWidth, room)
+            x = besideX
+        } else {
+            width = minimumWidth
+            x = max(visible.minX + edgeMargin, visible.maxX - edgeMargin - width)
         }
-        return NSRect(x: x.rounded(), y: (anchor.maxY - height).rounded(), width: size.width, height: height)
+        return NSRect(x: x.rounded(), y: (anchor.maxY - height).rounded(), width: width.rounded(.down), height: height)
     }
 
     // MARK: Plumbing

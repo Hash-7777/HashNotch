@@ -286,19 +286,16 @@ public struct SettingsView: View {
 
     // MARK: Tabs
 
-    /// The six pages, across the top.
+    /// The pages, across the top: the one you are on named, the rest as icons.
     ///
-    /// This was a 146pt column down the left, which cost the content a third of
-    /// the window's width on every page to show six words. Across the top the
-    /// same six pages cost about 54pt of height once, and the pages below get
-    /// the full width — which is what stops a row of controls from having to
-    /// choose between wrapping and running off the edge.
-    ///
-    /// The icon sits ABOVE its label rather than beside it, and that is what
-    /// makes six fit. Side by side, "Appearance" plus its icon is roughly 77pt,
-    /// so the row would want over 460pt before padding and the last tab would
-    /// be pushed out. Stacked, each tab needs only as much width as its widest
-    /// word.
+    /// Every tab used to carry its name, each in an equal share of the strip,
+    /// and that made the window's width a function of its longest word times
+    /// the number of pages. It had to be 500 points wide to fit eight — wider
+    /// than the room beside the panel on a laptop — so it was pushed over the
+    /// panel it belongs to. Naming only the page you are on is the tab bar
+    /// iPhone settled on for the same problem: the strip fits a narrow window,
+    /// the icon of every other page is still one click away, and each name is
+    /// on its tooltip. The page's own heading says where you are in full.
     private var tabStrip: some View {
         HStack(spacing: SettingsTabs.spacing) {
             ForEach(tabs) { item in
@@ -308,6 +305,8 @@ public struct SettingsView: View {
         .padding(.horizontal, SettingsTabs.horizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 10)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: section)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: suppliedIndex)
     }
 
     /// What a tab is called. Every fixed tab answers for itself; a supplied one
@@ -331,31 +330,35 @@ public struct SettingsView: View {
             section = item.section
             if let supplied = item.supplied { suppliedIndex = supplied }
         } label: {
-            VStack(spacing: 4) {
+            HStack(spacing: SettingsTabs.iconLabelGap) {
                 Image(systemName: symbol(for: item))
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(height: 14)
-                    .foregroundStyle(selected ? settings.accent.color : Color.white.opacity(0.55))
-                Text(title(for: item))
-                    .font(.system(size: SettingsTabs.labelSize, weight: selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? Color.white : Color.white.opacity(0.7))
-                    // One line, always. A tab that wraps is taller than its
-                    // neighbours and the whole strip grows to match it.
-                    .lineLimit(1)
-                    .minimumScaleFactor(SettingsTabs.minimumScale)
+                    .font(.system(size: SettingsTabs.iconSize, weight: .semibold))
+                    .frame(width: SettingsTabs.iconSize + 4, height: 16)
+                    .foregroundStyle(selected ? settings.accent.color : Color.white.opacity(0.6))
+                if selected {
+                    Text(title(for: item))
+                        .font(.system(size: SettingsTabs.labelSize, weight: .semibold))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .leading)))
+                }
             }
-            // Equal shares of whatever width there is, so the strip stays even
-            // on a display that has squeezed the window narrower.
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            .padding(.horizontal, selected ? SettingsTabs.selectedPadding : 0)
+            .frame(minWidth: SettingsTabs.iconTabWidth, maxWidth: selected ? nil : .infinity)
+            .frame(height: 30)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.white.opacity(selected ? 0.09 : 0))
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(selected ? 0.10 : 0))
             )
-            .contentShape(Rectangle())
+            .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        // The name of every page, for the pages whose name is not showing.
         .help(title(for: item))
+        .accessibilityLabel(title(for: item))
+        // The named tab keeps its width; the icons share what is left.
+        .layoutPriority(selected ? 1 : 0)
     }
 
     // MARK: Pages
@@ -1745,20 +1748,28 @@ package enum SettingsTabs {
     // real numbers rather than about numbers that look like them.
     package static let horizontalPadding: CGFloat = 12
     package static let spacing: CGFloat = 4
-    package static let labelSize: CGFloat = 10
-    package static let minimumScale: CGFloat = 0.85
+    package static let labelSize: CGFloat = 11
+    package static let iconSize: CGFloat = 12
+    package static let iconLabelGap: CGFloat = 5
+    /// Padding either side of the named tab's icon and label.
+    package static let selectedPadding: CGFloat = 11
+    /// The least an icon-only tab may be squeezed to: still a comfortable
+    /// target for a pointer.
+    package static let iconTabWidth: CGFloat = 28
 
-    /// How wide each tab is when this many share the strip.
+    /// How wide the strip needs to be with `selectedLabelWidth` showing on one
+    /// tab and the other `count - 1` as icons at their narrowest.
     ///
-    /// Every tab takes an equal share, so one more tab makes every label
-    /// narrower — and a label that will not fit its share is truncated with an
-    /// ellipsis rather than reported. Adding the focus page took "Appearance"
-    /// from 58.9 points of room to 51.0, against the 52.1 it needs at the
-    /// smallest it is allowed to shrink to. It was measured, not noticed.
-    package static func share(forTabs count: Int, windowWidth: CGFloat) -> CGFloat {
+    /// The window narrows to stay beside the panel, so this is what decides
+    /// whether a page's name can be shown at all. A label that will not fit is
+    /// not truncated with an ellipsis here — it pushes the strip wider than the
+    /// window, which is why the checks hold it against the narrowest width the
+    /// window may take, for every page's name.
+    package static func requiredWidth(tabs count: Int, selectedLabelWidth: CGFloat) -> CGFloat {
         guard count > 0 else { return 0 }
-        let usable = windowWidth - horizontalPadding * 2 - spacing * CGFloat(count - 1)
-        return max(0, usable) / CGFloat(count)
+        let named = selectedPadding * 2 + (iconSize + 4) + iconLabelGap + selectedLabelWidth
+        let icons = CGFloat(count - 1) * iconTabWidth
+        return horizontalPadding * 2 + spacing * CGFloat(count - 1) + named + icons
     }
 
     /// Every tab title the window would show, fixed pages first.

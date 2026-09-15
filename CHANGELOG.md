@@ -4,6 +4,16 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Fixed
+
+- **Settings opens beside the panel, not over it.** On a laptop display there
+  are only about 425 points to the right of the panel, and the settings window
+  kept its full width and was pushed back over the readouts it was opened to
+  change. It now takes the room there is, down to 360 points, and only covers
+  the panel on a display scaled too small for any window to fit beside it. The
+  tabs make that possible: the page you are on shows its icon and name, every
+  other page shows its icon, and each name is on its tooltip.
+
 ### Changed
 
 - **Settings has no Agents page.** Its one control, connecting Claude Code,

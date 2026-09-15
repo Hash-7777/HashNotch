@@ -3635,52 +3635,35 @@ MainActor.assumeIsolated {
                               page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
         ]) == ["Agents", "Focus"]
     )
-    // Every tab takes an equal share of the strip, so one more tab makes every
-    // label narrower. A label that will not fit is truncated with an ellipsis
-    // and nothing says so — which is what adding the focus page did to
-    // "Appearance". Measured against the real font at the real size.
+    // The window narrows to stay beside the panel, and only the page you are
+    // on shows its name — so what has to fit is that one name plus every other
+    // page as an icon, at the NARROWEST the window may become. Measured against
+    // the real font at the real size, for every page's name in turn, since any
+    // of them can be the one showing. The supplied page is the one the focus
+    // feature brings; it is named here because the checks cannot reach the
+    // app's manifest.
+    let shippedTabTitles = SettingsTabs.allTitles(features: [
+        FeatureDescriptor(id: "focus", title: "Focus", options: [],
+                          page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
+    ])
+    let tabFont = NSFont.systemFont(ofSize: SettingsTabs.labelSize, weight: .semibold)
+    let widestTabNeed = shippedTabTitles.map { title in
+        SettingsTabs.requiredWidth(
+            tabs: shippedTabTitles.count,
+            selectedLabelWidth: (title as NSString).size(withAttributes: [.font: tabFont]).width
+        )
+    }.max() ?? .infinity
     check(
-        "every tab label fits the room it is given, at the width the window ships",
-        {
-            let titles = SettingsTabs.allTitles(features: [
-                FeatureDescriptor(id: "activities", title: "Agents", options: [],
-                                  page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
-                FeatureDescriptor(id: "focus", title: "Focus", options: [],
-                                  page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
-            ])
-            let share = SettingsTabs.share(forTabs: titles.count, windowWidth: SettingsWindowController.windowWidth)
-            let font = NSFont.systemFont(
-                ofSize: SettingsTabs.labelSize * SettingsTabs.minimumScale, weight: .semibold
-            )
-            return titles.allSatisfy { title in
-                (title as NSString).size(withAttributes: [.font: font]).width <= share
-            }
-        }()
+        "every page's name fits the tab strip at the narrowest the window may be",
+        widestTabNeed <= SettingsWindowController.minimumWidth
     )
     check(
-        "and the width it ships at is not one point of luck",
-        {
-            // Two more points of label than the strip has room for is the same
-            // failure; this holds a margin so the next tab is a decision rather
-            // than a surprise.
-            let titles = SettingsTabs.allTitles(features: [
-                FeatureDescriptor(id: "a", title: "Agents", options: [],
-                                  page: FeatureSettingsPage(title: "Agents", symbol: "sparkles", view: AnyView(EmptyView()))),
-                FeatureDescriptor(id: "f", title: "Focus", options: [],
-                                  page: FeatureSettingsPage(title: "Focus", symbol: "target", view: AnyView(EmptyView()))),
-            ])
-            let share = SettingsTabs.share(forTabs: titles.count, windowWidth: SettingsWindowController.windowWidth)
-            let font = NSFont.systemFont(
-                ofSize: SettingsTabs.labelSize * SettingsTabs.minimumScale, weight: .semibold
-            )
-            let widest = titles.map { (($0 as NSString).size(withAttributes: [.font: font]).width) }.max() ?? 0
-            return share - widest >= 3
-        }()
+        "with room to spare, so the next page is a decision rather than a surprise",
+        SettingsWindowController.minimumWidth - widestTabNeed >= 3
     )
     check(
-        "a strip with no room in it asks for none",
-        SettingsTabs.share(forTabs: 0, windowWidth: 500) == 0
-            && SettingsTabs.share(forTabs: 8, windowWidth: 10) == 0
+        "a strip with no tabs in it asks for no room",
+        SettingsTabs.requiredWidth(tabs: 0, selectedLabelWidth: 80) == 0
     )
 
     check(
@@ -5056,15 +5039,28 @@ check(
         check("settings hangs from the panel's top edge", beside.maxY == panel.maxY)
         check("settings sits to the right of the panel", beside.minX > panel.maxX)
         check("with a gap, not touching", beside.minX - panel.maxX >= 8)
+        check("and at its full width where there is room", beside.width == SettingsWindowController.preferredWidth)
 
-        // A laptop display has far less room to the right than a desk monitor,
-        // and running off the screen is worse than overlapping the island.
-        let tight = CGRect(x: 0, y: 0, width: 1280, height: 832)
-        let clamped = SettingsWindowController.frame(
-            besideAnchor: CGRect(x: 490, y: 315, width: 300, height: 517), in: tight
-        )
-        check("it never runs off the right edge", clamped.maxX <= tight.maxX)
-        check("nor off the left", clamped.minX >= tight.minX)
+        // A 1280-point laptop display with the panel at its usual width,
+        // centred on the notch: about 425 points remain to its right. The
+        // window used to keep its full width and be pushed back over the panel.
+        let laptop = CGRect(x: 0, y: 0, width: 1280, height: 832)
+        let laptopPanel = CGRect(x: 449, y: 315, width: 382, height: 517)
+        let fitted = SettingsWindowController.frame(besideAnchor: laptopPanel, in: laptop)
+        check("on a laptop display it still sits beside the panel, not over it", fitted.minX > laptopPanel.maxX)
+        check("by narrowing to the room there is", fitted.width < SettingsWindowController.preferredWidth
+            && fitted.width >= SettingsWindowController.minimumWidth)
+        check("and it never runs off the right edge", fitted.maxX <= laptop.maxX)
+
+        // A display scaled so small that not even the narrowest window fits
+        // beside the panel: overlapping is then the lesser evil, and running
+        // off the screen is not allowed at all.
+        let cramped = CGRect(x: 0, y: 0, width: 1024, height: 665)
+        let crampedPanel = CGRect(x: 321, y: 148, width: 382, height: 517)
+        let squeezed = SettingsWindowController.frame(besideAnchor: crampedPanel, in: cramped)
+        check("where nothing fits beside it, it stays on the screen", squeezed.maxX <= cramped.maxX
+            && squeezed.minX >= cramped.minX)
+        check("at no less than its narrowest width", squeezed.width == SettingsWindowController.minimumWidth)
 
         // Hung from the top of a panel on a short screen, it shortens rather
         // than hanging past the bottom of the display.
