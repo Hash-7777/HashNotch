@@ -75,6 +75,9 @@ All notable changes to HashNotch are recorded here.
 - **The focus section is a row shorter.** With nothing running, the week's
   sentence sits on the left and the Start button on the right, in one row,
   instead of the button taking a row of its own above the text.
+- **A shorter internet graph.** 16 points tall instead of 26. It shows the
+  shape of traffic against its own recent peak, so the extra height measured
+  nothing.
 - **AirPods in one row.** "AirPods  L 95%  R 94%", with the case when it is
   docked, instead of a heading and a row for each part. A level turns red at
   10%, the same point as the Mac's own battery.
