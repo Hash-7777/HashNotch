@@ -16,9 +16,20 @@ struct MediaArtworkView: View {
         }
     }
 
+    /// How big the cover is on the strip.
+    ///
+    /// The strip is exactly as tall as the notch — 28 points here — and the
+    /// cover was 26, leaving a point of black above and below it. At that
+    /// margin the picture reads as touching the strip's edge rather than sitting
+    /// inside it, and it did not help that it carried a drop shadow: black on
+    /// black shows nothing, so the only visible part of that shadow was the bit
+    /// that spilled below the strip onto the desktop. Twenty leaves four points
+    /// either side, the same breathing room the activity mark beside it has.
+    private static let stripSize: CGFloat = 20
+
     @ViewBuilder
     private func artwork(_ media: NowPlaying) -> some View {
-        let size: CGFloat = 26
+        let size = Self.stripSize
         Group {
             if let data = media.artwork, let image = NSImage(data: data) {
                 Image(nsImage: image)
@@ -31,13 +42,12 @@ struct MediaArtworkView: View {
                     .frame(width: size, height: size)
                     .overlay(
                         Image(systemName: "music.note")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(theme.subtitleColor)
                     )
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 

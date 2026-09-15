@@ -69,8 +69,9 @@ public final class NotchState: ObservableObject {
     }
 
     /// The least height the live strip can be drawn at and still hold what goes
-    /// in it. The artwork beside a track is 26 points; this is that with a
-    /// point of air above and below.
+    /// in it. The artwork beside a track is 20 points; this leaves four points
+    /// of black above and below it, so the picture sits inside the strip
+    /// rather than against its edge.
     ///
     /// It used to be applied to the idle shape too, and on a notched Mac that
     /// was invisible: every notch this app has measured is at least 28 points

@@ -26,6 +26,10 @@ All notable changes to HashNotch are recorded here.
   0:00; the system's own playing flag now answers that. And at a song change,
   when macOS and Spotify or Music briefly disagree about the title, the player
   keeps the notch as long as macOS says it owns the session.
+- **The cover on the strip sits inside it.** It filled the strip to within a
+  point of its bottom edge, and its drop shadow — invisible on black — showed
+  only where it spilled below the strip onto the desktop. The cover is smaller
+  now, with room above and below it, and has no shadow.
 - **Settings opens beside the panel, not over it.** On a laptop display there
   are only about 425 points to the right of the panel, and the settings window
   kept its full width and was pushed back over the readouts it was opened to
