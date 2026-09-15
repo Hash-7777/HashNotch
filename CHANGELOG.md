@@ -106,6 +106,14 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **Settings no longer freezes when you switch tabs.** The General page asked
+  macOS whether the app opens at login three times every time it drew, and
+  that question is a round trip to a system service: usually a couple of
+  milliseconds, sometimes a tenth of a second, and the window is frozen for
+  every one of them because it is asked while the page is being drawn. It is
+  now asked once, away from the drawing, when the window opens and again after
+  the switch is used. A change made in System Settings is picked up the next
+  time the window opens.
 - **A cleaner General page, and one tab fewer.** How long a finished alert
   stays is now on General, under its own heading, and the Alerts tab that held
   only that slider is gone. The page is in groups — Alerts, Counting, Cover art

@@ -6885,6 +6885,34 @@ check(
     }()
 )
 
+// Asking macOS about the login item is a round trip to a system daemon, and it
+// is asked off the main thread and kept. Counted through an injected reader,
+// because the real one costs the very milliseconds this is about.
+@MainActor func loginItemReads() -> (afterInit: Int, afterRefresh: Int, afterReading: Int, enabled: Bool) {
+    final class Count: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = 0
+        var reads: Int { lock.lock(); defer { lock.unlock() }; return value }
+        func add() { lock.lock(); value += 1; lock.unlock() }
+    }
+    let count = Count()
+    let status = LoginItemStatus(read: { count.add(); return (enabled: true, needsApproval: false) })
+    let afterInit = count.reads
+    status.refresh()
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let afterRefresh = count.reads
+    let enabled = status.isEnabled
+    for _ in 0..<50 { _ = status.isEnabled; _ = status.needsApproval }
+    return (afterInit, afterRefresh, count.reads, enabled)
+}
+// Unsupported outside an app bundle — which is what the checks run as — so the
+// reader is never called at all there, and what is held is that it is not
+// called repeatedly by reading the answer.
+let loginReads = MainActor.assumeIsolated { loginItemReads() }
+check("the login item is not asked about until it is asked for", loginReads.afterInit == 0)
+check("and reading the kept answer asks nothing further",
+      loginReads.afterReading == loginReads.afterRefresh)
+
 check("a panel that has just opened shows its first row, not a few points below it",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }

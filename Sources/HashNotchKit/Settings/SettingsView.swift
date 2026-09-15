@@ -55,6 +55,9 @@ public struct SettingsView: View {
     let features: [FeatureDescriptor]
 
     @State private var section: Section = .general
+    /// What macOS says about opening at login, asked off the main thread and
+    /// kept. See `LoginItemStatus` — asking it while drawing froze the window.
+    @StateObject private var loginItem = LoginItemStatus()
     /// Which feature-supplied page is showing, when a supplied tab is chosen.
     @State private var suppliedIndex: Int = 0
     @State private var dragging: String?
@@ -199,7 +202,10 @@ public struct SettingsView: View {
         )
         .preferredColorScheme(.dark)
         .tint(settings.accent.color)
-        .onAppear { jumpIfRequested() }
+        .onAppear {
+            jumpIfRequested()
+            loginItem.refresh()
+        }
         .onChange(of: route.requested) { _ in jumpIfRequested() }
     }
 
@@ -391,10 +397,10 @@ public struct SettingsView: View {
             SettingCard {
                 SettingRow("Open at login", detail: loginDetail) {
                     SettingSwitch(isOn: launchAtLoginBinding)
-                        .disabled(!LoginItem.isSupported)
+                        .disabled(!loginItem.isSupported)
                 }
 
-                if LoginItem.needsApproval {
+                if loginItem.needsApproval {
                     Button("Approve in System Settings") {
                         LoginItem.openLoginItemsSettings()
                     }
@@ -551,7 +557,8 @@ public struct SettingsView: View {
         if LoginItem.isSupported, LoginItem.isEnabled {
             _ = LoginItem.setEnabled(false)
         }
-        settings.launchAtLogin = LoginItem.isSupported ? LoginItem.isEnabled : false
+        settings.launchAtLogin = false
+        loginItem.refresh()
         settings.resetAll(features: features)
     }
 
@@ -1187,10 +1194,10 @@ public struct SettingsView: View {
         // somebody to do a thing they have already done is the worst kind of
         // explanation: it costs them the attempt and teaches them not to
         // believe the next message.
-        if let reason = LoginItem.unavailableReason {
+        if let reason = loginItem.unavailableReason {
             return reason
         }
-        if LoginItem.needsApproval {
+        if loginItem.needsApproval {
             return "macOS is waiting for you to allow this in System Settings."
         }
         return "Comes back every time you start your Mac."
@@ -1240,10 +1247,14 @@ public struct SettingsView: View {
         Binding(
             // Read the OS's actual login-item state, not our stored copy — the
             // user can also change it in System Settings behind our back.
-            get: { LoginItem.isSupported ? LoginItem.isEnabled : settings.launchAtLogin },
+            get: { loginItem.isSupported ? loginItem.isEnabled : settings.launchAtLogin },
             set: { value in
+                // Writing it is a deliberate act, once, so the round trip it
+                // costs is one nobody is waiting on a drawn frame for. The
+                // kept answer is brought back in line straight after.
                 let ok = LoginItem.setEnabled(value)
-                settings.launchAtLogin = ok ? value : LoginItem.isEnabled
+                settings.launchAtLogin = ok ? value : loginItem.isEnabled
+                loginItem.refresh()
             }
         )
     }
