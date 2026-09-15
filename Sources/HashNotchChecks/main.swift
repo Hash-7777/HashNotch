@@ -6715,6 +6715,38 @@ check("and rows that fit keep the plain one",
     guard let scroller = scrollViews(in: host).first else { return nil }
     return scroller.hasVerticalScroller && scroller.verticalScroller?.isHidden == false
 }
+// Opening always starts at the first row. The panel's view outlives each
+// opening, so without this a panel reopened wherever it was last left. Scroll
+// the real AppKit scroll view down, close the panel, and read where it is.
+@MainActor func scrollOffsetAfterClosing() -> CGFloat? {
+    func rows(open: Bool) -> PanelRows<some View> {
+        PanelRows(maxHeight: 200, isOpen: open) { Color.clear.frame(width: 120, height: 900) }
+    }
+    let host = NSHostingView(rootView: rows(open: true))
+    host.frame = NSRect(x: 0, y: 0, width: 120, height: 200)
+    let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: true)
+    window.contentView = host
+    host.layoutSubtreeIfNeeded()
+    func scrollViews(in view: NSView) -> [NSScrollView] {
+        (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
+    }
+    guard let scroll = scrollViews(in: host).first else { return nil }
+    scroll.contentView.scroll(to: NSPoint(x: 0, y: 300))
+    scroll.reflectScrolledClipView(scroll.contentView)
+    guard abs(scroll.contentView.bounds.origin.y) > 1 else { return nil }
+    host.rootView = rows(open: false)
+    for _ in 0..<5 {
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    return scroll.contentView.bounds.origin.y
+}
+check("a panel closed while scrolled down opens again at the top",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          guard let offset = scrollOffsetAfterClosing() else { return false }
+          return abs(offset) < 1
+      })
 check("a panel that scrolls shows no scroll bar",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }

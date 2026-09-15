@@ -35,7 +35,8 @@ All notable changes to HashNotch are recorded here.
   the notch and the bottom rows were simply cut off, with no way to reach them.
   It now stops above the bottom of the screen and its rows scroll, with a soft
   fade to say there is more — and no scroll bar, whatever System Settings says,
-  so the rows keep their place. A panel that fits looks exactly as it did. While
+  so the rows keep their place. It always opens at the top rather than where
+  it was last left. A panel that fits looks exactly as it did. While
   it scrolls, a two-finger swipe up over the rows scrolls them; a swipe up on
   the notch still closes the panel.
 - **The cover on the strip sits inside it.** It filled the strip to within a

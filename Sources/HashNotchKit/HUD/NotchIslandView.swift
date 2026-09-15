@@ -544,7 +544,7 @@ struct NotchIslandView: View {
     private var expandedIsland: some View {
         VStack(spacing: 0) {
             notchShoulders
-            PanelRows(maxHeight: rowsRoom) { expandedContent }
+            PanelRows(maxHeight: rowsRoom, isOpen: state.isExpanded) { expandedContent }
                 .padding(.top, Self.rowsTopPadding)
                 .padding(.horizontal, 20)
                 .padding(.bottom, Self.rowsBottomPadding)

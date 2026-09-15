@@ -12,12 +12,19 @@ import SwiftUI
 /// with nothing to scroll and no scroll bar.
 package struct PanelRows<Content: View>: View {
     let maxHeight: CGFloat
+    /// Whether the panel is open. Each time it closes, the rows go back to the
+    /// top, so the next opening starts at the first row rather than wherever
+    /// the last one was left.
+    let isOpen: Bool
     @ViewBuilder let content: () -> Content
 
-    package init(maxHeight: CGFloat, @ViewBuilder content: @escaping () -> Content) {
+    package init(maxHeight: CGFloat, isOpen: Bool = true, @ViewBuilder content: @escaping () -> Content) {
         self.maxHeight = maxHeight
+        self.isOpen = isOpen
         self.content = content
     }
+
+    private static var topID: String { "panel-rows-top" }
 
     /// How much of the bottom of a scrolling panel fades out — a hint that
     /// there is more below. The rows gain the same amount of room at their end
@@ -51,13 +58,26 @@ package struct PanelRows<Content: View>: View {
     /// part of the hardware grows a grey gutter down one side. `.never` holds
     /// whatever that setting says. The fade at the bottom is what says there is
     /// more, and the two-finger scroll is what reaches it.
+    ///
+    /// The panel's view outlives each opening, so a scroll position would carry
+    /// over and a panel could open halfway down its own list. It is reset when
+    /// the panel CLOSES rather than when it opens: done then, the jump happens
+    /// while nothing is on screen, and the opening itself never moves.
     @available(macOS 13.0, *)
     private var scrolling: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            content()
-                .padding(.bottom, Self.fade)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    Color.clear.frame(height: 0).id(Self.topID)
+                    content()
+                        .padding(.bottom, Self.fade)
+                }
+            }
+            .scrollIndicators(.never)
+            .onChange(of: isOpen) { open in
+                if !open { proxy.scrollTo(Self.topID, anchor: .top) }
+            }
         }
-        .scrollIndicators(.never)
         .mask(
             VStack(spacing: 0) {
                 Color.black
