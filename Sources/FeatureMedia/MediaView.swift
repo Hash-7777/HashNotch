@@ -91,6 +91,8 @@ struct MediaDetailView: View {
     /// something to hold on to at the moment it is wanted.
     private static let barThicknessActive: CGFloat = 5
     private static let handleSize: CGFloat = 9
+    /// Extra space above the progress bar, on top of the stack's spacing.
+    private static let artworkToProgress: CGFloat = 6
 
     var body: some View {
         if let media = monitor.nowPlaying {
@@ -129,6 +131,11 @@ struct MediaDetailView: View {
 
                 if let progress = monitor.progress {
                     progressBar(progress)
+                        // Room between the artwork and the line under it. At
+                        // the stack's own 4 points the bar sat against the
+                        // artwork's shadow and read as its bottom edge rather
+                        // than as a control of its own.
+                        .padding(.top, Self.artworkToProgress)
                 }
 
                 // Controls work for every source: Spotify/Music via their own
@@ -159,7 +166,7 @@ struct MediaDetailView: View {
                         Image(systemName: "speaker.fill")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(theme.subtitleColor)
-                        PremiumVolumeSlider(value: volume) { monitor.setVolume($0) }
+                        PremiumVolumeSlider(value: volume, fill: theme.accent) { monitor.setVolume($0) }
                         Image(systemName: "speaker.wave.3.fill")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(theme.subtitleColor)
@@ -297,8 +304,11 @@ struct MediaDetailView: View {
                     Capsule()
                         .fill(Color.white.opacity(0.14))
                         .frame(height: track)
+                    // The played part wears the accent, like every other bar
+                    // in the panel; the handle stays white so it reads as the
+                    // thing to hold rather than as more of the bar.
                     Capsule()
-                        .fill(theme.textColor)
+                        .fill(theme.accent)
                         .frame(width: max(track, geo.size.width * CGFloat(fraction)), height: track)
                     // The handle exists only while the bar is being used. At
                     // rest the played edge IS the position, which is how every
@@ -380,11 +390,12 @@ struct MediaDetailView: View {
     }
 }
 
-/// An iPhone-style volume slider: thin capsule track, white fill, and a knob
-/// that grows under the pointer. Values apply on every drag tick — the
-/// backing call is direct CoreAudio, so movement is instant.
+/// An iPhone-style volume slider: thin capsule track, a fill in the accent, and
+/// a white knob that grows under the pointer. Values apply on every drag tick —
+/// the backing call is direct CoreAudio, so movement is instant.
 private struct PremiumVolumeSlider: View {
     let value: Int
+    let fill: Color
     let onChange: (Int) -> Void
 
     @State private var dragging = false
@@ -402,7 +413,7 @@ private struct PremiumVolumeSlider: View {
                     .fill(Color.white.opacity(0.18))
                     .frame(height: 4)
                 Capsule(style: .continuous)
-                    .fill(Color.white)
+                    .fill(fill)
                     .frame(width: max(4, width * fraction), height: 4)
                 Circle()
                     .fill(Color.white)

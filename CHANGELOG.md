@@ -14,6 +14,11 @@ All notable changes to HashNotch are recorded here.
   the same two colours, turning red at 80°C — the figure as well as the
   thermometer — and a battery running down turns red at 10% with no orange at
   20%. The low-battery alert on the notch is the same red.
+- **The music card follows your colour.** The played part of the progress bar
+  and the volume fill wear your accent, like every other bar in the panel; the
+  knobs and the play and skip buttons stay white so they read as the things to
+  press. The progress bar also sits further from the artwork, where it had been
+  reading as the artwork's bottom edge.
 
 ## 1.4.0 — it says who is watching, what you missed, and what you got done
 
