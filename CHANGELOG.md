@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.5.0 — it says what your Mac is drawing, and the panel stays where you put it
 
 ### Added
 
