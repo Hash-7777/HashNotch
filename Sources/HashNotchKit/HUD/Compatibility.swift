@@ -89,6 +89,22 @@ public extension View {
         modifier(FigureAnimation(animation: animation, value: value))
     }
 
+    /// `scrollIndicators(.never)` where it exists, and nothing where it does
+    /// not. A macOS 12 scroll view hides its bars through its initialiser
+    /// instead, and shows the system's own when it must.
+    @ViewBuilder
+    func hidesScrollBar() -> some View {
+        if #available(macOS 13, *) { scrollIndicators(.never) } else { self }
+    }
+
+    /// `scrollDisabled` where it exists. On macOS 12 a scroll view sized to
+    /// its own rows has nowhere to go anyway; what is lost is only the
+    /// trackpad's rubber band.
+    @ViewBuilder
+    func scrollHeld(_ held: Bool) -> some View {
+        if #available(macOS 13, *) { scrollDisabled(held) } else { self }
+    }
+
     /// Rolls digits like an odometer when the number changes, on systems that
     /// can. Elsewhere the number simply changes, which is what it always did.
     ///

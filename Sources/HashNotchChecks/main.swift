@@ -6717,6 +6717,19 @@ check("rows taller than the room are held to it",
 check("rows that fit keep their own height",
       MainActor.assumeIsolated { abs(rowsHeight(content: 180, room: 300) - 180) < 0.5 })
 
+// The height a panel takes on a system with no custom layouts (macOS 12).
+//
+// It used to be a frame with only a maximum, and a frame with only a maximum
+// takes everything it is offered up to that maximum: every panel on Monterey
+// was drawn the full height of the room, rows at the top and a tall black
+// emptiness below, and a long one was cut off with no way to reach the rest.
+check("before the rows are measured, a panel asks for no particular height",
+      PanelSize.height(rows: 0, room: 400) == nil)
+check("rows that fit give the panel their own height",
+      PanelSize.height(rows: 180, room: 400) == 180)
+check("and rows that do not are held to the room",
+      PanelSize.height(rows: 900, room: 400) == 400)
+
 // The rows stay the same rows when they outgrow the room and fit again.
 //
 // They used to be two copies, a plain one and a scrolling one, swapped as the

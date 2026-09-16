@@ -110,6 +110,13 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **On macOS 12 the panel is the size of its rows, and scrolls.** Monterey has
+  no custom layouts, so the panel there was held to a maximum height — and a
+  height with only a maximum takes everything it is offered: every panel was
+  drawn the full height of the room, rows at the top and a tall black
+  emptiness beneath them, while a long one was cut off with no way to reach
+  the rest. The rows are now measured and the panel is their height, capped at
+  the room, with the same scrolling every later system has.
 - **Calm motion also stops the figures rolling.** With nine indicators
   showing, an open panel costs about a fifth of one core on an M2, and about
   half of that is the readings rolling their digits and easing into place —

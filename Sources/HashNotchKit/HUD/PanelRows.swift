@@ -48,14 +48,23 @@ package struct PanelRows<Content: View>: View {
         if #available(macOS 13.0, *) {
             CappedHeight(maxHeight: maxHeight) { scrollView }
         } else {
-            // macOS 12 has no custom layouts, so the rows are held to the room
-            // and anything past it is cut rather than drawn off the screen.
-            // Every system since scrolls instead.
-            content()
-                .frame(maxHeight: maxHeight, alignment: .top)
-                .clipped()
+            // macOS 12 has no custom layouts, so the height is taken from the
+            // rows themselves, measured, rather than asked of a layout.
+            //
+            // It used to be `frame(maxHeight:)` and a clip, and that is not the
+            // same thing at all: a frame with only a maximum takes everything
+            // it is offered up to that maximum, so EVERY panel on Monterey was
+            // drawn the full height of the room with the rows at the top and a
+            // tall black emptiness below them — and a long one was cut off with
+            // no way to reach the rest. A measured height hugs the rows and
+            // caps them at the room, which is what every later system gets, and
+            // the scroll view then reaches what does not fit.
+            scrollView
+                .frame(height: PanelSize.height(rows: rowsHeight, room: maxHeight), alignment: .top)
         }
     }
+
+
 
     /// The rows, in a scroll view with no scroll bar.
     ///
@@ -78,7 +87,6 @@ package struct PanelRows<Content: View>: View {
     /// down its own list (measured: 2.5 points, every time, before the settle
     /// wobble), so the top of the first row opened cut off. `TopHold` keeps it
     /// at the top until the opening has settled.
-    @available(macOS 13.0, *)
     private var scrollView: some View {
         ScrollView(.vertical, showsIndicators: false) {
             content()
@@ -90,8 +98,8 @@ package struct PanelRows<Content: View>: View {
                 .padding(.bottom, scrolls ? Self.fade : 0)
                 .background(alignment: .top) { TopHold().frame(height: 0) }
         }
-        .scrollIndicators(.never)
-        .scrollDisabled(!scrolls)
+        .hidesScrollBar()
+        .scrollHeld(!scrolls)
         // The fade is a mask on the scroll view itself. A gradient overlay was
         // tried in its place and did not show in use, and timing the two gave
         // the same cost per scroll step, so the mask, which does show, stays.
@@ -105,6 +113,21 @@ package struct PanelRows<Content: View>: View {
                     .frame(height: Self.fade)
             }
         )
+    }
+}
+
+/// The height a panel takes where it has to be worked out rather than laid out.
+///
+/// Its own type rather than a member of `PanelRows`, which is generic over what
+/// it holds: a rule nobody can call without naming a view type is a rule the
+/// checks cannot reach.
+package enum PanelSize {
+    /// The rows' own height, held to the room — and nothing at all until they
+    /// have been measured, so the first frame is drawn at the rows' height
+    /// rather than at the room's.
+    package static func height(rows: CGFloat, room: CGFloat) -> CGFloat? {
+        guard rows > 0 else { return nil }
+        return min(rows, room)
     }
 }
 
