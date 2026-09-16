@@ -42,8 +42,10 @@ anywhere.
 
 ## What it writes
 
-Almost nothing. The app itself writes **no files at all** — its only persistent
-state is its own settings, stored where every Mac app stores them
+Almost nothing, and one thing you have to press for.
+
+Left alone, the app writes **no files** — its only persistent state is its own
+settings, stored where every Mac app stores them
 (`~/Library/Preferences/com.hashnotch.app.plist`). Alongside your choices,
 that holds two small pieces of remembered state. The last AI token totals and
 the day they belong to, so the panel opens on a number rather than on a zero it
@@ -70,6 +72,16 @@ the last seven days, which is a date, the time you spent focused and how many
 rounds you finished, and nothing about what you were doing. That record is
 about you rather than the Mac, so the opening window names it, and Settings →
 Focus deletes it with one button.
+
+The exception is a button. When the panel says the notch hook on disk is older
+than the one this app ships, **Update** runs the installer inside the app
+bundle (`Contents/Resources/scripts/install-claude-hooks.sh`), and that script
+writes: it copies the hook script and its logo into `~/.hashnotch`, and adds or
+refreshes this app's entries in `~/.claude/settings.json` — another program's
+configuration — after copying that file to a backup beside it and keeping the
+three most recent of its own backups. It touches no other file, and nothing
+happens until the button is pressed. The same script is the one you can run
+yourself from `scripts/`.
 
 It never writes to the files it reads, and artwork
 is fetched through an ephemeral session so not even an image cache lands on disk.

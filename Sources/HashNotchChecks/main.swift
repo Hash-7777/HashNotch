@@ -6829,6 +6829,54 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// What the app says it writes is what it writes.
+//
+// The privacy page's one-word tiles are reserved for absolutes, and "Files
+// written — None — settings only" stopped being one when the panel grew a
+// button that brings the notch hook up to date: pressing it runs the bundled
+// installer, which writes ~/.hashnotch and another program's settings file.
+// Both the page and SECURITY.md now say so, and these hold them to it.
+check(
+    "the privacy page's one-word answers are only ever absolutes",
+    {
+        guard let page = try? String(
+            contentsOfFile: "Sources/HashNotchKit/Settings/SettingsView.swift", encoding: .utf8
+        ) else { return false }
+        // Written out rather than derived: the point is that adding one is a
+        // deliberate act somebody has to come here and justify.
+        let claimed = page.split(separator: "\n")
+            .filter { $0.contains("PrivacyNone(\"") }
+            .compactMap { line -> String? in
+                guard let start = line.range(of: "PrivacyNone(\""),
+                      let end = line[start.upperBound...].firstIndex(of: "\"")
+                else { return nil }
+                return String(line[start.upperBound..<end])
+            }
+        return Set(claimed) == ["Accounts", "Analytics", "Location", "Audio"]
+    }()
+)
+check(
+    "and the page says in full what it does write, naming the file that is not its own",
+    {
+        guard let page = try? String(
+            contentsOfFile: "Sources/HashNotchKit/Settings/SettingsView.swift", encoding: .utf8
+        ) else { return false }
+        return page.contains("What it writes") && page.contains("~/.claude/settings.json")
+    }()
+)
+check(
+    "SECURITY.md names it too, and the script that does it",
+    {
+        guard let doc = try? String(contentsOfFile: "SECURITY.md", encoding: .utf8) else { return false }
+        guard let writes = doc.range(of: "## What it writes"),
+              let next = doc.range(of: "## Removing it")
+        else { return false }
+        let section = String(doc[writes.lowerBound..<next.lowerBound])
+        return section.contains("~/.claude/settings.json")
+            && section.contains("install-claude-hooks.sh")
+    }()
+)
+
 // The focus clock runs at the rate the thing it is counting needs.
 //
 // A running block is drawn to the second and counted to the second. With

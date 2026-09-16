@@ -110,6 +110,13 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **The privacy page says what the app writes, in full.** One of its one-word
+  "None" answers was "Files written — settings only", and that stopped being
+  true when the panel gained the button that brings the notch hook up to date:
+  pressing it writes the hook into `~/.hashnotch` and adds this app's entries
+  to `~/.claude/settings.json`, another program's file. The page now says so
+  in full, and in its place stands an answer that is still simply none — no
+  location framework is linked into the app at all. SECURITY.md says the same.
 - **The focus clock only runs by the second when something is running.** With
   no stretch under way it ticked once a second all day to notice midnight
   passing, which is fifty-nine wakeups a minute spent on a question whose

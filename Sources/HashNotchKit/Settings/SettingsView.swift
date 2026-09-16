@@ -1022,7 +1022,14 @@ public struct SettingsView: View {
                 PrivacyNone("Analytics", "nothing counted")
             }
             HStack(spacing: 8) {
-                PrivacyNone("Files written", "settings only")
+                // "Files written — None — settings only" used to be here, and
+                // it stopped being an absolute the day the panel grew a button
+                // that updates the notch hook: pressing it writes a file
+                // belonging to another program. An almost-absolute in this grid
+                // costs every other tile its credibility, so what it writes is
+                // said in full below and this tile is one that is still simply
+                // none — no location framework is linked into the app at all.
+                PrivacyNone("Location", "never asked for")
                 PrivacyNone("Audio", "never listened to")
             }
 
@@ -1033,6 +1040,11 @@ public struct SettingsView: View {
                 // The grid's whole meaning is that the format is reserved for
                 // absolutes, so an almost-absolute put there costs every other
                 // tile its credibility.
+                PrivacyLine(
+                    "What it writes",
+                    "Its own settings, in the usual place for them, and nothing else — except when you press Update on the notice that the notch hook is out of date. That runs the installer this app ships, which copies the hook into ~/.hashnotch and adds its entries to ~/.claude/settings.json, keeping a backup of that file first. Nothing else the app does writes anything outside its own settings, and it never writes to a file it reads."
+                )
+                SettingDivider()
                 PrivacyLine(
                     "The one request it makes",
                     "Fetching the cover for what's playing, over HTTPS, only from the image servers of the services you allow on the General page, size-capped, and refused if a redirect would lead elsewhere. Turn both off and nothing touches the network at all. Nothing about you is ever sent anywhere."
