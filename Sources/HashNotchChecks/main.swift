@@ -6842,6 +6842,56 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// A figure can never travel on a curve of its own, whatever moved its row.
+//
+// The panel changes height for reasons no one announces: a pair of AirPods
+// connecting, a sensor appearing, an indicator switched on in the settings
+// window beside an open panel. So besides the announcements there is a
+// structural half — every figure's geometry updates as one unit with the row
+// that moved it — and both are held here.
+check(
+    "a figure that rolls its digits travels with its row",
+    {
+        guard let file = try? String(
+            contentsOfFile: "Sources/HashNotchKit/HUD/Compatibility.swift", encoding: .utf8
+        ) else { return false }
+        return file.contains("modifier(RollingDigits()).travelsWithItsRow()")
+            && file.contains("geometryGroup()")
+    }()
+)
+check(
+    "and so does one that eases into its new value",
+    {
+        guard let file = try? String(
+            contentsOfFile: "Sources/HashNotchKit/HUD/Compatibility.swift", encoding: .utf8
+        ) else { return false }
+        return file.contains("FigureAnimation(animation: animation, value: value)).travelsWithItsRow()")
+    }()
+)
+
+// Every feature comes and goes through presence, so that is where the coming
+// change of height is announced from — before the change, in the same turn.
+@MainActor func presenceAnnouncesResize() -> (before: Bool, after: Bool) {
+    let motion = PanelMotion()
+    let presence = LivePresence()
+    presence.panelMotion = motion
+    let before = motion.isResizing
+    presence.setActive("something", true)
+    return (before, motion.isResizing)
+}
+let announced = MainActor.assumeIsolated { presenceAnnouncesResize() }
+check("nothing is resizing before a feature appears", announced.before == false)
+check("a feature appearing says the panel is about to change", announced.after)
+check(
+    "and the context wires that up, so no feature has to remember",
+    {
+        guard let file = try? String(
+            contentsOfFile: "Sources/HashNotchKit/Feature/FeatureContext.swift", encoding: .utf8
+        ) else { return false }
+        return file.contains("presence.panelMotion = self.panelMotion")
+    }()
+)
+
 // Calm means calm, including the figures.
 //
 // Measured on an M2 with nine indicators showing: an open panel costs about a

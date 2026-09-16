@@ -78,7 +78,10 @@ All notable changes to HashNotch are recorded here.
   hanging over another row until it caught up — the panel looked as though it
   had come apart. While the panel is changing size, a figure that changes
   simply changes, and it travels with its row instead of on a curve of its
-  own.
+  own. That now holds however the panel came to change height: a notice
+  finishing and going ("Claude finished" after its few seconds), a download
+  ending, a call hanging up, a pair of AirPods connecting, or an indicator
+  switched on in the settings window beside an open panel.
 - **The focus settings show their numbers.** Each length and the number of
   rounds before a long rest now sits beside its buttons. The figures were
   written as the buttons' own label, which the layout hides, so the rounds row

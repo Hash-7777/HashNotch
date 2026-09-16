@@ -86,7 +86,7 @@ public extension View {
     /// While the panel is resizing the change is not animated at all, so the
     /// figure simply travels with its row. See `PanelMotion`.
     func figureAnimation<V: Equatable>(_ animation: Animation, value: V) -> some View {
-        modifier(FigureAnimation(animation: animation, value: value))
+        modifier(FigureAnimation(animation: animation, value: value)).travelsWithItsRow()
     }
 
     /// `scrollIndicators(.never)` where it exists, and nothing where it does
@@ -114,7 +114,26 @@ public extension View {
     ///
     /// It holds still while the panel is changing size. See `PanelMotion`.
     func rollingDigits() -> some View {
-        modifier(RollingDigits())
+        modifier(RollingDigits()).travelsWithItsRow()
+    }
+
+    /// Ties a figure's position to its row's, so it can never travel on a curve
+    /// of its own.
+    ///
+    /// This is the same defect the resize announcements address, approached
+    /// from the other end. Those work by knowing a change of height is coming;
+    /// this needs no warning at all, which matters because the panel's height
+    /// can change for reasons nobody announced — a pair of AirPods connecting,
+    /// a temperature sensor appearing, an indicator switched on in the settings
+    /// window beside an open panel. `geometryGroup` makes a view's geometry
+    /// update as ONE unit with the layout that moved it, so an animation
+    /// belonging to the figure can no longer interpolate where the figure is.
+    ///
+    /// macOS 14 and later. Older systems keep the announcements, which cover
+    /// every path a feature actually takes today.
+    @ViewBuilder
+    func travelsWithItsRow() -> some View {
+        if #available(macOS 14, *) { geometryGroup() } else { self }
     }
 }
 

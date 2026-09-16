@@ -84,6 +84,10 @@ public final class FeatureContext {
         self.presence = presence ?? LivePresence()
         self.visibility = visibility ?? PanelVisibility()
         self.panelMotion = panelMotion ?? PanelMotion()
+        // Every feature appears and disappears through presence, so that is
+        // where a coming change of height is announced from. See
+        // `LivePresence.panelMotion`.
+        self.presence.panelMotion = self.panelMotion
         self.away = AwayReport()
     }
 }

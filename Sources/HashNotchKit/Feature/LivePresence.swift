@@ -8,6 +8,21 @@ import SwiftUI
 public final class LivePresence: ObservableObject {
     @Published public private(set) var activeIDs: Set<String> = []
 
+    /// Told just before a feature appears or disappears, so the figures in the
+    /// panel hold their digits still while the rows move around them.
+    ///
+    /// A feature arriving or leaving is the other way the panel changes height
+    /// — a finished-download notice, a call ending, the "Claude finished" line
+    /// going after its few seconds. The change below is made inside an
+    /// animation, and a reading that happened to change in the same instant
+    /// rolled on its own curve while its row moved on this one, and was drawn
+    /// over a different row until the two agreed. Focus says so before it
+    /// changes anything; this says it for every feature at once, because every
+    /// one of them comes and goes through here.
+    ///
+    /// Set by `FeatureContext`, which owns both.
+    public weak var panelMotion: PanelMotion?
+
     /// Bumped when a feature that is ALREADY live says that what it wants the
     /// island to draw has changed.
     ///
@@ -62,6 +77,9 @@ public final class LivePresence: ObservableObject {
                 "[live] \(active ? "+" : "-")\(id) → \(activeIDs.union(active ? [id] : []).subtracting(active ? [] : [id]).sorted())\n".utf8
             ))
         }
+        // Said BEFORE the change, in the same turn, so the rows are already
+        // holding their digits when the animation below starts to move them.
+        panelMotion?.beginResize(for: 0.7)
         // Inside an animation transaction so the strip's content transition
         // (emerging from the notch) actually animates — a bare set would grow
         // the pill but pop the content in.
