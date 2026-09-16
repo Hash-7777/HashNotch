@@ -6829,6 +6829,27 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// Calm means calm, including the figures.
+//
+// Measured on an M2 with nine indicators showing: an open panel costs about a
+// fifth of one core, and about half of that is the figures rolling and easing
+// as they change — nine readings change every second, so there is almost
+// always an animation in flight and the panel is redrawn at screen rate rather
+// than once a second. Calm turns that half off (measured: 21.5% of a core to
+// 10.1%), which is what somebody choosing Calm is asking for.
+check("figures roll on the standard motion", AppearanceSettings.Motion.standard.rollsFigures)
+check("and on the lively one", AppearanceSettings.Motion.lively.rollsFigures)
+check("and simply change on the calm one", AppearanceSettings.Motion.calm.rollsFigures == false)
+check(
+    "the island tells its rows which it is",
+    {
+        guard let island = try? String(
+            contentsOfFile: "Sources/HashNotchKit/HUD/NotchIslandView.swift", encoding: .utf8
+        ) else { return false }
+        return island.contains("figuresRoll, settings.appearance.motion.rollsFigures")
+    }()
+)
+
 // What the app says it writes is what it writes.
 //
 // The privacy page's one-word tiles are reserved for absolutes, and "Files

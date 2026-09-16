@@ -53,6 +53,17 @@ public struct AppearanceSettings: Codable, Equatable {
             }
         }
 
+        /// Whether a figure that changes rolls its digits and eases into its
+        /// new value.
+        ///
+        /// Measured on an M2 with nine indicators showing: an open panel costs
+        /// about a fifth of one core, and about half of that is those
+        /// animations — nine readings change every second, so there is almost
+        /// always one in flight and the panel is redrawn at screen rate rather
+        /// than once a second. Calm is the setting for somebody who wants the
+        /// app to sit still, so on Calm the figures simply change.
+        public var rollsFigures: Bool { self != .calm }
+
         /// Multiplies every spring's response. Higher is slower and softer.
         public var responseScale: Double {
             switch self {

@@ -50,6 +50,19 @@ extension EnvironmentValues {
     }
 }
 
+extension EnvironmentValues {
+    /// Whether a figure that changes may roll its digits at all. False on the
+    /// Calm motion setting — see `AppearanceSettings.Motion.rollsFigures`.
+    package var figuresRoll: Bool {
+        get { self[FiguresRollKey.self] }
+        set { self[FiguresRollKey.self] = newValue }
+    }
+}
+
+private struct FiguresRollKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
 private struct PanelResizingKey: EnvironmentKey {
     /// False everywhere else — the settings window draws rolling figures too,
     /// and nothing there moves under them.

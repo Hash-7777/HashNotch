@@ -106,12 +106,13 @@ public extension View {
 /// none: a panel that is moving the figure's row at the same time.
 struct FigureAnimation<V: Equatable>: ViewModifier {
     @Environment(\.panelIsResizing) private var resizing
+    @Environment(\.figuresRoll) private var rolls
     let animation: Animation
     let value: V
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if resizing {
+        if resizing || !rolls {
             // No animation of its own — NOT `animation(nil, value:)`, which is
             // an instruction of its own: it makes the change instant, and the
             // figure then jumps to where its row is going while the row is
@@ -128,11 +129,12 @@ struct FigureAnimation<V: Equatable>: ViewModifier {
 /// changing size under the figure. See `PanelMotion` for why.
 struct RollingDigits: ViewModifier {
     @Environment(\.panelIsResizing) private var resizing
+    @Environment(\.figuresRoll) private var rolls
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(macOS 13, *) {
-            content.contentTransition(resizing ? .identity : .numericText())
+            content.contentTransition(resizing || !rolls ? .identity : .numericText())
         } else {
             content
         }

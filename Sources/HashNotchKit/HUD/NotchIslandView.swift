@@ -264,6 +264,7 @@ struct NotchIslandView: View {
             }
         }
         .environment(\.panelIsResizing, panelMotion.isResizing)
+        .environment(\.figuresRoll, settings.appearance.motion.rollsFigures)
         .background(
             GeometryReader { geo in
                 Color.clear

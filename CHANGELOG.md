@@ -110,6 +110,13 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **Calm motion also stops the figures rolling.** With nine indicators
+  showing, an open panel costs about a fifth of one core on an M2, and about
+  half of that is the readings rolling their digits and easing into place —
+  nine of them change every second, so there is almost always one animating
+  and the panel is redrawn at screen rate instead of once a second. On Calm
+  they simply change, which measures at half the cost. Standard and Lively are
+  unchanged.
 - **The privacy page says what the app writes, in full.** One of its one-word
   "None" answers was "Files written — settings only", and that stopped being
   true when the panel gained the button that brings the notch hook up to date:

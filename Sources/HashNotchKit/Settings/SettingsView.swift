@@ -775,7 +775,7 @@ public struct SettingsView: View {
 
                 SettingRow(
                     "Motion",
-                    detail: "How eagerly the island opens and closes.",
+                    detail: "How eagerly the island opens and closes. Calm also stops the figures rolling as they change, which is about half of what an open panel costs.",
                     stacked: true
                 ) {
                     Picker("", selection: $settings.appearance.motion) {
