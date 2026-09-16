@@ -110,6 +110,10 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **The focus clock only runs by the second when something is running.** With
+  no stretch under way it ticked once a second all day to notice midnight
+  passing, which is fifty-nine wakeups a minute spent on a question whose
+  answer changes once. It now ticks once a minute until a stretch starts.
 - **The microphone and camera watch no longer interrupts the animations.**
   Asking macOS which apps have the microphone or a camera open costs about six
   milliseconds — more than a frame — and it is asked every two seconds for as

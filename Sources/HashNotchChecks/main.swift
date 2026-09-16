@@ -6829,6 +6829,30 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// The focus clock runs at the rate the thing it is counting needs.
+//
+// A running block is drawn to the second and counted to the second. With
+// nothing running there is one thing to notice — midnight — and the clock used
+// to tick every second all day for it, which is fifty-nine wakeups a minute
+// spent on a question whose answer changes once a day.
+@MainActor func focusClockIntervals() -> (idle: TimeInterval, running: TimeInterval, stopped: TimeInterval) {
+    let engine = FocusEngine()
+    engine.start(presence: LivePresence(), away: AwayReport(), defaults: InMemoryDefaults())
+    let idle = engine.clockInterval
+    engine.begin(.work)
+    let running = engine.clockInterval
+    engine.giveUp()
+    let stopped = engine.clockInterval
+    engine.stop()
+    return (idle, running, stopped)
+}
+let focusClock = MainActor.assumeIsolated { focusClockIntervals() }
+check("the focus clock ticks once a minute with nothing running",
+      focusClock.idle == FocusEngine.idleTick)
+check("once a second while a stretch runs", focusClock.running == FocusEngine.runningTick)
+check("and goes back to once a minute when it is stopped",
+      focusClock.stopped == FocusEngine.idleTick)
+
 // Asking the system what is using the microphone and the cameras costs 5.6 ms
 // and 0.8 ms on an M2, measured — and it is asked every two seconds for as long
 // as the app runs, panel open or shut. On the main thread that is a frame's

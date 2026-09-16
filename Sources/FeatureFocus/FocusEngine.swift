@@ -65,12 +65,13 @@ public final class FocusEngine: ObservableObject {
             }
         }
         updatePresence()
-        startTicking()
+        retimeClock()
     }
 
     public func stop() {
         ticker?.stop()
         ticker = nil
+        clockInterval = 0
         awayWatch = nil
         notifier.cancelScheduled()
         presence?.setActive("focus", false)
@@ -82,6 +83,7 @@ public final class FocusEngine: ObservableObject {
     public func suspend() {
         ticker?.stop()
         ticker = nil
+        clockInterval = 0
         awayWatch = nil
     }
 
@@ -98,6 +100,7 @@ public final class FocusEngine: ObservableObject {
         session = running
         FocusStore.save(running, to: defaults)
         updatePresence()
+        retimeClock()
 
         // Asked every time a block starts rather than once, which is what
         // catches permission being taken away later. The deadline is handed
@@ -143,9 +146,26 @@ public final class FocusEngine: ObservableObject {
 
     // MARK: The clock
 
-    private func startTicking() {
+    /// A running block is counted down to the second, because it is drawn to
+    /// the second.
+    package nonisolated static let runningTick: TimeInterval = 1
+    /// With nothing running there is one thing to notice — midnight, so
+    /// yesterday's total is put away — and a minute is soon enough for it. It
+    /// used to tick every second all day for that, which is fifty-nine
+    /// wakeups a minute spent on a question whose answer changes once.
+    package nonisolated static let idleTick: TimeInterval = 60
+
+    /// How often the clock is running now, so the rule can be checked.
+    package private(set) var clockInterval: TimeInterval = 0
+
+    /// Match the clock to what is happening. Called wherever a session starts
+    /// or ends, so neither has to remember the intervals.
+    private func retimeClock() {
+        let wanted = session == nil ? Self.idleTick : Self.runningTick
+        guard wanted != clockInterval || ticker == nil else { return }
+        clockInterval = wanted
         ticker?.stop()
-        let ticker = PollingSampler(interval: 1) { [weak self] in
+        let ticker = PollingSampler(interval: wanted) { [weak self] in
             MainActor.assumeIsolated { self?.tick() }
         }
         self.ticker = ticker
@@ -190,6 +210,7 @@ public final class FocusEngine: ObservableObject {
         // that never existed.
         notifier.cancelScheduled()
         updatePresence()
+        retimeClock()
     }
 
     /// A spell with the screen away, applied to whatever was running.
