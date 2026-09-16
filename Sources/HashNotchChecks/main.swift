@@ -6829,6 +6829,34 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// Asking the system what is using the microphone and the cameras costs 5.6 ms
+// and 0.8 ms on an M2, measured — and it is asked every two seconds for as long
+// as the app runs, panel open or shut. On the main thread that is a frame's
+// worth of hitch landing in the middle of whatever the island is animating, so
+// it is asked away from it. Held here because it is exactly the kind of thing
+// that quietly moves back.
+@MainActor func callReadingIsOffTheMainThread() -> Bool? {
+    final class Where: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: Bool?
+        var onMain: Bool? { lock.lock(); defer { lock.unlock() }; return value }
+        func record(_ main: Bool) { lock.lock(); value = main; lock.unlock() }
+    }
+    let seen = Where()
+    let monitor = CallMonitor(read: {
+        seen.record(Thread.isMainThread)
+        return (listener: nil, camera: false)
+    })
+    monitor.start(presence: LivePresence())
+    // The sampler reads once as soon as it starts.
+    RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+    monitor.stop()
+    return seen.onMain
+}
+let callReading = MainActor.assumeIsolated { callReadingIsOffTheMainThread() }
+check("what is using the microphone is asked for, and answered", callReading != nil)
+check("and it is never asked on the main thread", callReading == false)
+
 // While the panel changes size, its figures hold their digits still.
 //
 // A rolling figure is drawn as its own moving piece, laid out where it was when

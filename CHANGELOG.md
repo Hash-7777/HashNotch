@@ -110,6 +110,12 @@ All notable changes to HashNotch are recorded here.
   heading, a row for the button and the sentence below that. The row stays
   as it is while a stretch runs, sentence included; only the button goes, and
   the timer appears beneath it.
+- **The microphone and camera watch no longer interrupts the animations.**
+  Asking macOS which apps have the microphone or a camera open costs about six
+  milliseconds — more than a frame — and it is asked every two seconds for as
+  long as the app runs. It was asked on the same thread that draws, so it
+  landed as a small hitch in whatever the island was animating. It is now asked
+  away from it; nothing about the readout changes.
 - **Settings no longer freezes when you switch tabs.** The General page asked
   macOS whether the app opens at login three times every time it drew, and
   that question is a round trip to a system service: usually a couple of

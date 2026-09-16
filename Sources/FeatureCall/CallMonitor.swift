@@ -49,9 +49,16 @@ public struct MicrophoneOrCameraUse: Equatable {
 ///
 /// This is the one feature that runs while the panel is SHUT, and it earns that
 /// deliberately: a dot saying your microphone or camera is live is worth nothing
-/// if it only appears once you go looking. It is also close to free — a boolean
-/// per audio process and a boolean per camera costs microseconds and touches
-/// neither audio nor video.
+/// if it only appears once you go looking. It touches neither audio nor video —
+/// it reads a flag per audio process and a flag per camera.
+///
+/// Cheap is not the same as instant, though, and this was described as costing
+/// microseconds until it was timed: 5.6 ms for the audio processes and 0.8 ms
+/// for the cameras on an M2, every two seconds for as long as the app runs.
+/// That is more than a whole frame at 120 Hz, so asked on the main thread it
+/// was a hitch the length of a frame, twice a minute per minute, landing in the
+/// middle of whatever the island was animating. It is asked off the main thread
+/// and only the answer comes back to it.
 ///
 /// It never listens and never watches. See `CallReader` and `CameraReader` for
 /// exactly what is asked of the system, and why neither is the same as using the
@@ -65,12 +72,29 @@ public final class CallMonitor: ObservableObject {
     private var sampler: PollingSampler?
     private var ticker: PollingSampler?
     private weak var presence: LivePresence?
+    /// Where the system is asked, so the main thread never waits on it.
+    private let queue = DispatchQueue(label: "com.hashnotch.call", qos: .utility)
+    /// Whether a reading is already in flight. A machine slow enough for one
+    /// read to outlast the interval should not be given a queue of them.
+    private var reading = false
 
-    public init() {}
+    /// What is asked of the system. One closure rather than two calls, so the
+    /// checks can hold the rule that it is not asked on the main thread —
+    /// which is the whole point of the queue above, and is otherwise the kind
+    /// of thing that quietly moves back.
+    private let read: @Sendable () -> (listener: CallReader.Listener?, camera: Bool)
+
+    public init() {
+        self.read = { (CallReader.current(), CameraReader.isCapturing()) }
+    }
+
+    package init(read: @escaping @Sendable () -> (listener: CallReader.Listener?, camera: Bool)) {
+        self.read = read
+    }
 
     /// Checked often enough that the dot appears as the call starts rather than
-    /// some seconds into it, and cheap enough that doing so costs nothing —
-    /// this reads a flag per audio process, it does not open audio.
+    /// some seconds into it. What it costs, and why that cost is paid off the
+    /// main thread, is on the type above.
     private nonisolated static let watchInterval: TimeInterval = 2
 
     public func start(presence: LivePresence) {
@@ -90,9 +114,22 @@ public final class CallMonitor: ObservableObject {
         presence?.setActive("call", false)
     }
 
+    /// Ask the system, away from the main thread, and bring back the answer.
     private func refresh() {
-        let listener = CallReader.current()
-        let camera = CameraReader.isCapturing()
+        guard !reading else { return }
+        reading = true
+        let read = self.read
+        queue.async { [weak self] in
+            let (listener, camera) = read()
+            Task { @MainActor in
+                guard let self else { return }
+                self.reading = false
+                self.apply(listener: listener, camera: camera)
+            }
+        }
+    }
+
+    private func apply(listener: CallReader.Listener?, camera: Bool) {
         let microphone = listener != nil
 
         guard microphone || camera else {
