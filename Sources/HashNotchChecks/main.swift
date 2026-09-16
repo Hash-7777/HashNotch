@@ -6842,6 +6842,40 @@ check("a row stays the same row when the rows outgrow the room and fit again",
     }
     return scrollViews(in: host).first?.contentView.bounds.origin.y
 }
+// Room before the content needs it.
+//
+// The window is told the panel's height by measuring the island, and a
+// measurement exists only after SwiftUI has laid the new content out — so a
+// panel that grew sat, for those frames, in a window still the old height, and
+// slipped down inside it before snapping back. Measured on a real start: the
+// window went 640 to 820 AFTER the focus section had already grown. Anything
+// about to change the height now says so first, and the window takes the whole
+// column then. What that column is, and that it still hangs from the top, is
+// the part worth holding.
+let aheadTop: CGFloat = 900
+let aheadScreen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+let (aheadReserved, aheadRoom) = MainActor.assumeIsolated {
+    (
+        NotchWindowController.expandedContentHeight(
+            measured: .greatestFiniteMagnitude, islandTop: aheadTop, screenFrame: aheadScreen
+        ),
+        NotchState.panelRoom(islandTop: aheadTop, screenFrame: aheadScreen)
+    )
+}
+check("room reserved ahead of a change is the whole column below the island",
+      aheadReserved == aheadRoom)
+check("and never more than the room, however much is asked for",
+      aheadReserved <= aheadScreen.height)
+check(
+    "the controller asks for it the moment something says the height will change",
+    {
+        guard let file = try? String(
+            contentsOfFile: "Sources/HashNotchKit/Notch/NotchWindowController.swift", encoding: .utf8
+        ) else { return false }
+        return file.contains("context.panelMotion.$isResizing") && file.contains("makeRoomForAChange()")
+    }()
+)
+
 // A figure can never travel on a curve of its own, whatever moved its row.
 //
 // The panel changes height for reasons no one announces: a pair of AirPods

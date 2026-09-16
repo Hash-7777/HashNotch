@@ -120,6 +120,14 @@ All notable changes to HashNotch are recorded here.
   emptiness beneath them, while a long one was cut off with no way to reach
   the rest. The rows are now measured and the panel is their height, capped at
   the room, with the same scrolling every later system has.
+- **The panel no longer dips when something in it grows.** The window is told
+  how tall the panel is by measuring it, and a measurement only exists once the
+  new contents have been laid out — so for a few frames a taller panel sat in a
+  window still the old height and slipped down inside it, leaving a gap at the
+  top of the screen before snapping back. Starting a focus stretch did it every
+  time. Whatever is about to change the panel's height now says so first, and
+  the window takes the room before the change is drawn; it gives back what it
+  does not need a moment later, as it already did when opening.
 - **Calm motion also stops the figures rolling.** With nine indicators
   showing, an open panel costs about a fifth of one core on an M2, and about
   half of that is the readings rolling their digits and easing into place —
