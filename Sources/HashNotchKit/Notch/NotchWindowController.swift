@@ -229,30 +229,6 @@ public final class NotchWindowController {
             }
             .store(in: &cancellables)
 
-        // Room BEFORE the content needs it.
-        //
-        // The window learns the panel's new height by being told the island's
-        // measured size, and a measurement only exists once SwiftUI has laid
-        // the new content out — so for the frames in between, taller content
-        // sat in a window still the old height, and the island slipped down
-        // inside it before snapping back. Measured on a real start: the window
-        // went 640 → 820 AFTER the focus section had already grown.
-        //
-        // Whatever is about to change the panel's height now says so first
-        // (see `PanelMotion`), which arrives in the same turn as the change and
-        // before it is drawn. The window takes the whole column then, and the
-        // settle pass gives back what is not needed — which is exactly what
-        // opening the panel already does, for the same reason.
-        context.panelMotion.$isResizing
-            .removeDuplicates()
-            .sink { [weak self] resizing in
-                MainActor.assumeIsolated {
-                    guard let self, resizing, self.state.isExpanded else { return }
-                    self.makeRoomForAChange()
-                }
-            }
-            .store(in: &cancellables)
-
         // A position correction reshapes the island in place, on every tick of
         // the slider. Deliberately undebounced: this is what makes the sliders
         // move the island under your hand rather than after you let go. The
@@ -648,15 +624,22 @@ public final class NotchWindowController {
         state.setExpanded(true)
     }
 
-    /// Take the whole column now, and give back what is spare once the change
-    /// has settled.
+    /// The whole column below the island, taken while the panel is open.
     ///
-    /// The window is transparent and, while the panel is open, catches clicks
-    /// across its whole frame — which is why it is sized to the panel rather
-    /// than left at full height. So this grows for the change and schedules the
-    /// same settle a measurement would.
-    private func makeRoomForAChange() {
-        let generous = Self.frame(
+    /// Sizing the window to the panel meant resizing it whenever the panel
+    /// changed height, and a window resize re-lays out everything inside it
+    /// THAT INSTANT — in the middle of whatever was animating. Growing it
+    /// after a measurement made the panel dip; growing it before the change
+    /// threw the readings out of their rows instead. The window simply does
+    /// not change size while the panel is open any more.
+    ///
+    /// It costs the clicks in a 524-point-wide column below the panel, which
+    /// the window already swallowed for most of that height: while the panel is
+    /// open a click anywhere in the window closes it rather than reaching what
+    /// is behind, and that is the behaviour either way. It is given back the
+    /// moment the panel closes.
+    private func columnFrame() -> NSRect {
+        Self.frame(
             for: notchRect,
             state: state,
             expanded: true,
@@ -665,38 +648,13 @@ public final class NotchWindowController {
             topEdge: islandTop,
             in: screenFrame
         )
-        let union = window.frame.union(generous)
-        if union != window.frame {
-            window.setFrame(union, display: true)
-            debugLog("room-ahead")
-        }
-        settleWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                let settled = self.targetWindowFrame()
-                if self.window.frame != settled {
-                    self.window.setFrame(settled, display: true)
-                    self.debugLog("settle")
-                }
-            }
-        }
-        settleWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: work)
     }
 
     /// Give the window the room the open panel needs, without shrinking it.
     private func growForExpanded() {
-        let target = Self.frame(
-            for: notchRect,
-            state: state,
-            expanded: true,
-            live: context.presence.hasLive,
-            islandHeight: expandedHeightEstimate,
-            topEdge: islandTop,
-            in: screenFrame
-        )
-        let union = window.frame.union(target)
+        // The whole column, not the height last measured: the window must not
+        // need resizing again while the panel is open.
+        let union = window.frame.union(columnFrame())
         guard union != window.frame else { return }
         window.setFrame(union, display: true)
         debugLog("open-prepare")
@@ -724,6 +682,21 @@ public final class NotchWindowController {
     /// either way — while too little clips it. The two mistakes are not
     /// symmetrical.
     private func refitWindow() {
+        // While the panel is open the window holds the whole column and is
+        // left alone. See `columnFrame`: a resize re-lays out the panel in the
+        // middle of whatever it was animating, and there is nothing to gain
+        // from one — the window is transparent, so the room below the panel
+        // shows the desktop whatever size it is.
+        if state.isExpanded {
+            settleWork?.cancel()
+            let column = window.frame.union(columnFrame())
+            if column != window.frame {
+                window.setFrame(column, display: true)
+                debugLog("column")
+            }
+            return
+        }
+
         // Ask first whether anything needs to grow at all.
         //
         // The generous size is for content that has OUTGROWN its window, and
