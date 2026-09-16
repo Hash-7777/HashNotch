@@ -141,6 +141,14 @@ package struct CappedHeight: Layout {
 /// It only ever undoes a drift — a scroll position within `drift` points of
 /// the top. Anything further is somebody scrolling, and a panel that fought a
 /// finger to stay at the top would be worse than the drift it prevents.
+///
+/// A small scroll is not further, though, and that was the flaw: the panel's
+/// scrolling is deliberately calmed to half distance, so an unhurried swipe in
+/// the first second moves the list by less than the drift allowance and was
+/// put straight back. For that second the panel appeared to refuse to scroll.
+/// So the hold also ends the moment a scroll actually reaches the panel —
+/// which the window controller knows, because every scroll over the panel
+/// passes through it. See `PanelHold`.
 package struct TopHold: NSViewRepresentable {
     /// Long enough for the opening spring and its settle to finish.
     package static let window: TimeInterval = 1.2
@@ -150,9 +158,14 @@ package struct TopHold: NSViewRepresentable {
     package func updateNSView(_ nsView: NSView, context: Context) {}
 
     final class HoldView: NSView {
+        /// When this panel appeared, so a scroll from before it opened — the
+        /// swipe that opened it, say — is not mistaken for one inside it.
+        private var appearedAt = Date()
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             guard window != nil else { return }
+            appearedAt = Date()
             for delay in stride(from: 0.03, through: TopHold.window, by: 0.03) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                     self?.holdAtTop()
@@ -161,12 +174,48 @@ package struct TopHold: NSViewRepresentable {
         }
 
         private func holdAtTop() {
+            guard PanelHold.holds(appearedAt: appearedAt) else { return }
             guard let scroll = enclosingScrollView else { return }
             let y = scroll.contentView.bounds.origin.y
             guard y != 0, abs(y) <= TopHold.drift else { return }
             scroll.contentView.scroll(to: NSPoint(x: scroll.contentView.bounds.origin.x, y: 0))
             scroll.reflectScrolledClipView(scroll.contentView)
         }
+    }
+}
+
+/// Whether a freshly opened panel is still holding itself at its first row.
+///
+/// The rule is here, as a function of three moments, rather than inside the
+/// view: when the panel appeared, when the list was last scrolled, and now.
+@MainActor
+package enum PanelHold {
+    /// When a scroll last reached the panel. Set by the window controller,
+    /// which sees every one of them.
+    private(set) static var lastScroll: Date = .distantPast
+
+    /// Told that somebody has scrolled the panel.
+    package static func userScrolled(at moment: Date = Date()) {
+        lastScroll = moment
+    }
+
+    /// Whether the drift correction still applies: inside the opening window,
+    /// and nobody has scrolled since this panel appeared.
+    /// `lastScroll` is the one the checks vary; left out, it is the real one.
+    package static func holds(
+        appearedAt: Date,
+        now: Date = Date(),
+        lastScroll: Date? = nil
+    ) -> Bool {
+        let scrolled = lastScroll ?? Self.lastScroll
+        return now.timeIntervalSince(appearedAt) <= TopHold.window && scrolled < appearedAt
+    }
+
+    /// Used only by the checks, so one that scrolls does not change the answer
+    /// for every check after it. The app never unlearns a scroll — a panel
+    /// that has been scrolled is simply a panel somebody is using.
+    package static func forgetLastScroll() {
+        lastScroll = .distantPast
     }
 }
 

@@ -6919,6 +6919,67 @@ check("a panel that has just opened shows its first row, not a few points below 
           guard let offset = scrollOffsetAfterOpening() else { return false }
           return abs(offset) < 0.5
       })
+// The hold ends the moment somebody scrolls. Scrolling the panel is calmed to
+// half distance, so an unhurried swipe in the first second moves the list by
+// less than the drift allowance — and was put back, which read as a panel
+// refusing to scroll for a second after it opened.
+let opened = Date()
+check("a panel holds its first row through the opening",
+      MainActor.assumeIsolated {
+          PanelHold.holds(appearedAt: opened, now: opened.addingTimeInterval(0.3),
+                          lastScroll: .distantPast)
+      })
+check("and stops holding it the moment the rows are scrolled",
+      MainActor.assumeIsolated {
+          PanelHold.holds(appearedAt: opened, now: opened.addingTimeInterval(0.3),
+                          lastScroll: opened.addingTimeInterval(0.2)) == false
+      })
+check("a scroll from before it opened is not one of its own",
+      MainActor.assumeIsolated {
+          PanelHold.holds(appearedAt: opened, now: opened.addingTimeInterval(0.3),
+                          lastScroll: opened.addingTimeInterval(-0.2))
+      })
+check("and the hold is over once the opening has settled",
+      MainActor.assumeIsolated {
+          PanelHold.holds(appearedAt: opened,
+                          now: opened.addingTimeInterval(TopHold.window + 0.1),
+                          lastScroll: .distantPast) == false
+      })
+
+// The same rule through the real scroll view: a drift-sized offset is put back
+// while nothing has been scrolled, and left alone once something has.
+@MainActor func driftAfterScrolling(_ scrolled: Bool) -> CGFloat? {
+    let host = NSHostingView(rootView: PanelRows(maxHeight: 200) {
+        Color.clear.frame(width: 120, height: 900)
+    })
+    let window = NSWindow(contentRect: NSRect(x: 400, y: 300, width: 120, height: 200),
+                          styleMask: .borderless, backing: .buffered, defer: false)
+    window.contentView = host
+    window.orderFrontRegardless()
+    defer { window.orderOut(nil); PanelHold.forgetLastScroll() }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+    func scrollViews(in view: NSView) -> [NSScrollView] {
+        (view as? NSScrollView).map { [$0] } ?? [] + view.subviews.flatMap(scrollViews)
+    }
+    guard let scroll = scrollViews(in: host).first else { return nil }
+    if scrolled { PanelHold.userScrolled() }
+    // Half the drift allowance: the distance a calm swipe covers, which is
+    // exactly what used to be undone.
+    scroll.contentView.scroll(to: NSPoint(x: 0, y: TopHold.drift / 2))
+    scroll.reflectScrolledClipView(scroll.contentView)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    return scroll.contentView.bounds.origin.y
+}
+check("a small drift while the panel opens is put back",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return driftAfterScrolling(false).map { abs($0) < 0.5 } ?? false
+      })
+check("the same distance, scrolled, is left where it was put",
+      MainActor.assumeIsolated {
+          guard #available(macOS 13.0, *) else { return true }
+          return driftAfterScrolling(true).map { abs($0 - TopHold.drift / 2) < 0.5 } ?? false
+      })
 // Calmer scrolling over the panel: the same gesture moves the list half as
 // far. Held against the real AppKit scroll view the panel builds, fed real
 // scroll events, raw and calmed, and measured by how far the list travelled.

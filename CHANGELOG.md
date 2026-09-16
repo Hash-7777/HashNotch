@@ -40,7 +40,11 @@ All notable changes to HashNotch are recorded here.
   it scrolls, a two-finger swipe up over the rows scrolls them; a swipe up on
   the notch still closes the panel. Scrolling it is calmer than elsewhere on
   the Mac: the same swipe moves the rows half as far, with the same glide
-  after it, so a short list does not fly to its end. When something in the
+  after it, so a short list does not fly to its end. A swipe in the first
+  second after it opens works like any other: the panel holds itself at its
+  first row while it opens, and lets go the moment you scroll — an unhurried
+  swipe covers less ground than that hold allowed for, and was being put
+  back. When something in the
   panel grows or shrinks across the limit — a focus stretch starting or
   stopping on a full panel — every row slides to its new place; none are
   rebuilt on the way.

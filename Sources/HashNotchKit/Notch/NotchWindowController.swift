@@ -808,7 +808,13 @@ public final class NotchWindowController {
             let overPanel = MainActor.assumeIsolated { () -> Bool in
                 self?.handleScroll(event)
                 guard let self, self.state.isExpanded else { return false }
-                return self.panelAnchor.contains(NSEvent.mouseLocation)
+                let overPanel = self.panelAnchor.contains(NSEvent.mouseLocation)
+                // A scroll that reaches the rows ends the opening hold. The
+                // panel's scrolling is calmed to half distance, so an unhurried
+                // swipe in the first second moves it by less than the drift the
+                // hold puts back — which read as the panel refusing to scroll.
+                if overPanel { PanelHold.userScrolled() }
+                return overPanel
             }
             return overPanel ? PanelScroll.calmed(event) : event
         }
