@@ -156,31 +156,21 @@ struct FocusDetailView: View {
 
     private func running(_ session: FocusSession) -> some View {
         HStack(spacing: 12) {
-            // The ring is the pause button. Pause and play in the middle of a
-            // progress ring is a control nobody has to be taught, and it costs
-            // the row no width: a third button beside Skip and Stop would not
-            // fit the panel with the longer captions.
-            Button {
-                session.isPaused ? engine.resume() : engine.pause()
-            } label: {
-                ZStack {
-                    FocusRing(fraction: session.fractionDone(now: engine.now), tint: tint)
-                        .frame(width: 46, height: 46)
-                        // The ring is redrawn every second, so it must ease over
-                        // exactly one second or it arrives in steps you can see.
-                        .animation(.linear(duration: 1), value: session.fractionDone(now: engine.now))
-                        .opacity(session.isPaused ? 0.45 : 1)
-                    Image(systemName: session.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(tint)
-                        .transition(.scale(scale: 0.5).combined(with: .opacity))
-                        .id(session.isPaused)
-                }
-                .contentShape(Circle())
+            ZStack {
+                FocusRing(fraction: session.fractionDone(now: engine.now), tint: tint)
+                    .frame(width: 46, height: 46)
+                    // The ring is redrawn every second, so it must ease over
+                    // exactly one second or it arrives in steps you can see.
+                    .animation(.linear(duration: 1), value: session.fractionDone(now: engine.now))
+                    .opacity(session.isPaused ? 0.45 : 1)
+                // What is running, or that it is held. A picture of the state,
+                // not a control — the control is the button that says Pause.
+                Image(systemName: FocusText.symbol(session))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+                    .id(FocusText.symbol(session))
             }
-            .buttonStyle(.plain)
-            .help(session.isPaused ? "Resume" : "Pause")
-            .accessibilityLabel(session.isPaused ? "Resume" : "Pause")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(FocusClock.text(session.secondsLeft(now: engine.now)))
@@ -197,7 +187,12 @@ struct FocusDetailView: View {
 
             Spacer(minLength: 0)
 
-            VStack(spacing: 5) {
+            // Pause first and in words, where the eye goes for it: a pause
+            // tucked into the ring was a control that had to be found.
+            VStack(alignment: .trailing, spacing: 4) {
+                FocusButton(session.isPaused ? "Resume" : "Pause", theme: theme, filled: session.isPaused) {
+                    session.isPaused ? engine.resume() : engine.pause()
+                }
                 FocusButton("Skip", theme: theme) { withPanel { engine.skip() } }
                 FocusButton("Stop", theme: theme) { withPanel { engine.giveUp() } }
             }
@@ -325,6 +320,12 @@ package enum FocusClock {
 
 /// What the line under the clock says. Pure, so the checks can hold it.
 package enum FocusText {
+    /// The picture in the middle of the ring.
+    package static func symbol(_ session: FocusSession) -> String {
+        if session.isPaused { return "pause.fill" }
+        return session.block.isWork ? "target" : "cup.and.saucer.fill"
+    }
+
     package static func caption(_ session: FocusSession, worksUntilLongBreak: Int) -> String {
         if session.isPaused { return "Paused" }
         return session.block.isWork ? "Long rest after \(worksUntilLongBreak) more" : "Then back to work"

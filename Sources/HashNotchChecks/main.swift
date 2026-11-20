@@ -3471,6 +3471,8 @@ MainActor.assumeIsolated {
             #"{"block":"work","startedAt":0,"endsAt":1500}"#.utf8)))?.isPaused == false)
     check("the line under the clock says it is paused",
           FocusText.caption(held, worksUntilLongBreak: 3).hasPrefix("Paused"))
+    check("and the ring shows it is held, while a running block shows what it is",
+          FocusText.symbol(held) == "pause.fill" && FocusText.symbol(block) == "target")
 
     // The tally. Two figures, and the refusals are still the point.
     let today = FocusTallyMath.day(of: started)

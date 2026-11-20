@@ -26,7 +26,8 @@ All notable changes to HashNotch are recorded here.
   stands: the clock and the ring stop, the alert is called off, and none of the
   pause counts as time focused. Resume carries on with the end moved on by the
   pause. A paused stretch survives a relaunch, and stepping away from one does
-  not end it, because pausing is stepping away on purpose.
+  not end it, because pausing is stepping away on purpose. Pause sits above
+  Skip and Stop while a stretch runs, and becomes Resume while it is held.
 
 ### Fixed
 
