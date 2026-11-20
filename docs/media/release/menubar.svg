@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 132" width="44" height="44" role="img" aria-label="figures in the menu bar">
+  <rect x="0.5" y="0.5" width="131" height="131" rx="30" fill="#0F1117" stroke="#1E2230"/>
+    <path d="M34 28 L98 28 C102.42 28 106 31.58 106 36 L106 46 C106 50.42 102.42 54 98 54 L34 54 C29.58 54 26 50.42 26 46 L26 36 C26 31.58 29.58 28 34 28 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M64 38 L64 44 M78 38 L78 44 M92 38 L92 44" fill="none" stroke="#8FBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 70 L98 70 C102.42 70 106 73.58 106 78 L106 96 C106 100.42 102.42 104 98 104 L62 104 C57.58 104 54 100.42 54 96 L54 78 C54 73.58 57.58 70 62 70 Z" fill="none" stroke="#8FBAFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M66 87 L94 87" fill="none" stroke="#8FBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
