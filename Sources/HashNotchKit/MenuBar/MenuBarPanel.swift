@@ -85,7 +85,9 @@ package final class MenuBarPanel {
         anchorButton = button
         generation &+= 1
         isShown = true
-        place(under: anchor, on: button.window?.screen)
+        let click = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(click) } ?? button.window?.screen
+        place(under: Self.anchor(item: anchor, click: click, screen: screen?.frame), on: screen)
         if !window.isVisible { window.alphaValue = 0 }
         window.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
@@ -122,6 +124,15 @@ package final class MenuBarPanel {
         frame.origin.y = frame.maxY - size.height
         frame.size = size
         window.setFrame(frame, display: true)
+    }
+
+    /// Where to hang it from: the item, or — when the click came from a menu
+    /// bar on another display, which shows the same item while the item's own
+    /// window stays where it is — the point clicked, on the display clicked.
+    package static func anchor(item: NSRect, click: NSPoint, screen: NSRect?) -> NSRect {
+        guard let screen, !item.isEmpty, !screen.intersects(item) else { return item }
+        return NSRect(x: click.x - item.width / 2, y: screen.maxY - item.height,
+                      width: item.width, height: item.height)
     }
 
     /// Hanging from just below the menu bar, its left edge on the item's, and

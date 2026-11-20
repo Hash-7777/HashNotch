@@ -6722,6 +6722,20 @@ MainActor.assumeIsolated {
             && !MenuBarPanel.isOnItem(NSPoint(x: 400, y: 500), item: NSRect(x: 856, y: 803, width: 110, height: 29))
             && !MenuBarPanel.isOnItem(NSPoint(x: 0, y: 0), item: .zero)
     )
+    let mainDisplay = NSRect(x: 0, y: 0, width: 1280, height: 832)
+    let secondDisplay = NSRect(x: 1280, y: 0, width: 1920, height: 1080)
+    let itemOnMain = NSRect(x: 856, y: 803, width: 110, height: 29)
+    check(
+        "the panel hangs from the item on the display the item is on",
+        MenuBarPanel.anchor(item: itemOnMain, click: NSPoint(x: 900, y: 815), screen: mainDisplay) == itemOnMain
+    )
+    check(
+        "and from the point clicked, on the other display, when the click came from there",
+        {
+            let a = MenuBarPanel.anchor(item: itemOnMain, click: NSPoint(x: 2900, y: 1070), screen: secondDisplay)
+            return secondDisplay.contains(NSPoint(x: a.midX, y: a.midY)) && a.maxY == secondDisplay.maxY
+        }()
+    )
     check(
         "and its controls answer the first click",
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
