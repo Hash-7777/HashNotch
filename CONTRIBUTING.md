@@ -33,7 +33,8 @@ toolchain's, not the code's.
 
 The same two commands run again on GitHub (`.github/workflows/build.yml`) for
 every **push to main** and every **pull request**, and on demand from the
-Actions tab. This repository is public, so GitHub's hosted runners cost nothing
+Actions tab, on two macOS releases at once: 15 and 26, the oldest and newest
+GitHub still offers. This repository is public, so GitHub's hosted runners cost nothing
 and a second machine is worth having on every change — both to catch what one
 machine agrees with itself about, and so that anybody reading the repository can
 see whether what is on main builds. That job also builds the release

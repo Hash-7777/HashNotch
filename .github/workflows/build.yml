@@ -29,7 +29,18 @@ jobs:
     # The image also has to carry Swift 6 or newer, because the package
     # declares tools version 6.0 — an older image cannot read Package.swift
     # at all, let alone build it.
-    runs-on: macos-15
+    #
+    # Two releases, not one: the oldest and the newest this service still
+    # offers. The app supports macOS 12 and later, and the code that differs
+    # between releases — the glass, the menu bar's items being drawn by the
+    # system — differs most between these two. Older images have been retired
+    # here, so macOS 12 to 14 rest on the compiler, which builds every module
+    # for macOS 12 and refuses anything newer without a version check.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
