@@ -6717,6 +6717,12 @@ MainActor.assumeIsolated {
         !menuPanel.canBecomeKey && !menuPanel.canBecomeMain
     )
     check(
+        "a click on the item is the item's to answer, not a click elsewhere",
+        MenuBarPanel.isOnItem(NSPoint(x: 900, y: 815), item: NSRect(x: 856, y: 803, width: 110, height: 29))
+            && !MenuBarPanel.isOnItem(NSPoint(x: 400, y: 500), item: NSRect(x: 856, y: 803, width: 110, height: 29))
+            && !MenuBarPanel.isOnItem(NSPoint(x: 0, y: 0), item: .zero)
+    )
+    check(
         "and its controls answer the first click",
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
     )

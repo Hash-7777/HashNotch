@@ -22,10 +22,13 @@ import SwiftUI
 /// click anywhere else closes it, as they close the system's. Its controls take
 /// the first click, so nothing is lost by its not being key.
 @MainActor
-final class MenuBarPanel {
+package final class MenuBarPanel {
     private let window: MenuBarPanelWindow
     private let host: FirstClickHostingView<AnyView>
     private var outsideClickMonitor: Any?
+    /// The item it hangs from, so a click on the item is told apart from a
+    /// click anywhere else.
+    private weak var anchorButton: NSStatusBarButton?
     /// Bumped on every open and close, so a fade-out that finishes after the
     /// panel was opened again does not take it off the screen.
     private var generation = 0
@@ -82,6 +85,7 @@ final class MenuBarPanel {
 
     func show(below button: NSStatusBarButton) {
         guard let anchor = button.window?.frame else { return }
+        anchorButton = button
         generation &+= 1
         isShown = true
         place(under: anchor, on: button.window?.screen)
@@ -134,16 +138,33 @@ final class MenuBarPanel {
                                width: size.width, height: size.height), display: true)
     }
 
-    /// A click anywhere else puts it away. A global monitor never sees this
-    /// app's own clicks — on the panel or on the item — so whatever reaches it
-    /// is by definition somewhere else; the item's own click toggles.
+    /// A click anywhere else puts it away.
+    ///
+    /// Except a click on the item itself, which is the item's to answer: it
+    /// toggles. A global monitor does not see this app's own clicks on the
+    /// panel, but on this system it DOES see the click on the item — the menu
+    /// bar's items are drawn by the system, not in this app's windows — so
+    /// without this a second press closed the panel here and reopened it in
+    /// the item's own action, and the panel never closed.
     private func watchForOutsideClicks() {
         guard outsideClickMonitor == nil else { return }
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hide() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let item = self.anchorButton?.window?.frame ?? .zero
+                guard !Self.isOnItem(NSEvent.mouseLocation, item: item) else { return }
+                self.hide()
+            }
         }
+    }
+
+    /// Whether a click at `point`, in screen coordinates, landed on the item.
+    /// A point of slack on each side, since the item's edge is drawn by the
+    /// system and a click on its border belongs to it.
+    package static func isOnItem(_ point: NSPoint, item: NSRect) -> Bool {
+        !item.isEmpty && item.insetBy(dx: -1, dy: -1).contains(point)
     }
 
     private func stopWatching() {
