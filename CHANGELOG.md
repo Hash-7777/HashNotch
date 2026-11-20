@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.7.0 — your Mac's vital signs in the menu bar, and a pause for focus
 
 ### Added
 
@@ -32,6 +32,12 @@ All notable changes to HashNotch are recorded here.
   pause. A paused stretch survives a relaunch, and stepping away from one does
   not end it, because pausing is stepping away on purpose. Pause sits above
   Skip and Stop while a stretch runs, and becomes Resume while it is held.
+
+### Changed
+
+- **Checked on two macOS releases for every change.** The build and every
+  check now run on macOS 15 and 26 for each change, as well as on macOS 27
+  where it is built. The support chart says so.
 
 ### Fixed
 
