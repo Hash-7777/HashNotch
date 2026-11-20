@@ -54,6 +54,7 @@ public final class FocusEngine: ObservableObject {
             switch FocusResume.decide(kept, now: Date()) {
             case .resume(let live):
                 session = live
+                guard !live.isPaused else { break }
                 // A block picked up after a relaunch may never have been handed
                 // to the system — an older build wrote no such field, and
                 // permission may have been refused when it started and granted
@@ -127,6 +128,29 @@ public final class FocusEngine: ObservableObject {
     /// Stop what is running without finishing it. A piece of work ended this way
     /// counts the time it actually served and is recorded as abandoned, because
     /// it was.
+    /// Hold the block where it is. The alert is called off, the clock drops to
+    /// its idle rate, and the strip stays up, saying it is paused.
+    public func pause() {
+        guard let running = session, !running.isPaused else { return }
+        let held = running.paused(at: Date())
+        notifier.cancelScheduled()
+        session = held
+        FocusStore.save(held, to: defaults)
+        now = Date()
+        retimeClock()
+    }
+
+    /// Carry on from where it was paused, with the end moved on by the pause.
+    public func resume() {
+        guard let held = session, held.isPaused else { return }
+        let running = held.resumed(at: Date())
+        session = running
+        FocusStore.save(running, to: defaults)
+        now = Date()
+        retimeClock()
+        rescheduleAlert(for: running)
+    }
+
     public func giveUp() {
         guard let running = session else { return }
         end(running, at: Date(), completed: false)
@@ -161,7 +185,9 @@ public final class FocusEngine: ObservableObject {
     /// Match the clock to what is happening. Called wherever a session starts
     /// or ends, so neither has to remember the intervals.
     private func retimeClock() {
-        let wanted = session == nil ? Self.idleTick : Self.runningTick
+        // A paused block has nothing to count down, so it is ticked like no
+        // block at all — once a minute, for the turn of the day.
+        let wanted = (session == nil || session?.isPaused == true) ? Self.idleTick : Self.runningTick
         guard wanted != clockInterval || ticker == nil else { return }
         clockInterval = wanted
         ticker?.stop()
@@ -178,7 +204,7 @@ public final class FocusEngine: ObservableObject {
         // rather than dropped — that is the whole point of keeping any of this.
         rollOver(tally, now: now)
 
-        guard let running = session, now >= running.endsAt else { return }
+        guard let running = session, !running.isPaused, now >= running.endsAt else { return }
         complete(running, at: running.endsAt)
     }
 
@@ -223,7 +249,9 @@ public final class FocusEngine: ObservableObject {
         lastAwayHandled = spell
 
         guard let running = FocusStore.loadSession(from: defaults) ?? session else { return }
-        guard running.block.isWork, spell.leftAt < running.endsAt else { return }
+        // A paused block is one somebody stepped away from on purpose, so being
+        // away does not end it.
+        guard running.block.isWork, !running.isPaused, spell.leftAt < running.endsAt else { return }
         session = running
         end(running, at: spell.leftAt, completed: false)
     }

@@ -27,7 +27,7 @@ struct FocusTitleView: View {
     var body: some View {
         if let session = engine.session {
             HStack(spacing: 6) {
-                Text(session.block.label)
+                Text(session.isPaused ? "Paused" : session.block.label)
                     .foregroundStyle(theme.subtitleColor)
                 Text(FocusClock.text(session.secondsLeft(now: engine.now)))
                     .foregroundStyle(theme.textColor)
@@ -156,18 +156,31 @@ struct FocusDetailView: View {
 
     private func running(_ session: FocusSession) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                FocusRing(fraction: session.fractionDone(now: engine.now), tint: tint)
-                    .frame(width: 46, height: 46)
-                    // The ring is redrawn every second, so it must ease over
-                    // exactly one second or it arrives in steps you can see.
-                    .animation(.linear(duration: 1), value: session.fractionDone(now: engine.now))
-                Image(systemName: session.block.isWork ? "target" : "cup.and.saucer.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(tint)
-                    .transition(.scale(scale: 0.5).combined(with: .opacity))
-                    .id(session.block)
+            // The ring is the pause button. Pause and play in the middle of a
+            // progress ring is a control nobody has to be taught, and it costs
+            // the row no width: a third button beside Skip and Stop would not
+            // fit the panel with the longer captions.
+            Button {
+                session.isPaused ? engine.resume() : engine.pause()
+            } label: {
+                ZStack {
+                    FocusRing(fraction: session.fractionDone(now: engine.now), tint: tint)
+                        .frame(width: 46, height: 46)
+                        // The ring is redrawn every second, so it must ease over
+                        // exactly one second or it arrives in steps you can see.
+                        .animation(.linear(duration: 1), value: session.fractionDone(now: engine.now))
+                        .opacity(session.isPaused ? 0.45 : 1)
+                    Image(systemName: session.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(tint)
+                        .transition(.scale(scale: 0.5).combined(with: .opacity))
+                        .id(session.isPaused)
+                }
+                .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .help(session.isPaused ? "Resume" : "Pause")
+            .accessibilityLabel(session.isPaused ? "Resume" : "Pause")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(FocusClock.text(session.secondsLeft(now: engine.now)))
@@ -175,9 +188,9 @@ struct FocusDetailView: View {
                     .foregroundStyle(theme.textColor)
                     .monospacedDigit()
                     .rollingDigits()
-                Text(session.block.isWork
-                     ? "Long rest after \(engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)) more"
-                     : "Then back to work")
+                Text(FocusText.caption(
+                    session,
+                    worksUntilLongBreak: engine.plan.worksUntilLongBreak(finishedWorkBlocks: engine.tally.finishedWork)))
                     .font(.system(size: 9))
                     .foregroundStyle(theme.subtitleColor)
             }
@@ -307,5 +320,13 @@ package enum FocusClock {
         let total = max(0, seconds)
         if total < 3_600 { return String(format: "%d:%02d", total / 60, total % 60) }
         return String(format: "%d:%02d:%02d", total / 3_600, (total % 3_600) / 60, total % 60)
+    }
+}
+
+/// What the line under the clock says. Pure, so the checks can hold it.
+package enum FocusText {
+    package static func caption(_ session: FocusSession, worksUntilLongBreak: Int) -> String {
+        if session.isPaused { return "Paused" }
+        return session.block.isWork ? "Long rest after \(worksUntilLongBreak) more" : "Then back to work"
     }
 }

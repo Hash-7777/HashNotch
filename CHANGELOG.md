@@ -22,6 +22,12 @@ All notable changes to HashNotch are recorded here.
   off takes its figure out too, and they all stop while the Mac is locked or
   the screen is asleep. The same choices are under Settings → Menu bar.
 
+- **Focus can be paused, not only stopped.** Pause holds a stretch where it
+  stands: the clock and the ring stop, the alert is called off, and none of the
+  pause counts as time focused. Resume carries on with the end moved on by the
+  pause. A paused stretch survives a relaunch, and stepping away from one does
+  not end it, because pausing is stepping away on purpose.
+
 ### Fixed
 
 - **The opening window names every reading about the machine.** Its list of

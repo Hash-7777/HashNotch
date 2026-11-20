@@ -22,12 +22,49 @@ public struct FocusSession: Codable, Equatable {
     /// reason it was handed over — and a chime on the next launch would be a
     /// second alert for one block, arriving whenever the Mac was next opened.
     public let alertScheduled: Bool
+    /// When it was paused, or nil while it runs.
+    ///
+    /// A pause freezes the block where it stands: the time left, the ring and
+    /// the time served all read as they did at this moment, for as long as it
+    /// lasts. Resuming moves the start and the end on by the length of the
+    /// pause, so the block is exactly as long as it was set to be and none of
+    /// the pause counts as time spent focused.
+    public let pausedAt: Date?
 
-    public init(block: FocusBlock, startedAt: Date, endsAt: Date, alertScheduled: Bool = false) {
+    public init(
+        block: FocusBlock,
+        startedAt: Date,
+        endsAt: Date,
+        alertScheduled: Bool = false,
+        pausedAt: Date? = nil
+    ) {
         self.block = block
         self.startedAt = startedAt
         self.endsAt = endsAt
         self.alertScheduled = alertScheduled
+        self.pausedAt = pausedAt
+    }
+
+    public var isPaused: Bool { pausedAt != nil }
+
+    /// This block, paused at `moment`. The alert is handed back, because a
+    /// paused block must not go off at the end it no longer has.
+    public func paused(at moment: Date) -> FocusSession {
+        guard pausedAt == nil else { return self }
+        return FocusSession(
+            block: block, startedAt: startedAt, endsAt: endsAt,
+            alertScheduled: false, pausedAt: min(max(moment, startedAt), endsAt))
+    }
+
+    /// This block, running again from `moment`, with its start and end moved
+    /// on by however long it was paused.
+    public func resumed(at moment: Date) -> FocusSession {
+        guard let pausedAt else { return self }
+        let held = max(0, moment.timeIntervalSince(pausedAt))
+        return FocusSession(
+            block: block,
+            startedAt: startedAt.addingTimeInterval(held),
+            endsAt: endsAt.addingTimeInterval(held))
     }
 
     /// Read leniently, so a session written by a build without this field still
@@ -39,24 +76,31 @@ public struct FocusSession: Codable, Equatable {
         startedAt = try container.decode(Date.self, forKey: .startedAt)
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         alertScheduled = try container.decodeIfPresent(Bool.self, forKey: .alertScheduled) ?? false
+        pausedAt = try container.decodeIfPresent(Date.self, forKey: .pausedAt)
     }
 
     public var total: TimeInterval { max(0, endsAt.timeIntervalSince(startedAt)) }
 
+    /// The moment the block is measured at: now, or where it was paused.
+    private func measured(at now: Date) -> Date {
+        pausedAt.map { min($0, now) } ?? now
+    }
+
     public func secondsLeft(now: Date) -> Int {
-        max(0, Int(endsAt.timeIntervalSince(now).rounded(.up)))
+        max(0, Int(endsAt.timeIntervalSince(measured(at: now)).rounded(.up)))
     }
 
     public func fractionDone(now: Date) -> Double {
         guard total > 0 else { return 0 }
-        return min(1, max(0, now.timeIntervalSince(startedAt) / total))
+        return min(1, max(0, measured(at: now).timeIntervalSince(startedAt) / total))
     }
 
     /// How much of this block had actually been served by a given moment.
     /// Never more than the block is long, so a session found long after it was
-    /// due cannot credit a day with hours it did not have.
+    /// due cannot credit a day with hours it did not have — and never any of a
+    /// pause, which is not time spent on the block.
     public func servedSeconds(by moment: Date) -> TimeInterval {
-        min(total, max(0, moment.timeIntervalSince(startedAt)))
+        min(total, max(0, measured(at: moment).timeIntervalSince(startedAt)))
     }
 }
 
@@ -111,7 +155,9 @@ package enum FocusResumption: Equatable {
 
 package enum FocusResume {
     /// Whether a session found in storage is still running or has since ended.
+    /// A paused block is picked up as it was, however long ago it was paused:
+    /// it has not run out, because it has not been running.
     package static func decide(_ session: FocusSession, now: Date) -> FocusResumption {
-        now < session.endsAt ? .resume(session) : .ranOut(session)
+        session.isPaused || now < session.endsAt ? .resume(session) : .ranOut(session)
     }
 }

@@ -30,13 +30,14 @@ public final class FocusFeature: NotchFeature {
 
     public init() {}
 
-    /// The accent while work is running, and nothing at all during a rest.
+    /// The accent while work is running, and nothing at all during a rest or
+    /// a pause.
     ///
     /// A colour that is always on is decoration; the point of the edge is that
     /// it means something across a room, and what it means here is "you are
     /// meant to be working".
     public var outlineTint: Color? {
-        guard let session = engine.session, session.block.isWork else { return nil }
+        guard let session = engine.session, session.block.isWork, !session.isPaused else { return nil }
         return context?.theme.accent
     }
 

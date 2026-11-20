@@ -3442,6 +3442,36 @@ MainActor.assumeIsolated {
     check("and one that ran out while nobody watched is counted rather than picked up",
           FocusResume.decide(block, now: started.addingTimeInterval(2_000)) == .ranOut(block))
 
+    // A pause holds the block where it stands, and none of it counts.
+    let held = block.paused(at: started.addingTimeInterval(600))
+    let muchLater = started.addingTimeInterval(5_000)
+    check("a paused block keeps the time it had left, however long it is held",
+          held.secondsLeft(now: muchLater) == 900 && block.secondsLeft(now: started.addingTimeInterval(600)) == 900)
+    check("and its ring stands still",
+          held.fractionDone(now: muchLater) == block.fractionDone(now: started.addingTimeInterval(600)))
+    check("and none of the pause is counted as served",
+          Int(held.servedSeconds(by: muchLater)) == 600)
+    check("a paused block found after a relaunch is picked up, not counted as run out",
+          FocusResume.decide(held, now: started.addingTimeInterval(50_000)) == .resume(held))
+    check("pausing hands the alert back, since the old end no longer stands",
+          FocusSession(block: .work, startedAt: started, endsAt: started.addingTimeInterval(1_500), alertScheduled: true)
+            .paused(at: started.addingTimeInterval(10)).alertScheduled == false)
+    let carriedOn = held.resumed(at: started.addingTimeInterval(1_000))
+    check("resuming moves the end on by exactly the pause",
+          carriedOn.endsAt == block.endsAt.addingTimeInterval(400) && !carriedOn.isPaused)
+    check("so the block is as long as it was set to be, and picks up where it stopped",
+          carriedOn.total == block.total
+            && Int(carriedOn.servedSeconds(by: started.addingTimeInterval(1_000))) == 600)
+    check("pausing twice, or resuming a running block, changes nothing",
+          held.paused(at: muchLater) == held && block.resumed(at: muchLater) == block)
+    check("a paused block survives being written down and read back",
+          (try? JSONDecoder().decode(FocusSession.self, from: JSONEncoder().encode(held))) == held)
+    check("and one written before pausing existed reads as running",
+          (try? JSONDecoder().decode(FocusSession.self, from: Data(
+            #"{"block":"work","startedAt":0,"endsAt":1500}"#.utf8)))?.isPaused == false)
+    check("the line under the clock says it is paused",
+          FocusText.caption(held, worksUntilLongBreak: 3).hasPrefix("Paused"))
+
     // The tally. Two figures, and the refusals are still the point.
     let today = FocusTallyMath.day(of: started)
     let empty = FocusTally(day: today)
@@ -7387,16 +7417,32 @@ check(
 // nothing running there is one thing to notice — midnight — and the clock used
 // to tick every second all day for it, which is fifty-nine wakeups a minute
 // spent on a question whose answer changes once a day.
-@MainActor func focusClockIntervals() -> (idle: TimeInterval, running: TimeInterval, stopped: TimeInterval) {
+struct FocusClockRun {
+    var idle: TimeInterval = 0
+    var running: TimeInterval = 0
+    var paused: TimeInterval = 0
+    var heldWhilePaused = false
+    var resumed: TimeInterval = 0
+    var runningAfterResume = false
+    var stopped: TimeInterval = 0
+}
+@MainActor func focusClockIntervals() -> FocusClockRun {
+    var run = FocusClockRun()
     let engine = FocusEngine()
     engine.start(presence: LivePresence(), away: AwayReport(), defaults: InMemoryDefaults())
-    let idle = engine.clockInterval
+    run.idle = engine.clockInterval
     engine.begin(.work)
-    let running = engine.clockInterval
+    run.running = engine.clockInterval
+    engine.pause()
+    run.paused = engine.clockInterval
+    run.heldWhilePaused = engine.session?.isPaused == true
+    engine.resume()
+    run.resumed = engine.clockInterval
+    run.runningAfterResume = engine.session?.isPaused == false
     engine.giveUp()
-    let stopped = engine.clockInterval
+    run.stopped = engine.clockInterval
     engine.stop()
-    return (idle, running, stopped)
+    return run
 }
 let focusClock = MainActor.assumeIsolated { focusClockIntervals() }
 check("the focus clock ticks once a minute with nothing running",
@@ -7404,6 +7450,30 @@ check("the focus clock ticks once a minute with nothing running",
 check("once a second while a stretch runs", focusClock.running == FocusEngine.runningTick)
 check("and goes back to once a minute when it is stopped",
       focusClock.stopped == FocusEngine.idleTick)
+check("a paused stretch is held, and ticked once a minute like no stretch at all",
+      focusClock.heldWhilePaused && focusClock.paused == FocusEngine.idleTick)
+check("and resuming it counts by the second again",
+      focusClock.runningAfterResume && focusClock.resumed == FocusEngine.runningTick)
+
+// Stepping away ends a stretch that was running, which is what keeps the week
+// honest — and does not end one that was paused, because pausing IS stepping
+// away on purpose.
+@MainActor func awayEnds(paused: Bool) -> Bool {
+    let away = AwayReport()
+    let engine = FocusEngine()
+    engine.start(presence: LivePresence(), away: away, defaults: InMemoryDefaults())
+    engine.begin(.work)
+    if paused { engine.pause() }
+    let left = Date()
+    away.recordReturn(leftAt: left, returnedAt: left.addingTimeInterval(600))
+    let ended = engine.session == nil
+    engine.stop()
+    return ended
+}
+check("walking away from a running stretch ends it",
+      MainActor.assumeIsolated { awayEnds(paused: false) })
+check("walking away from a paused one leaves it paused",
+      MainActor.assumeIsolated { !awayEnds(paused: true) })
 
 // Asking the system what is using the microphone and the cameras costs 5.6 ms
 // and 0.8 ms on an M2, measured — and it is asked every two seconds for as long

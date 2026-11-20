@@ -72,7 +72,8 @@ macOS keeps where you put it in the same file, under a name beginning
 
 The focus cycle and the timer keep what they need to survive the screen
 sleeping and the app quitting, in the same place: the lengths you chose, the
-moment a running stretch or countdown ends, and — for focus — a short record of
+moment a running stretch or countdown ends — or, for a paused stretch, the
+moment it was paused — and, for focus, a short record of
 the last seven days, which is a date, the time you spent focused and how many
 rounds you finished, and nothing about what you were doing. That record is
 about you rather than the Mac, so the opening window names it, and Settings →
