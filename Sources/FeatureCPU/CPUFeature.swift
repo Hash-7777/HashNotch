@@ -31,6 +31,24 @@ public final class CPUFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
+    /// Load, on the menu bar's clock, while it is in the menu bar. The reader
+    /// takes its first counter reading as it is built, so its first tick has
+    /// something to measure the load over.
+    public var menuBarMeter: MenuBarMeter? {
+        MenuBarMeter(
+            id: id,
+            title: title,
+            summary: "How busy the processor is.",
+            label: "CPU",
+            glyph: .cpu,
+            widestText: "100%"
+        ) {
+            let tracker = CPULoadTracker()
+            _ = tracker.next()
+            return { tracker.next().map { MenuBarReading.share($0, title: "CPU") } }
+        }
+    }
+
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(CPUDetailView(
             monitor: monitor,

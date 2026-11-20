@@ -46,6 +46,27 @@ public final class ThermalFeature: NotchFeature {
     public func start(context: FeatureContext) { monitor.start(visibility: context.visibility, scale: context.settings.samplingScale) }
     public func stop() { monitor.stop() }
 
+    /// The panel's first temperature row — the processor, on every Mac that
+    /// names one — on the menu bar's clock, while it is in the menu bar. It
+    /// has its own sensor reader, so it never shares one with the panel's
+    /// queue.
+    public var menuBarMeter: MenuBarMeter? {
+        MenuBarMeter(
+            id: id,
+            title: title,
+            summary: "The processor's temperature, the first row the panel shows.",
+            label: "TEMP",
+            glyph: .temperature,
+            widestText: "100°"
+        ) {
+            let reader: ThermalSensorReader? = AppleSiliconThermal() ?? SMCThermal()
+            return {
+                guard let reader else { return nil }
+                return ThermalMonitor.menuBarReading(from: reader.read())
+            }
+        }
+    }
+
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(ThermalDetailView(
             monitor: monitor,

@@ -32,7 +32,7 @@ public final class FeatureContext {
     public let away: AwayReport
 
     /// Opens the customization window. The app wires this at launch; the
-    /// island's gear button calls it (there is no menu-bar item).
+    /// island's gear button calls it.
     public var openSettings: () -> Void = {}
 
     /// Opens the customization window ON a particular page.

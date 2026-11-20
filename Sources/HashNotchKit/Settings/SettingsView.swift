@@ -10,17 +10,21 @@ public struct FeatureDescriptor: Identifiable {
     public let options: [FeatureOption]
     /// A page of this feature's own settings, if it has one.
     public let page: FeatureSettingsPage?
+    /// The figure it can put in the menu bar, if it has one.
+    public let menuBar: MenuBarMeter?
 
     public init(
         id: String,
         title: String,
         options: [FeatureOption],
-        page: FeatureSettingsPage? = nil
+        page: FeatureSettingsPage? = nil,
+        menuBar: MenuBarMeter? = nil
     ) {
         self.id = id
         self.title = title
         self.options = options
         self.page = page
+        self.menuBar = menuBar
     }
 }
 
@@ -67,7 +71,7 @@ public struct SettingsView: View {
     @State private var hoveredRow: String?
 
     package enum Section: String, CaseIterable, Identifiable {
-        case general, indicators, appearance, position, privacy
+        case general, indicators, menuBar, appearance, position, privacy
         /// A page a FEATURE supplies. Deliberately unnamed here: the tab's
         /// words and its symbol come from the feature, because the core does
         /// not know what any feature does and should not start now.
@@ -78,6 +82,7 @@ public struct SettingsView: View {
             switch self {
             case .general: return "General"
             case .indicators: return "Indicators"
+            case .menuBar: return "Menu bar"
             case .appearance: return "Appearance"
             case .position: return "Position"
             case .privacy: return "Privacy"
@@ -89,6 +94,7 @@ public struct SettingsView: View {
             switch self {
             case .general: return "gearshape.fill"
             case .indicators: return "square.stack.3d.up.fill"
+            case .menuBar: return "menubar.rectangle"
             case .appearance: return "paintbrush.fill"
             case .position: return "arrow.up.and.down.and.arrow.left.and.right"
             case .privacy: return "lock.shield.fill"
@@ -372,6 +378,7 @@ public struct SettingsView: View {
         switch section {
         case .general: general
         case .indicators: indicators
+        case .menuBar: menuBarPage
         case .appearance: appearance
         case .position: position
         case .privacy: privacy
@@ -587,6 +594,76 @@ public struct SettingsView: View {
         }
         // And a drag abandoned by closing the page cannot outlive the page.
         .onDisappear { dragging = nil }
+    }
+
+    /// The figures that can go in the menu bar, one switch each, and how often
+    /// they are read. The same choices the menu bar item's own popover offers;
+    /// both are bound to the same store, so they cannot disagree.
+    ///
+    /// A figure belongs to its indicator, so a figure whose indicator is off
+    /// shows its switch off and greyed, and says where to turn it on — rather
+    /// than a switch that can be turned on and then does nothing.
+    private var menuBarPage: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            PageHeader(
+                "Menu bar",
+                detail: "Small live figures in one place beside the clock. Click it for more."
+            )
+
+            SettingCard {
+                ForEach(Array(menuBarDescriptors.enumerated()), id: \.element.id) { index, feature in
+                    if index > 0 { SettingDivider() }
+                    SettingRow(feature.title, detail: menuBarDetail(feature)) {
+                        SettingSwitch(isOn: menuBarBinding(feature.id))
+                            .disabled(!settings.isEnabled(feature.id))
+                    }
+                }
+            }
+
+            SettingSection("Refresh") {
+                SettingRow(
+                    "Read the figures",
+                    detail: MenuBarWording.refreshDetail(
+                        refresh: settings.menuBarRefresh, batterySaver: settings.batterySaver),
+                    stacked: true
+                ) {
+                    Picker("", selection: $settings.menuBarRefresh) {
+                        ForEach(MenuBarRefresh.allCases, id: \.self) { refresh in
+                            Text(refresh.label).tag(refresh)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 200)
+                }
+            }
+
+            Text("Hold Command and drag it to move it.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// In the same order as the Indicators page, so the two lists agree.
+    private var menuBarDescriptors: [FeatureDescriptor] {
+        orderedDescriptors.filter { $0.menuBar != nil }
+    }
+
+    private func menuBarDetail(_ feature: FeatureDescriptor) -> String {
+        guard let meter = feature.menuBar else { return "" }
+        guard settings.isEnabled(feature.id) else {
+            return "The \(feature.title) indicator is off. Switch it on under Indicators to show this."
+        }
+        return meter.summary
+    }
+
+    private func menuBarBinding(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { settings.isEnabled(id) && settings.isInMenuBar(id) },
+            set: { settings.setInMenuBar(id, $0) }
+        )
     }
 
     /// Descriptors in the user's chosen order. Ties break on id so two features

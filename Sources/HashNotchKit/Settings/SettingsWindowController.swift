@@ -85,7 +85,8 @@ public final class SettingsWindowController {
                 id: $0.id,
                 title: $0.title,
                 options: $0.displayOptions,
-                page: $0.makeSettingsPage(context: context)
+                page: $0.makeSettingsPage(context: context),
+                menuBar: $0.menuBarMeter
             )
         }
     }

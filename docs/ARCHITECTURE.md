@@ -139,7 +139,8 @@ open.
 Low-power behavior also lives in the core: `PollingSampler` uses tolerant,
 coalesced timers; monitors publish only when a displayed value actually changes;
 `VisibleSampler` keeps panel-only readouts idle until the panel is open; and
-`PowerCoordinator` stops all sampling while the screen is asleep.
+`PowerCoordinator` stops all sampling while the screen is asleep — the menu
+bar's figures included.
 
 ## Customization (settings)
 
@@ -150,7 +151,8 @@ User choices live in `SettingsStore` (in `HashNotchKit`), persisted to
 - each feature's chosen display style,
 - appearance (accent, panel fill, corner rounding, motion) and alert length,
 - battery saver, which scales every sampling interval,
-- the per-display `IslandAdjustment`, and
+- the per-display `IslandAdjustment`,
+- which figures are in the menu bar, and how often they are read, and
 - open-at-login.
 
 "Enabled" governs whether a feature **runs**, not merely whether it is drawn.
@@ -171,9 +173,34 @@ more — see `BatteryStyle`, which lost "Icon only" for exactly that reason. A
 stored choice that no longer exists falls back to the feature's default rather
 than failing.
 
-There is no menu-bar item: `SettingsView` is reached through the gear button in
-the expanded panel (`FeatureContext.openSettings`), and it is also where the app
-is quit.
+`SettingsView` is reached through the gear button in the expanded panel
+(`FeatureContext.openSettings`), and it is also where the app is quit. A
+menu bar item's popover offers the way in too.
+
+## Figures in the menu bar
+
+A feature may offer one figure for the menu bar by returning a `MenuBarMeter`
+from `menuBarMeter`: a name, the word shown above its number, a glyph for the
+popover, the widest thing it can say, and a way to build a reader. Processor,
+graphics, memory and temperature do. Nothing is put there until somebody
+switches a figure on, in Settings → Menu bar or in the item's popover.
+
+A figure is NOT a second view of the panel's monitor. The panel's readouts
+sample only while the panel is open; a figure is on screen all day, so it has
+its own reader, and runs only while it is shown. `MenuBarController` puts every
+chosen figure in ONE `NSStatusItem` (`StatusBarItem`) and reads them all on one
+clock, on one utility queue — never the main thread — at the rate chosen in
+`MenuBarRefresh`. One item rather than one each, because each item is a place
+macOS arranges on its own terms, and on a notched display the ones that do not
+fit beside the notch are hidden behind it. Which figures run is one pure rule,
+`MenuBarPlan.wanted`: consent given, screen on, the figure switched on, and its
+indicator switched on. With nothing wanted there is no item and no clock.
+
+The item is one image: a small word above each number, in the bar's own text
+colours, red only where the panel would be red. Its width depends on which
+figures are shown, never on what they say. The popover (`MenuBarPopoverView`)
+is built when it opens and let go when it closes, so nothing keeps a view up to
+date while it is shut.
 
 ## Adding a feature
 

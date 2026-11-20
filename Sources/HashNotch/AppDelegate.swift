@@ -3,8 +3,9 @@ import Combine
 import HashNotchKit
 
 /// Boots the HUD: builds the registry from the manifest, loads settings, starts
-/// the features, and shows the notch overlay. There is no menu-bar item — the
-/// panel's gear button is the way into settings.
+/// the features, and shows the notch overlay. The panel's gear button is the
+/// way into settings; the menu bar holds nothing unless somebody puts figures
+/// there, and each of those offers the way in as well.
 /// Deliberately thin — all behavior lives in the core and the feature modules.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -28,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// again on the way out — see `forgetPreferences`.
     private var declined = false
     private var power: PowerCoordinator?
+    /// The figures somebody chose to put in the menu bar. None by default.
+    private var menuBar: MenuBarController?
     private var screenObserver: NSObjectProtocol?
     private var rebuildWork: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
@@ -36,8 +39,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // One island, or none. A second copy of this app does not add a second
         // app, it doubles the first: two overlays drawn on top of each other,
         // every alert appearing twice, and nothing on screen to say why —
-        // there is no Dock icon or menu-bar item to reveal that a copy is
-        // already up. See `SingleInstance`.
+        // there is no Dock icon, and usually no menu-bar item, to reveal that a
+        // copy is already up. See `SingleInstance`.
         //
         // Done before anything is built, so the copy that stands down has read
         // no settings, started no feature and put no window on screen.
@@ -69,7 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // No menu-bar item: the island's gear button is the settings entry.
+        // The island's gear button is the settings entry. The menu bar holds
+        // nothing of this app's unless somebody puts figures there.
         let settingsWindow = SettingsWindowController(
             settings: settings, registry: registry, context: context)
         // The gear opens settings beside the panel it was clicked from, and
@@ -91,8 +95,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Settings normally holds the panel open beside it, because it was
             // opened FROM that panel and leaving it to collapse would strand
             // the window next to nothing. An open asked for on the command line
-            // has no panel behind it to belong to, so it skips the pin and
-            // appears on its own.
+            // or from a figure in the menu bar has no panel behind it to belong
+            // to, so it skips the pin and appears on its own.
             if visible, self.opensSettingsAlone {
                 self.opensSettingsAlone = false
                 return
@@ -131,6 +135,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             concealed ? self?.controller?.hide() : self?.controller?.show()
         }
         power.begin()
+
+        // Figures in the menu bar, for the indicators that offer one, in one
+        // item. Nothing is put there until somebody switches a figure on,
+        // nothing is read before consent, and a figure goes when its indicator
+        // is switched off — `MenuBarPlan.wanted` is the whole rule. They stop
+        // with the screen, like every indicator, which the coordinator says
+        // once it has put the indicators down.
+        let meters = MenuBarPlan.arranged(registry.features.compactMap(\.menuBarMeter))
+        let menuBar = MenuBarController(
+            settings: settings,
+            meters: meters,
+            makeItem: { [weak self] state in
+                StatusBarItem(
+                    settings: settings,
+                    state: state,
+                    meters: meters,
+                    onSettings: { self?.openSettingsAlone(at: "menuBar") }
+                )
+            }
+        )
+        power.onPaused = { [weak menuBar] paused in menuBar?.setPaused(paused) }
+        menuBar.begin()
+        self.menuBar = menuBar
 
         self.registry = registry
         self.context = context
@@ -384,6 +411,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Open settings ON a page, for when the island has named a switch.
+    /// Settings on its own, without the panel opened behind it — for a way in
+    /// that does not start from the panel, such as a figure in the menu bar.
+    private func openSettingsAlone(at page: String) {
+        guard settingsWindow?.isVisible != true else {
+            openSettings(at: page)
+            return
+        }
+        opensSettingsAlone = true
+        openSettings(at: page)
+    }
+
     private func openSettings(at page: String) {
         guard let controller, let settingsWindow else { return }
         settingsWindow.show(
@@ -515,6 +553,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.removeObserver(screenObserver)
         }
         power?.end()
+        menuBar?.stopAll()
         registry?.stopAll()
     }
 }

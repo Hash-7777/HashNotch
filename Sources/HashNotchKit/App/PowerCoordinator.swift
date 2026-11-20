@@ -52,6 +52,12 @@ public final class PowerCoordinator {
     /// because the coordinator deliberately knows nothing about windows.
     public var onConcealed: (Bool) -> Void = { _ in }
 
+    /// Called with `true` when sampling stops because nobody can see the
+    /// screen, and `false` when it starts again. For what the registry does not
+    /// hold — the figures in the menu bar — so they stop and start with every
+    /// indicator rather than on a rule of their own.
+    public var onPaused: (Bool) -> Void = { _ in }
+
     public init(registry: FeatureRegistry, context: FeatureContext) {
         self.registry = registry
         self.context = context
@@ -111,6 +117,7 @@ public final class PowerCoordinator {
         reportWork = nil
         leftAt = snapshot()
         registry.suspendAll()
+        onPaused(true)
     }
 
     private func resume() {
@@ -125,6 +132,7 @@ public final class PowerCoordinator {
             context.away.recordReturn(leftAt: before.at, returnedAt: Date())
         }
         registry.resumeAll(context: context)
+        onPaused(false)
         // Not immediately. The monitors have just been restarted, and not all of
         // them answer straight away: the network total and the battery are read
         // synchronously as they start, but the token count is done off the main

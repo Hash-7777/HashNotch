@@ -9,8 +9,8 @@ import AppKit
 /// everything twice.
 ///
 /// A second copy is easier to end up with than it sounds. The app has no Dock
-/// icon and no menu-bar item, so there is nothing on screen to say it is
-/// already running: a build folder copy and an Applications copy are two
+/// icon, and no menu-bar item unless somebody puts figures there, so there is
+/// usually nothing on screen to say it is already running: a build folder copy and an Applications copy are two
 /// different files as far as Launch Services is concerned, and opening either
 /// while the other is up starts a second one. Nothing about the result looks
 /// like two apps.

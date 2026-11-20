@@ -3705,8 +3705,8 @@ MainActor.assumeIsolated {
     // one slider behind a tab — and every tab is a place taken from the strip
     // in a window narrowed to fit beside the panel.
     check(
-        "the window's own pages are General, Indicators, Appearance, Position and Privacy",
-        SettingsTabs.allTitles(features: []) == ["General", "Indicators", "Appearance", "Position", "Privacy"]
+        "the window's own pages are General, Indicators, Menu bar, Appearance, Position and Privacy",
+        SettingsTabs.allTitles(features: []) == ["General", "Indicators", "Menu bar", "Appearance", "Position", "Privacy"]
     )
     check(
         "a strip with no tabs in it asks for no room",
@@ -6480,6 +6480,314 @@ MainActor.assumeIsolated {
     check(
         "stopping drops the reading and the graph",
         monitor.load == nil && monitor.history.isEmpty && monitor.isAvailable
+    )
+}
+
+// MARK: - Figures in the menu bar
+
+// The wording. A figure is a whole percentage or whole degrees.
+check("a share is a whole percentage in the menu bar", MenuBarText.percent(0.234) == "23%")
+check("a share past the whole is held at it", MenuBarText.percent(1.2) == "100%")
+check(
+    "a share below nothing, or not a number, reads zero rather than nonsense",
+    MenuBarText.percent(-0.5) == "0%" && MenuBarText.percent(.nan) == "0%"
+)
+check("a temperature is whole degrees", MenuBarText.degrees(51.6) == "52°")
+check(
+    "a share turns high where the panel turns the same figure red",
+    MenuBarReading.share(0.9, title: "CPU").isHigh && !MenuBarReading.share(0.89, title: "CPU").isHigh
+)
+check("and is read aloud with its name", MenuBarReading.share(0.5, title: "GPU").spoken == "GPU 50%")
+check(
+    "a temperature turns high at the point it names",
+    MenuBarReading.temperature(80, title: "Processor", dangerAt: 80).isHigh
+        && !MenuBarReading.temperature(79.4, title: "Processor", dangerAt: 80).isHigh
+)
+check(
+    "the menu bar's temperature is the panel's first row, by its name",
+    ThermalMonitor.menuBarReading(from: [("gas gauge battery", 31), ("PMU tdie3", 51.4)])
+        == MenuBarReading(text: "51°", spoken: "Processor 51°", isHigh: false)
+)
+check(
+    "and with no sensors there is no figure rather than a zero",
+    ThermalMonitor.menuBarReading(from: []) == nil
+)
+check(
+    "the processor figure needs two readings, like the panel's",
+    {
+        var ticks = [CPUTicks(busy: 100, idle: 100), CPUTicks(busy: 150, idle: 150)]
+        let tracker = CPULoadTracker(read: { ticks.isEmpty ? nil : ticks.removeFirst() })
+        return tracker.next() == nil && tracker.next() == 0.5
+    }()
+)
+
+// The refresh. Two seconds unless somebody chooses otherwise, and battery saver
+// doubles it like every other reading in the app.
+check("the menu bar refreshes every two seconds by default", MenuBarRefresh.default.seconds == 2)
+check(
+    "every refresh on offer is a whole number of seconds, fastest first",
+    MenuBarRefresh.allCases.map(\.seconds) == [1, 2, 3, 5, 10]
+)
+check(
+    "battery saver doubles the refresh",
+    MenuBarPlan.interval(refresh: .twoSeconds, samplingScale: 2) == 4
+        && MenuBarPlan.interval(refresh: .fiveSeconds, samplingScale: 1) == 5
+)
+check(
+    "the preferences name the rate the clock actually runs at",
+    MenuBarWording.refreshDetail(refresh: .twoSeconds, batterySaver: true).hasPrefix("Read every 4 seconds")
+        && MenuBarWording.refreshDetail(refresh: .oneSecond, batterySaver: false).hasPrefix("Read every second")
+)
+
+// The rule for what runs. Every condition is held on its own, so a figure
+// cannot be found running for a reason the rule does not give.
+let allMeters = ["cpu", "gpu", "memory", "thermal"]
+check(
+    "nothing runs in the menu bar before consent",
+    MenuBarPlan.wanted(meters: allMeters, shown: Set(allMeters), isEnabled: { _ in true },
+                       hasConsent: false, isPaused: false).isEmpty
+)
+check(
+    "nothing runs while the screen is away",
+    MenuBarPlan.wanted(meters: allMeters, shown: Set(allMeters), isEnabled: { _ in true },
+                       hasConsent: true, isPaused: true).isEmpty
+)
+check(
+    "a figure whose indicator is off is not shown, even if it was put there",
+    MenuBarPlan.wanted(meters: allMeters, shown: ["cpu", "gpu"], isEnabled: { $0 != "gpu" },
+                       hasConsent: true, isPaused: false) == ["cpu"]
+)
+check(
+    "only figures somebody put there are shown, in the order they are offered",
+    MenuBarPlan.wanted(meters: allMeters, shown: ["thermal", "cpu"], isEnabled: { _ in true },
+                       hasConsent: true, isPaused: false) == ["cpu", "thermal"]
+)
+
+// The glyphs, held the way the panel's marks are: inside their box, solid,
+// and no two the same.
+let glyphBox = CGRect(x: 0, y: 0, width: 100, height: 100)
+check(
+    "every menu bar glyph draws something, inside its box",
+    MenuBarGlyph.allCases.allSatisfy { glyph in
+        let pieces = glyph.pieces(in: glyphBox)
+        let bounds = pieces.reduce(CGRect.null) { $0.union($1.path.boundingBox) }
+        return !pieces.isEmpty && bounds.minX >= 0 && bounds.minY >= 0
+            && bounds.maxX <= 100 && bounds.maxY <= 100
+    }
+)
+// In its long direction, that is: a thermometer is tall and thin, and one
+// stretched to fill the square would stop being a thermometer.
+check(
+    "every menu bar glyph fills its box in its long direction",
+    MenuBarGlyph.allCases.allSatisfy { glyph in
+        let bounds = glyph.pieces(in: glyphBox).reduce(CGRect.null) { $0.union($1.path.boundingBox) }
+        return max(bounds.width, bounds.height) >= 85 && min(bounds.width, bounds.height) >= 40
+    }
+)
+check(
+    "no two menu bar glyphs are the same drawing",
+    Set(MenuBarGlyph.allCases.map { glyph in
+        glyph.pieces(in: glyphBox).map { "\($0.path)|\($0.evenOdd)" }.joined(separator: ";")
+    }).count == MenuBarGlyph.allCases.count
+)
+check(
+    "a glyph drawn in a smaller box is the same drawing, smaller",
+    MenuBarGlyph.allCases.allSatisfy { glyph in
+        let big = glyph.pieces(in: glyphBox).reduce(CGRect.null) { $0.union($1.path.boundingBox) }
+        let small = glyph.pieces(in: CGRect(x: 10, y: 20, width: 50, height: 50))
+            .reduce(CGRect.null) { $0.union($1.path.boundingBox) }
+        return abs(small.width * 2 - big.width) < 0.01 && abs(small.minX - (10 + big.minX / 2)) < 0.01
+    }
+)
+
+// The item's picture.
+check(
+    "the item's width depends on which figures it shows, never on what they say",
+    {
+        let meter = MenuBarMeter(id: "cpu", title: "CPU", summary: "", label: "CPU", glyph: .cpu, widestText: "100%",
+                                 makeReader: { { nil } })
+        let low = StatusBarItem.image(for: [MenuBarFigure(meter: meter, reading: .share(0.05, title: "CPU"))], height: 22)
+        let full = StatusBarItem.image(for: [MenuBarFigure(meter: meter, reading: .share(1, title: "CPU"))], height: 22)
+        let none = StatusBarItem.image(for: [MenuBarFigure(meter: meter, reading: nil)], height: 22)
+        return low.size == full.size && full.size == none.size
+    }()
+)
+check(
+    "three figures take less room than a hundred points",
+    StatusBarItem.width(columns: [("100%", "CPU"), ("100%", "GPU"), ("100°", "TEMP")]) < 100
+)
+check(
+    "a word and a number fit one above the other in the menu bar",
+    StatusBarItem.stackHeight <= 22
+)
+check(
+    "every word above a number is no wider than the number's column needs",
+    ["CPU", "GPU", "MEM", "TEMP"].allSatisfy {
+        StatusBarItem.labelWidth($0) <= StatusBarItem.columnWidth(widest: "100%", label: "")
+    }
+)
+check(
+    "and the picture actually draws, rather than an empty strip",
+    {
+        let meter = MenuBarMeter(id: "gpu", title: "GPU", summary: "", label: "GPU", glyph: .gpu, widestText: "100%",
+                                 makeReader: { { nil } })
+        let image = StatusBarItem.image(for: [MenuBarFigure(meter: meter, reading: .share(0.42, title: "GPU"))], height: 22)
+        let w = Int(image.size.width * 2), h = 44
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return false }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        image.draw(in: NSRect(x: 0, y: 0, width: w, height: h))
+        NSGraphicsContext.restoreGraphicsState()
+        var inked = 0
+        for x in 0..<w { for y in 0..<h where (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { inked += 1 } }
+        return inked > 60 && inked < w * h / 2
+    }()
+)
+
+MainActor.assumeIsolated {
+    let offered: [NotchFeature] = [CPUFeature(), GPUFeature(), MemoryFeature(), ThermalFeature()]
+    let meters = offered.compactMap(\.menuBarMeter)
+    check(
+        "processor, graphics, memory and temperature each offer a figure under their own id",
+        meters.map(\.id) == ["cpu", "gpu", "memory", "thermal"]
+    )
+    check(
+        "they stand left to right as processor, graphics, memory, temperature, whatever order they come in",
+        MenuBarPlan.arranged(meters.reversed()).map(\.id) == ["cpu", "gpu", "memory", "thermal"]
+    )
+    check(
+        "each is named in the menu bar by a word, not a picture",
+        meters.map(\.label) == ["CPU", "GPU", "MEM", "TEMP"]
+    )
+    check(
+        "an indicator with nothing to put there offers nothing",
+        BatteryFeature().menuBarMeter == nil && StorageFeature().menuBarMeter == nil
+    )
+    check(
+        "every figure's column is sized for the widest thing it can say",
+        meters.allSatisfy { $0.widestText.count >= MenuBarText.percent(1).count }
+            && MenuBarText.degrees(105).count <= "100°".count
+    )
+
+    // What is stored. None by default, on a fresh install and on an update.
+    let fresh = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())
+    check("a fresh install puts nothing in the menu bar", fresh.menuBarFigures.isEmpty)
+    check("and would read it every two seconds", fresh.menuBarRefresh == .twoSeconds)
+    fresh.setInMenuBar("gpu", true)
+    fresh.setInMenuBar("cpu", true)
+    fresh.setInMenuBar("cpu", true)
+    check("figures are kept sorted and never twice", fresh.menuBarFigures == ["cpu", "gpu"])
+    fresh.setInMenuBar("gpu", false)
+    check("and taking one out leaves the rest", fresh.menuBarFigures == ["cpu"])
+
+    let kept = InMemoryDefaults()
+    let writer = SettingsStore(defaults: kept, legacyDefaults: InMemoryDefaults())
+    writer.setInMenuBar("thermal", true)
+    writer.menuBarRefresh = .fiveSeconds
+    writer.flush()
+    let reader = SettingsStore(defaults: kept, legacyDefaults: InMemoryDefaults())
+    check(
+        "the figures and the refresh survive a relaunch",
+        reader.menuBarFigures == ["thermal"] && reader.menuBarRefresh == .fiveSeconds
+    )
+    let older = InMemoryDefaults()
+    older.set(Data(#"{"features":{},"launchAtLogin":false}"#.utf8), forKey: "hashnotch.settings.v3")
+    let updated = SettingsStore(defaults: older, legacyDefaults: InMemoryDefaults())
+    check(
+        "a document from before the menu bar had figures loads with none in it",
+        !updated.isFirstRun && updated.menuBarFigures.isEmpty && updated.menuBarRefresh == .twoSeconds
+    )
+    reader.resetAll(features: [])
+    check(
+        "resetting everything empties the menu bar and puts the refresh back",
+        reader.menuBarFigures.isEmpty && reader.menuBarRefresh == .twoSeconds
+    )
+
+    // The controller, against a menu bar that records instead of drawing.
+    final class Calls: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = 0
+        func bump() { lock.lock(); value += 1; lock.unlock() }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return value }
+    }
+    final class FakeItem: MenuBarItem {
+        var removed = false
+        var shown: [[MenuBarFigure]] = []
+        func display(_ figures: [MenuBarFigure]) { shown.append(figures) }
+        func remove() { removed = true }
+    }
+    let reads = Calls()
+    let fakeMeters = ["cpu", "gpu"].map { id in
+        MenuBarMeter(id: id, title: id, summary: "", label: "CPU", glyph: .cpu, widestText: "100%",
+                     makeReader: { { reads.bump(); return MenuBarReading.share(0.1, title: id) } })
+    }
+    var made: [FakeItem] = []
+    let store = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())
+    store.seed(features: [CPUFeature(), GPUFeature()])
+    store.hasAcceptedReading = false
+    store.menuBarRefresh = .oneSecond
+    store.setInMenuBar("cpu", true)
+    store.setInMenuBar("gpu", true)
+    let controller = MenuBarController(settings: store, meters: fakeMeters, makeItem: { _ in
+        let item = FakeItem(); made.append(item); return item
+    })
+    controller.sync()
+    check("before consent, nothing is put in the menu bar", !controller.isShown && made.isEmpty)
+
+    store.hasAcceptedReading = true
+    controller.sync()
+    check(
+        "after it, ONE item is put there, holding both figures",
+        controller.isShown && made.count == 1 && controller.runningIDs == ["cpu", "gpu"]
+    )
+    check(
+        "and it starts as dashes rather than empty",
+        made.first?.shown.first?.map(\.text) == ["—", "—"]
+    )
+    // The first reading is due half a second in, with a tenth of the interval
+    // of slack; this waits more than twice that.
+    Thread.sleep(forTimeInterval: 1.2)
+    check("the readers run, off the main thread", reads.count >= 2)
+
+    store.update("gpu") { $0.enabled = false }
+    controller.sync()
+    check(
+        "switching one indicator off takes its figure out and keeps the item",
+        controller.runningIDs == ["cpu"] && made.count == 1 && made.first?.removed == false
+    )
+
+    store.update("cpu") { $0.enabled = false }
+    controller.sync()
+    let afterOff = reads.count
+    Thread.sleep(forTimeInterval: 1.5)
+    check(
+        "switching the last one off takes the item out and stops the reading",
+        !controller.isShown && made.first?.removed == true && reads.count == afterOff
+    )
+
+    store.update("cpu") { $0.enabled = true }
+    controller.sync()
+    check("switching it back on brings an item back", controller.isShown && made.count == 2)
+
+    controller.setPaused(true)
+    let afterPause = reads.count
+    Thread.sleep(forTimeInterval: 1.5)
+    check(
+        "the screen going away takes it out and stops the reading",
+        !controller.isShown && made.count > 1 && made[1].removed && reads.count == afterPause
+    )
+    controller.setPaused(false)
+    check("and it comes back with the screen", controller.isShown && controller.runningIDs == ["cpu"])
+
+    store.setInMenuBar("cpu", false)
+    controller.sync()
+    check(
+        "taking the last figure out stops it",
+        !controller.isShown && made.count > 2 && made[2].removed
     )
 }
 

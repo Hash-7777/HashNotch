@@ -38,6 +38,20 @@ public final class MemoryFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
+    /// The share in use, on the menu bar's clock, while it is in the menu bar.
+    public var menuBarMeter: MenuBarMeter? {
+        MenuBarMeter(
+            id: id,
+            title: title,
+            summary: "How much of the memory is in use.",
+            label: "MEM",
+            glyph: .memory,
+            widestText: "100%"
+        ) {
+            { MemoryReader.read().map { MenuBarReading.share($0.fraction, title: "Memory") } }
+        }
+    }
+
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(MemoryDetailView(
             monitor: monitor,

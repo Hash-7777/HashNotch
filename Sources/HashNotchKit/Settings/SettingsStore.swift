@@ -253,6 +253,11 @@ private struct SettingsDocument: Codable {
     var adjustments: [String: IslandAdjustment]?
     /// Which music services may be asked for a cover. Absent means all of them.
     var artworkServices: [String: Bool]?
+    /// Which figures are in the menu bar, by feature id. Absent in a document
+    /// written before the menu bar had any, which is none of them.
+    var menuBarFigures: [String]?
+    /// How often the figures in the menu bar are read.
+    var menuBarRefresh: MenuBarRefresh?
     /// Whether the user has seen what the indicators read and agreed to it.
     /// Optional because documents written before this existed have no opinion,
     /// and those are installs that already made their choices — they are read
@@ -391,6 +396,29 @@ public final class SettingsStore: ObservableObject {
     /// saved document written before it existed has no opinion about it.
     @Published public var artworkServices: [String: Bool] = [:]
 
+    /// Which figures are in the menu bar, by feature id, kept sorted.
+    ///
+    /// None on a fresh install, and none on an update. The menu bar belongs to
+    /// every app on the Mac, and taking a place in it is something somebody
+    /// asks for — never something an update does to them.
+    @Published public var menuBarFigures: [String] = []
+
+    /// How often the figures in the menu bar are read. See `MenuBarRefresh`.
+    @Published public var menuBarRefresh: MenuBarRefresh = .default
+
+    public func isInMenuBar(_ id: String) -> Bool {
+        menuBarFigures.contains(id)
+    }
+
+    /// Put a figure in the menu bar or take it out. Kept sorted and without
+    /// repeats, so the stored list is the same whatever order it was built in.
+    public func setInMenuBar(_ id: String, _ shown: Bool) {
+        var figures = Set(menuBarFigures)
+        if shown { figures.insert(id) } else { figures.remove(id) }
+        let sorted = figures.sorted()
+        if sorted != menuBarFigures { menuBarFigures = sorted }
+    }
+
     public func isArtworkEnabled(_ service: ArtworkService) -> Bool {
         artworkServices[service.settingKey] ?? true
     }
@@ -500,6 +528,8 @@ public final class SettingsStore: ObservableObject {
             self.networkAppsExpanded = document.networkAppsExpanded ?? SettingsStore.defaultNetworkAppsExpanded
             self.adjustments = (document.adjustments ?? [:]).mapValues(\.clamped)
             self.artworkServices = document.artworkServices ?? [:]
+            self.menuBarFigures = Array(Set(document.menuBarFigures ?? [])).sorted()
+            self.menuBarRefresh = document.menuBarRefresh ?? .default
             self.isFirstRun = false
             // Absent in a document written before this existed, which is
             // exactly an install that predates the question — and one that
@@ -627,6 +657,8 @@ public final class SettingsStore: ObservableObject {
         canPressMediaKeys = false
         adjustments = [:]
         artworkServices = [:]
+        menuBarFigures = []
+        menuBarRefresh = .default
 
         var rebuilt: [String: FeatureConfig] = [:]
         for (index, descriptor) in descriptors.enumerated() {
@@ -676,6 +708,8 @@ public final class SettingsStore: ObservableObject {
             networkAppsExpanded: networkAppsExpanded,
             adjustments: adjustments,
             artworkServices: artworkServices,
+            menuBarFigures: menuBarFigures,
+            menuBarRefresh: menuBarRefresh,
             hasAcceptedReading: hasAcceptedReading
         )
         if let data = try? JSONEncoder().encode(document) {

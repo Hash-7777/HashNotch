@@ -137,6 +137,12 @@ public protocol NotchFeature: AnyObject {
     /// nothing beyond its switch. See `FeatureSettingsPage`.
     func makeSettingsPage(context: FeatureContext) -> FeatureSettingsPage?
 
+    /// A figure this feature can put in the menu bar, or nil (the default) for
+    /// one that has none. Offered, never shown on its own: it appears only once
+    /// somebody switches it on, and it runs only while its indicator is on as
+    /// well. See `MenuBarMeter`.
+    var menuBarMeter: MenuBarMeter? { get }
+
     /// Act on a sideways swipe over the open panel. Return `true` if this
     /// feature took it, `false` (the default) to let another feature try.
     ///
@@ -196,6 +202,7 @@ public extension NotchFeature {
     var outlineTint: Color? { nil }
     var outlineUrgency: Double { 0 }
     var awayFigure: AwayFigure? { nil }
+    var menuBarMeter: MenuBarMeter? { nil }
     func handleSwipe(_ direction: SwipeDirection) -> Bool { false }
 }
 

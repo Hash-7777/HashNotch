@@ -54,3 +54,26 @@ package enum CPUReader {
         return CPUTicks(busy: user &+ system &+ nice, idle: idle)
     }
 }
+
+/// Load from one reading to the next, for a reader that keeps its own clock.
+///
+/// Only ever used on the one queue that reads it, which is what makes it safe
+/// to hand across: it is never touched from two threads, so there is nothing
+/// for a lock to protect.
+package final class CPULoadTracker: @unchecked Sendable {
+    private var previous: CPUTicks?
+    private let read: () -> CPUTicks?
+
+    package init(read: @escaping () -> CPUTicks? = CPUReader.ticks) {
+        self.read = read
+    }
+
+    /// The load since the last call. Nil on the first, which has nothing to
+    /// compare with — the same rule as the panel's monitor.
+    package func next() -> Double? {
+        guard let now = read() else { return nil }
+        defer { previous = now }
+        guard let previous else { return nil }
+        return previous.load(to: now)
+    }
+}

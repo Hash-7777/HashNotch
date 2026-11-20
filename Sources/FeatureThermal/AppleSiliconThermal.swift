@@ -10,9 +10,10 @@ import Darwin
 /// This is a private-API path (fine for a local / open-source app, not for the
 /// Mac App Store). Sensor availability and naming vary by chip, so treat the
 /// values as indicative and verify on the target Mac.
-/// Confined to `ThermalMonitor`'s own serial queue, which is the only thing that
-/// ever touches it — the client handle is a raw pointer held outside ARC's view
-/// and must not be used from two threads at once.
+/// Confined to the one serial queue that owns it — `ThermalMonitor`'s, or the
+/// menu bar's for the figure there, each of which builds its own — and nothing
+/// else ever touches it: the client handle is a raw pointer held outside ARC's
+/// view and must not be used from two threads at once.
 final class AppleSiliconThermal: @unchecked Sendable {
     private typealias CreateFn = @convention(c) (CFAllocator?) -> UnsafeMutableRawPointer?
     private typealias SetMatchingFn = @convention(c) (UnsafeMutableRawPointer?, CFDictionary?) -> Void

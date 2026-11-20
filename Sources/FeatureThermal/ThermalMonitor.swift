@@ -154,6 +154,16 @@ public final class ThermalMonitor: ObservableObject {
         }
     }
 
+    /// What the menu bar says: the first row the panel would show, in whole
+    /// degrees, high at the panel's own point. Nil with no sensors to read.
+    package nonisolated static func menuBarReading(
+        from readings: [(name: String, celsius: Double)]
+    ) -> MenuBarReading? {
+        guard let first = grouped(readings).first else { return nil }
+        return MenuBarReading.temperature(
+            first.celsius, title: first.name, dangerAt: ThermalLevel.hotCelsius)
+    }
+
     /// The order the categories are shown in, biggest thing first.
     ///
     /// Not alphabetical and not by temperature: it reads down the machine, from

@@ -9,9 +9,18 @@ All notable changes to HashNotch are recorded here.
 - **Graphics: how busy the graphics processor is.** A new row beside the
   processor, as a number, a graph of the last half-minute, or both, from the
   graphics driver's own figure. It turns red at 90%, like every other full-scale
-  readout. It reads nothing while the panel is shut and asks for no permission.
-  A Mac whose driver does not publish the figure is shown as not reporting,
-  rather than as idle.
+  readout. With the panel shut it reads nothing, unless you put its figure in
+  the menu bar, and it asks for no permission. A Mac whose driver does not
+  publish the figure is shown as not reporting, rather than as idle.
+- **Figures in the menu bar, if you want them.** Processor, graphics, memory
+  and temperature can sit beside the clock as small live figures, a word above
+  each number, all in one compact item that keeps its width as the numbers
+  change. Click it for a popover with the figures larger, a switch for each, and
+  how often they refresh — every two seconds unless you choose one to ten. None
+  is there until you ask, and with none switched on nothing is read. A figure
+  turns red where the panel turns the same reading red. Switching an indicator
+  off takes its figure out too, and they all stop while the Mac is locked or
+  the screen is asleep. The same choices are under Settings → Menu bar.
 
 ### Fixed
 

@@ -99,7 +99,10 @@ Three things a feature must honour:
   feature that is switched off opens no files, runs no subprocess, and can
   trigger no permission prompt.
 - **Panel-only work belongs to the panel.** If a readout is only visible inside
-  the panel, sample it with `VisibleSampler` so it costs nothing while shut.
+  the panel, sample it with `VisibleSampler` so it costs nothing while shut. A
+  figure offered for the menu bar (`menuBarMeter`) is the one exception, and it
+  gets its own reader for exactly that reason: it is on screen all day, so it
+  is read on the menu bar's clock — but only while somebody has put it there.
 
 - **A display choice must change what somebody sees.** Anything in
   `displayOptions` has to produce a visibly different row, and a check holds the

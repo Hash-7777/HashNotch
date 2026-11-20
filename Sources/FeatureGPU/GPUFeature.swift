@@ -31,6 +31,20 @@ public final class GPUFeature: NotchFeature {
 
     public func stop() { monitor.stop() }
 
+    /// Load, on the menu bar's clock, while it is in the menu bar.
+    public var menuBarMeter: MenuBarMeter? {
+        MenuBarMeter(
+            id: id,
+            title: title,
+            summary: "How busy the graphics processor is.",
+            label: "GPU",
+            glyph: .gpu,
+            widestText: "100%"
+        ) {
+            { GPUReader.read().map { MenuBarReading.share($0, title: "GPU") } }
+        }
+    }
+
     public func makeExpandedView(context: FeatureContext) -> AnyView? {
         AnyView(GPUDetailView(
             monitor: monitor,
