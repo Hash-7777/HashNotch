@@ -182,8 +182,9 @@ menu bar item's panel offers the way in too.
 A feature may offer one figure for the menu bar by returning a `MenuBarMeter`
 from `menuBarMeter`: a name, the word shown above its number, a glyph for the
 panel, the widest thing it can say, and a way to build a reader. Processor,
-graphics, memory and temperature do. Nothing is put there until somebody
-switches a figure on, in Settings → Menu bar or in the item's panel.
+graphics, memory and temperature do. Processor, memory and temperature are
+shown to begin with (`SettingsStore.defaultMenuBarFigures`); each is switched
+on or off in Settings → Menu bar or in the item's panel.
 
 A figure is NOT a second view of the panel's monitor. The panel's readouts
 sample only while the panel is open; a figure is on screen all day, so it has

@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-1247%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1247 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1249%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1249 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -67,7 +67,7 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Graphics** — how busy the graphics processor is, as a number and a graph beside the processor's, read from the graphics driver's own figure.
 
-**In the menu bar, if you want them** — small live figures for the processor, graphics, memory and temperature, a word above each number, all in one compact item beside the clock. Click it for a glass panel with the same figures larger and the choices: which figures, and how often they refresh, every two seconds unless you pick another. With none switched on, nothing is read for it.
+**In the menu bar** — small live figures for the processor, graphics, memory and temperature, a word above each number, all in one compact item beside the clock. Click it for a glass panel with the same figures larger and the choices: which figures, and how often they refresh, every two seconds unless you pick another. Processor, memory and temperature are there from the start; switch any off, or GPU on. With none switched on, nothing is read for it.
 
 **Temperatures** — the real sensors inside your Mac, not an estimate. On Apple Silicon it reads the on-die sensors; on every other Mac it reads the System Management Controller, so an Intel MacBook gets real readings too.
 
@@ -95,7 +95,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 1247 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1249 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks
@@ -114,7 +114,7 @@ All checks passed.
 
 1. Download the disk image — `HashNotch-1.5.0.dmg` — from [Releases](https://github.com/Hash-7777/HashNotch/releases/latest) and open it. Drag **HashNotch** onto the **Applications** folder shown beside it, then eject the disk image.
 2. First launch, macOS says it cannot verify the developer. Click **Done**, then open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**. Once only.
-3. **Hover the notch.** No Dock icon, and nothing in the menu bar unless you put figures there — the notch is the whole interface. The gear beside it opens settings.
+3. **Hover the notch.** No Dock icon — the notch is the whole interface, with small live figures beside the clock. The gear beside the notch opens settings.
 
 ### Upgrading from Hash D Island
 

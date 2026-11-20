@@ -264,8 +264,10 @@ The same holds while your screen is asleep — all sampling stops until it wakes
 — and a feature you switched off does not quietly come back on wake. This is
 covered by the automated checks (`FeatureRegistry.syncRunning`).
 
-**Figures in the menu bar** follow the same rules. None is there until you
-switch it on, in **Settings → Menu bar** or the panel the item opens. They
+**Figures in the menu bar** follow the same rules. Processor, memory and
+temperature are there from the start, and nothing is read for them until the
+opening window is answered; each can be switched off, or GPU on, in
+**Settings → Menu bar** or the panel the item opens. They
 share one item and one clock, every two seconds unless you choose another rate
 from one second to ten, and twice that with battery saver on. Each reads
 exactly what its row in the table above reads, nothing more. With no figure

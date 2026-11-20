@@ -6727,20 +6727,29 @@ MainActor.assumeIsolated {
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
     )
 
-    // What is stored. None by default, on a fresh install and on an update.
+    // What is stored. Processor, memory and temperature by default, on a fresh
+    // install and on an update; switching them all off is kept.
     let fresh = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())
-    check("a fresh install puts nothing in the menu bar", fresh.menuBarFigures.isEmpty)
-    check("and would read it every two seconds", fresh.menuBarRefresh == .twoSeconds)
+    check(
+        "a fresh install shows processor, memory and temperature in the menu bar",
+        fresh.menuBarFigures == ["cpu", "memory", "thermal"]
+    )
+    check("and reads them every two seconds", fresh.menuBarRefresh == .twoSeconds)
+    check(
+        "but reads nothing for them before the opening window is answered",
+        !fresh.hasAcceptedReading
+            && MenuBarPlan.wanted(meters: allMeters, shown: Set(fresh.menuBarFigures), isEnabled: { _ in true },
+                                  hasConsent: fresh.hasAcceptedReading, isPaused: false).isEmpty
+    )
     fresh.setInMenuBar("gpu", true)
-    fresh.setInMenuBar("cpu", true)
-    fresh.setInMenuBar("cpu", true)
-    check("figures are kept sorted and never twice", fresh.menuBarFigures == ["cpu", "gpu"])
+    fresh.setInMenuBar("gpu", true)
+    check("figures are kept sorted and never twice", fresh.menuBarFigures == ["cpu", "gpu", "memory", "thermal"])
     fresh.setInMenuBar("gpu", false)
-    check("and taking one out leaves the rest", fresh.menuBarFigures == ["cpu"])
+    check("and taking one out leaves the rest", fresh.menuBarFigures == ["cpu", "memory", "thermal"])
 
     let kept = InMemoryDefaults()
     let writer = SettingsStore(defaults: kept, legacyDefaults: InMemoryDefaults())
-    writer.setInMenuBar("thermal", true)
+    ["cpu", "memory"].forEach { writer.setInMenuBar($0, false) }
     writer.menuBarRefresh = .fiveSeconds
     writer.flush()
     let reader = SettingsStore(defaults: kept, legacyDefaults: InMemoryDefaults())
@@ -6748,17 +6757,26 @@ MainActor.assumeIsolated {
         "the figures and the refresh survive a relaunch",
         reader.menuBarFigures == ["thermal"] && reader.menuBarRefresh == .fiveSeconds
     )
+    let emptied = InMemoryDefaults()
+    let switcher = SettingsStore(defaults: emptied, legacyDefaults: InMemoryDefaults())
+    ["cpu", "memory", "thermal"].forEach { switcher.setInMenuBar($0, false) }
+    switcher.flush()
+    check(
+        "switching every figure off is kept, rather than read as never chosen",
+        SettingsStore(defaults: emptied, legacyDefaults: InMemoryDefaults()).menuBarFigures.isEmpty
+    )
     let older = InMemoryDefaults()
     older.set(Data(#"{"features":{},"launchAtLogin":false}"#.utf8), forKey: "hashnotch.settings.v3")
     let updated = SettingsStore(defaults: older, legacyDefaults: InMemoryDefaults())
     check(
-        "a document from before the menu bar had figures loads with none in it",
-        !updated.isFirstRun && updated.menuBarFigures.isEmpty && updated.menuBarRefresh == .twoSeconds
+        "a document from before the menu bar had figures takes the default",
+        !updated.isFirstRun && updated.menuBarFigures == ["cpu", "memory", "thermal"]
+            && updated.menuBarRefresh == .twoSeconds
     )
     reader.resetAll(features: [])
     check(
-        "resetting everything empties the menu bar and puts the refresh back",
-        reader.menuBarFigures.isEmpty && reader.menuBarRefresh == .twoSeconds
+        "resetting everything puts the menu bar and its refresh back",
+        reader.menuBarFigures == ["cpu", "memory", "thermal"] && reader.menuBarRefresh == .twoSeconds
     )
 
     // The controller, against a menu bar that records instead of drawing.

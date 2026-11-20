@@ -16,8 +16,9 @@
 
 import AppKit
 
-// Run as an agent app: no Dock icon, no main window, and nothing in the menu
-// bar unless somebody puts figures there — just the notch overlay. `.accessory` keeps it out of the Dock and app switcher.
+// Run as an agent app: no Dock icon and no main window — the notch overlay,
+// and the figures in the menu bar. `.accessory` keeps it out of the Dock and
+// the app switcher.
 // The program starts on the main thread, so we assume main-actor isolation to
 // wire up the app delegate and run the loop.
 MainActor.assumeIsolated {

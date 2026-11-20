@@ -254,7 +254,7 @@ private struct SettingsDocument: Codable {
     /// Which music services may be asked for a cover. Absent means all of them.
     var artworkServices: [String: Bool]?
     /// Which figures are in the menu bar, by feature id. Absent in a document
-    /// written before the menu bar had any, which is none of them.
+    /// written before the menu bar had any, which takes the default.
     var menuBarFigures: [String]?
     /// How often the figures in the menu bar are read.
     var menuBarRefresh: MenuBarRefresh?
@@ -398,10 +398,14 @@ public final class SettingsStore: ObservableObject {
 
     /// Which figures are in the menu bar, by feature id, kept sorted.
     ///
-    /// None on a fresh install, and none on an update. The menu bar belongs to
-    /// every app on the Mac, and taking a place in it is something somebody
-    /// asks for — never something an update does to them.
-    @Published public var menuBarFigures: [String] = []
+    /// Processor, memory and temperature to begin with — the three that say
+    /// how hard the Mac is working — on a fresh install and on an install
+    /// whose settings predate the menu bar having any, the same rule the
+    /// indicators follow: a choice nobody has made yet takes the default.
+    /// Switching them all off is a choice, stored as an empty list, and it is
+    /// kept. Nothing is read for them before the opening window is answered.
+    @Published public var menuBarFigures: [String] = SettingsStore.defaultMenuBarFigures
+    public nonisolated static let defaultMenuBarFigures = ["cpu", "memory", "thermal"]
 
     /// How often the figures in the menu bar are read. See `MenuBarRefresh`.
     @Published public var menuBarRefresh: MenuBarRefresh = .default
@@ -528,7 +532,7 @@ public final class SettingsStore: ObservableObject {
             self.networkAppsExpanded = document.networkAppsExpanded ?? SettingsStore.defaultNetworkAppsExpanded
             self.adjustments = (document.adjustments ?? [:]).mapValues(\.clamped)
             self.artworkServices = document.artworkServices ?? [:]
-            self.menuBarFigures = Array(Set(document.menuBarFigures ?? [])).sorted()
+            self.menuBarFigures = Array(Set(document.menuBarFigures ?? SettingsStore.defaultMenuBarFigures)).sorted()
             self.menuBarRefresh = document.menuBarRefresh ?? .default
             self.isFirstRun = false
             // Absent in a document written before this existed, which is
@@ -657,7 +661,7 @@ public final class SettingsStore: ObservableObject {
         canPressMediaKeys = false
         adjustments = [:]
         artworkServices = [:]
-        menuBarFigures = []
+        menuBarFigures = Self.defaultMenuBarFigures
         menuBarRefresh = .default
 
         var rebuilt: [String: FeatureConfig] = [:]

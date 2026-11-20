@@ -4,8 +4,7 @@ import HashNotchKit
 
 /// Boots the HUD: builds the registry from the manifest, loads settings, starts
 /// the features, and shows the notch overlay. The panel's gear button is the
-/// way into settings; the menu bar holds nothing unless somebody puts figures
-/// there, and each of those offers the way in as well.
+/// way into settings, and so is the panel the menu bar item opens.
 /// Deliberately thin — all behavior lives in the core and the feature modules.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -39,8 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // One island, or none. A second copy of this app does not add a second
         // app, it doubles the first: two overlays drawn on top of each other,
         // every alert appearing twice, and nothing on screen to say why —
-        // there is no Dock icon, and usually no menu-bar item, to reveal that a
-        // copy is already up. See `SingleInstance`.
+        // there is no Dock icon, and the menu bar item may be switched off, to
+        // reveal that a copy is already up. See `SingleInstance`.
         //
         // Done before anything is built, so the copy that stands down has read
         // no settings, started no feature and put no window on screen.
@@ -72,8 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // The island's gear button is the settings entry. The menu bar holds
-        // nothing of this app's unless somebody puts figures there.
+        // The island's gear button is the settings entry; the menu bar item's
+        // panel is the other.
         let settingsWindow = SettingsWindowController(
             settings: settings, registry: registry, context: context)
         // The gear opens settings beside the panel it was clicked from, and
@@ -137,9 +136,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         power.begin()
 
         // Figures in the menu bar, for the indicators that offer one, in one
-        // item. Nothing is put there until somebody switches a figure on,
-        // nothing is read before consent, and a figure goes when its indicator
-        // is switched off — `MenuBarPlan.wanted` is the whole rule. They stop
+        // item. Processor, memory and temperature are there to begin with, but
+        // nothing is read before consent, and a figure goes when it or its
+        // indicator is switched off — `MenuBarPlan.wanted` is the whole rule. They stop
         // with the screen, like every indicator, which the coordinator says
         // once it has put the indicators down.
         let meters = MenuBarPlan.arranged(registry.features.compactMap(\.menuBarMeter))

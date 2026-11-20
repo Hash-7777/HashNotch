@@ -55,9 +55,6 @@ package final class MenuBarPanel {
                         .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
                 )
                 .environment(\.colorScheme, .dark)
-                // Drawn as active controls, as they would be in a window that
-                // had the keyboard: this one never does, by design.
-                .environment(\.controlActiveState, .key)
         )
         host = FirstClickHostingView(rootView: root)
         window = MenuBarPanelWindow(
