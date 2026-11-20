@@ -17,7 +17,7 @@ What's playing, how fast your internet is, what your battery is doing, how hot t
   <img src="https://img.shields.io/badge/Apple%20Silicon-M--series-408CFF?style=flat-square&labelColor=0B0C10" alt="Apple Silicon">
   <img src="https://img.shields.io/badge/network-artwork%20only-47D67A?style=flat-square&labelColor=0B0C10" alt="Network: artwork only">
   <img src="https://img.shields.io/badge/telemetry-none-47D67A?style=flat-square&labelColor=0B0C10" alt="No telemetry">
-  <img src="https://img.shields.io/badge/checks-1244%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1244 automated checks passing">
+  <img src="https://img.shields.io/badge/checks-1246%20passing-8FBAFF?style=flat-square&labelColor=0B0C10" alt="1246 automated checks passing">
   <img src="https://img.shields.io/badge/license-GPL%20v3-AEB7C8?style=flat-square&labelColor=0B0C10" alt="GNU General Public License v3">
 </p>
 
@@ -67,7 +67,7 @@ Swipe **down** on the notch to open it. Swipe **sideways** across the open panel
 
 **Graphics** — how busy the graphics processor is, as a number and a graph beside the processor's, read from the graphics driver's own figure.
 
-**In the menu bar, if you want them** — small live figures for the processor, graphics, memory and temperature, a word above each number, all in one compact item beside the clock. Click it for a popover with the same figures larger and the choices: which figures, and how often they refresh, every two seconds unless you pick another. With none switched on, nothing is read for it.
+**In the menu bar, if you want them** — small live figures for the processor, graphics, memory and temperature, a word above each number, all in one compact item beside the clock. Click it for a glass panel with the same figures larger and the choices: which figures, and how often they refresh, every two seconds unless you pick another. With none switched on, nothing is read for it.
 
 **Temperatures** — the real sensors inside your Mac, not an estimate. On Apple Silicon it reads the on-die sensors; on every other Mac it reads the System Management Controller, so an Intel MacBook gets real readings too.
 
@@ -95,7 +95,7 @@ Switch any of them off, drag to reorder, restyle each one. The panel is yours �
 
 **One glance, then gone.** Something that just happened outranks something merely still true. A finished job takes the strip for a few seconds and hands it back to the music.
 
-**Verified, not asserted.** 1244 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
+**Verified, not asserted.** 1246 automated checks run before every push — the parsers, the geometry, the privacy rules, and the arithmetic behind every readout. Every commit is signed.
 
 ```
 $ swift run HashNotchChecks

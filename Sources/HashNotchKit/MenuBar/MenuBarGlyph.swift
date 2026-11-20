@@ -1,10 +1,10 @@
 import CoreGraphics
 
-/// The pictures the menu bar's popover draws beside each figure's name.
+/// The pictures the menu bar's panel draws beside each figure's name.
 ///
 /// Solid silhouettes with the detail cut out of them — the core of the chip,
 /// the fan of the card, the slots of the memory stick — rather than the panel's
-/// outlines, because the popover sits on glass over any wallpaper and a solid
+/// outlines, because the panel sits on glass over any wallpaper and a solid
 /// shape holds there. They are deliberately NOT drawn in the menu bar itself:
 /// at nine points a graphics card or a memory stick has to be guessed at, so
 /// the bar carries a word instead (`MenuBarMeter.label`).

@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// The app's one item in the real menu bar: a small column per figure, its
@@ -8,7 +9,7 @@ import SwiftUI
 /// and these are two, and because one image is one redraw: the item changes at
 /// most once per refresh, and only when a number in it has.
 ///
-/// Clicking it opens a popover with the same figures at a size you can read
+/// Clicking it opens a panel with the same figures at a size you can read
 /// properly, and the menu bar's own preferences.
 @MainActor
 public final class StatusBarItem: NSObject, MenuBarItem {
@@ -27,21 +28,15 @@ public final class StatusBarItem: NSObject, MenuBarItem {
     package nonisolated static let itemInset: CGFloat = 6
 
     private let item: NSStatusItem
-    private let popover = NSPopover()
-    /// What the popover shows, built and laid out once, ahead of the first
-    /// click.
-    ///
-    /// It used to be built at the click, and that was the hitch on opening:
-    /// SwiftUI's first layout of it took 24 to 35 ms on the main thread, and
-    /// the popover then opened at its default size and was resized to fit,
-    /// which cost as much again — a stall of several frames between the click
-    /// and the popover, measured on the running app. Built here, a click only
-    /// shows something that already exists at the size it already has.
-    private let content: NSHostingController<MenuBarPopoverView>
-    /// The figures the popover shows. Its own copy, handed new figures only
+    /// What the item opens: built once with the item, so a click only shows
+    /// something that already exists. Building it under the click held the
+    /// main thread for several frames, measured on the running app.
+    private let panel: MenuBarPanel
+    /// The figures the panel shows. Its own copy, handed new figures only
     /// while it is open and once as it opens — so the view kept ready for the
     /// next click is not redrawn every refresh while nobody can see it.
     private let shown = MenuBarState()
+    private var cancellables = Set<AnyCancellable>()
     private var figures: [MenuBarFigure] = []
     /// The bar's appearance the picture was last drawn for. Kept so a
     /// notification that the appearance may have changed redraws only when it
@@ -52,37 +47,41 @@ public final class StatusBarItem: NSObject, MenuBarItem {
     private var appearanceObservation: NSKeyValueObservation?
 
     /// - Parameter onSettings: opens the settings window on the menu-bar page.
-    ///   The popover is put away first, so the two are never on screen at once.
+    ///   The panel is put away first, so the two are never on screen at once.
     public init(
         settings: SettingsStore,
         meters: [MenuBarMeter],
         onSettings: @escaping () -> Void
     ) {
         self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        let popover = self.popover
         let shown = self.shown
-        self.content = NSHostingController(rootView: MenuBarPopoverView(
+        var close: () -> Void = {}
+        self.panel = MenuBarPanel(content: MenuBarPanelView(
             settings: settings,
             state: shown,
             meters: meters,
-            openSettings: { [weak popover] in
-                popover?.performClose(nil)
+            openSettings: {
+                close()
                 onSettings()
             }
         ))
         super.init()
+        close = { [weak self] in self?.panel.hide() }
 
         // Named, so a place somebody drags it to with Command held is kept.
         // macOS keeps it with the app's own settings.
         item.autosaveName = "hashnotch.menubar"
         // Not removable by dragging it out. An item that could vanish that way
         // would leave its switches on in Settings with nothing to show for
-        // them, and the switches would be lying. The popover takes it out.
+        // them, and the switches would be lying. The panel takes it out.
         item.behavior = []
         if let button = item.button {
             button.imagePosition = .imageOnly
             button.target = self
-            button.action = #selector(togglePopover)
+            button.action = #selector(togglePanel)
+            // On the press, not the release, the way the system's own items
+            // open — it is what makes opening one feel immediate.
+            button.sendAction(on: [.leftMouseDown, .rightMouseDown])
             appearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated {
@@ -94,34 +93,19 @@ public final class StatusBarItem: NSObject, MenuBarItem {
             }
         }
 
-        popover.behavior = .transient
-        popover.animates = true
-        // The popover follows its content's own size from here on — a figure
-        // switched on or off changes the row of tiles — rather than being told
-        // a size once and keeping it.
-        if #available(macOS 13.0, *) {
-            content.sizingOptions = .preferredContentSize
-        }
-        popover.contentViewController = content
-        // The first layout is the expensive one, so it is done now, a turn
-        // after the item appears, instead of under the first click.
-        DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated { self?.fitPopover() }
-        }
-    }
-
-    /// Size the popover to what it shows, so it opens at that size rather
-    /// than at the system's default and then grows.
-    private func fitPopover() {
-        let size = content.view.fittingSize
-        if size.width > 0, size.height > 0, popover.contentSize != size {
-            popover.contentSize = size
-        }
+        // A figure switched on or off from inside the panel changes what it
+        // holds; it is fitted again a turn later, once the view has the change.
+        settings.$menuBarFigures.dropFirst()
+            .merge(with: settings.$features.dropFirst().map { _ in settings.menuBarFigures })
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.panel.refit() } }
+            }
+            .store(in: &cancellables)
     }
 
     public func display(_ figures: [MenuBarFigure]) {
         self.figures = figures
-        if popover.isShown, shown.figures != figures { shown.figures = figures }
+        if panel.isShown, shown.figures != figures { shown.figures = figures }
         guard let button = item.button else { return }
         let height = max(18, min(26, NSStatusBar.system.thickness))
 
@@ -150,25 +134,14 @@ public final class StatusBarItem: NSObject, MenuBarItem {
     }
 
     public func remove() {
-        popover.performClose(nil)
+        panel.hide()
         NSStatusBar.system.removeStatusItem(item)
     }
 
-    @objc private func togglePopover() {
+    @objc private func togglePanel() {
         guard let button = item.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-            return
-        }
-        // An app with no Dock icon is never the active one, and a popover in
-        // an inactive app needs a first click just to wake it. Activating
-        // first makes the first click on a switch the one that flips it.
-        NSApp.activate(ignoringOtherApps: true)
-        if shown.figures != figures { shown.figures = figures }
-        // macOS 12 has no sizing that follows the content, so it is measured
-        // again here; on later systems this finds the size already right.
-        fitPopover()
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if !panel.isShown, shown.figures != figures { shown.figures = figures }
+        panel.toggle(below: button)
     }
 
     // MARK: Drawing

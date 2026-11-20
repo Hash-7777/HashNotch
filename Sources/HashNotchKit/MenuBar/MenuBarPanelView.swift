@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The figures the popover shows, larger. The item keeps one of these for its
-/// popover and hands it figures only while the popover is open.
+/// The figures the panel shows, larger. The item keeps one of these for its
+/// panel and hands it figures only while the panel is open.
 @MainActor
 public final class MenuBarState: ObservableObject {
     @Published public package(set) var figures: [MenuBarFigure] = []
@@ -11,10 +11,9 @@ public final class MenuBarState: ObservableObject {
 /// What opens from the menu bar item: the figures at a size you can read, and
 /// the menu bar's own preferences — which figures, and how often.
 ///
-/// The popover's surface is the system's own, which is glass on a macOS that
-/// draws glass and frosted on one that does not, so this draws no background
-/// of its own and nothing here can disagree with it.
-public struct MenuBarPopoverView: View {
+/// It draws no surface of its own: `MenuBarPanel` puts it on the app's glass,
+/// the same surface every other window here is made of.
+public struct MenuBarPanelView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var state: MenuBarState
     let meters: [MenuBarMeter]

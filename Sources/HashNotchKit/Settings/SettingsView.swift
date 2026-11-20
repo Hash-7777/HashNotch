@@ -597,7 +597,7 @@ public struct SettingsView: View {
     }
 
     /// The figures that can go in the menu bar, one switch each, and how often
-    /// they are read. The same choices the menu bar item's own popover offers;
+    /// they are read. The same choices the menu bar item's own panel offers;
     /// both are bound to the same store, so they cannot disagree.
     ///
     /// A figure belongs to its indicator, so a figure whose indicator is off

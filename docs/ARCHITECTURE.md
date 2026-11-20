@@ -175,15 +175,15 @@ than failing.
 
 `SettingsView` is reached through the gear button in the expanded panel
 (`FeatureContext.openSettings`), and it is also where the app is quit. A
-menu bar item's popover offers the way in too.
+menu bar item's panel offers the way in too.
 
 ## Figures in the menu bar
 
 A feature may offer one figure for the menu bar by returning a `MenuBarMeter`
 from `menuBarMeter`: a name, the word shown above its number, a glyph for the
-popover, the widest thing it can say, and a way to build a reader. Processor,
+panel, the widest thing it can say, and a way to build a reader. Processor,
 graphics, memory and temperature do. Nothing is put there until somebody
-switches a figure on, in Settings → Menu bar or in the item's popover.
+switches a figure on, in Settings → Menu bar or in the item's panel.
 
 A figure is NOT a second view of the panel's monitor. The panel's readouts
 sample only while the panel is open; a figure is on screen all day, so it has
@@ -198,11 +198,16 @@ indicator switched on. With nothing wanted there is no item and no clock.
 
 The item is one image: a small word above each number, in the bar's own text
 colours, red only where the panel would be red. Its width depends on which
-figures are shown, never on what they say. The popover (`MenuBarPopoverView`)
-is built and laid out once, ahead of the first click, at the size it will open
-at — building it under the click was a stall of several frames — and it is
-handed new figures only while it is open, so the view kept ready is not
-redrawn while it is shut.
+figures are shown, never on what they say.
+
+Clicking it opens `MenuBarPanel`: a NON-ACTIVATING glass panel under the item,
+the way the system's own items open theirs. It never becomes the key window,
+so this app stays inactive and the window somebody is working in keeps the
+keyboard; its controls take the first click instead. It opens and closes on
+every press — on the press, not the release — and a click anywhere else
+closes it. Its view (`MenuBarPanelView`) is
+built once with the item, at the size it opens at, and handed new figures only
+while it is open, so the view kept ready is not redrawn while it is shut.
 
 ## Adding a feature
 

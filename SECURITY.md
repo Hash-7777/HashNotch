@@ -265,7 +265,7 @@ The same holds while your screen is asleep — all sampling stops until it wakes
 covered by the automated checks (`FeatureRegistry.syncRunning`).
 
 **Figures in the menu bar** follow the same rules. None is there until you
-switch it on, in **Settings → Menu bar** or the popover the item opens. They
+switch it on, in **Settings → Menu bar** or the panel the item opens. They
 share one item and one clock, every two seconds unless you choose another rate
 from one second to ten, and twice that with battery saver on. Each reads
 exactly what its row in the table above reads, nothing more. With no figure

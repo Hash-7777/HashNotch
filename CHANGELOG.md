@@ -15,13 +15,16 @@ All notable changes to HashNotch are recorded here.
 - **Figures in the menu bar, if you want them.** Processor, graphics, memory
   and temperature can sit beside the clock as small live figures, a word above
   each number, all in one compact item that keeps its width as the numbers
-  change. Click it for a popover with the figures larger, a switch for each, and
-  how often they refresh — every two seconds unless you choose one to ten. None
-  is there until you ask, and with none switched on nothing is read. A figure
-  turns red where the panel turns the same reading red. Switching an indicator
-  off takes its figure out too, and they all stop while the Mac is locked or
-  the screen is asleep. The same choices are under Settings → Menu bar.
-
+  change. Click it for a glass panel with the figures larger, a switch for
+  each, and how often they refresh — every two seconds unless you choose one to
+  ten. Like the system's own menu bar items, the panel opens on the press,
+  closes on the next one or on a click anywhere else, and never takes focus
+  from the window you are working in. None is
+  there until you ask, and with none switched on nothing is read. A figure
+  turns red where the notch panel turns the same reading red. Switching an
+  indicator off takes its figure out too, and they all stop while the Mac is
+  locked or the screen is asleep. The same choices are under Settings → Menu
+  bar.
 - **Focus can be paused, not only stopped.** Pause holds a stretch where it
   stands: the clock and the ring stop, the alert is called off, and none of the
   pause counts as time focused. Resume carries on with the end moved on by the

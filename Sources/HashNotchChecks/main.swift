@@ -6705,6 +6705,22 @@ MainActor.assumeIsolated {
             && MenuBarText.degrees(105).count <= "100°".count
     )
 
+    // The panel the item opens must leave the window somebody is working in
+    // alone: it never takes the keyboard or becomes main, so this app never
+    // becomes the active one by opening it. Its controls take the first click,
+    // which is what makes not being key cost nothing.
+    let menuPanel = MenuBarPanelWindow(
+        contentRect: NSRect(x: 0, y: 0, width: 10, height: 10),
+        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+    check(
+        "the menu bar panel never takes the keyboard or becomes the main window",
+        !menuPanel.canBecomeKey && !menuPanel.canBecomeMain
+    )
+    check(
+        "and its controls answer the first click",
+        FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
+    )
+
     // What is stored. None by default, on a fresh install and on an update.
     let fresh = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())
     check("a fresh install puts nothing in the menu bar", fresh.menuBarFigures.isEmpty)

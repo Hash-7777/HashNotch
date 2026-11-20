@@ -32,7 +32,7 @@ public struct MenuBarMeter: Sendable {
     /// The feature's own id. A figure belongs to its indicator: switching the
     /// indicator off takes the figure out of the menu bar as well.
     public let id: String
-    /// The short name, as the popover and the settings page show it.
+    /// The short name, as the panel and the settings page show it.
     public let title: String
     /// One plain sentence: what the figure is.
     public let summary: String
@@ -40,7 +40,7 @@ public struct MenuBarMeter: Sendable {
     /// picture — at the size the menu bar allows, a drawing of a graphics card
     /// or a memory stick has to be guessed at, and a word does not.
     public let label: String
-    /// Its picture, where there is room for one: the popover.
+    /// Its picture, where there is room for one: the panel.
     public let glyph: MenuBarGlyph
     /// The widest thing it can ever say, so its column in the menu bar is
     /// sized once and nothing beside it moves as the figure changes.
