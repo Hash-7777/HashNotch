@@ -146,10 +146,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menuBar = MenuBarController(
             settings: settings,
             meters: meters,
-            makeItem: { [weak self] state in
+            makeItem: { [weak self] in
                 StatusBarItem(
                     settings: settings,
-                    state: state,
                     meters: meters,
                     onSettings: { self?.openSettingsAlone(at: "menuBar") }
                 )

@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// The figures the popover shows, larger. The item keeps one of these for its
+/// popover and hands it figures only while the popover is open.
+@MainActor
+public final class MenuBarState: ObservableObject {
+    @Published public package(set) var figures: [MenuBarFigure] = []
+    public init() {}
+}
+
 /// What opens from the menu bar item: the figures at a size you can read, and
 /// the menu bar's own preferences — which figures, and how often.
 ///

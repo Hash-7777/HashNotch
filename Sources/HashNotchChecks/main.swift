@@ -6764,7 +6764,7 @@ MainActor.assumeIsolated {
     store.menuBarRefresh = .oneSecond
     store.setInMenuBar("cpu", true)
     store.setInMenuBar("gpu", true)
-    let controller = MenuBarController(settings: store, meters: fakeMeters, makeItem: { _ in
+    let controller = MenuBarController(settings: store, meters: fakeMeters, makeItem: {
         let item = FakeItem(); made.append(item); return item
     })
     controller.sync()

@@ -11,7 +11,7 @@ import SwiftUI
 /// Clicking it opens a popover with the same figures at a size you can read
 /// properly, and the menu bar's own preferences.
 @MainActor
-public final class StatusBarItem: NSObject, MenuBarItem, NSPopoverDelegate {
+public final class StatusBarItem: NSObject, MenuBarItem {
     // The measurements, named so the checks can hold the item to them.
     package nonisolated static let labelSize: CGFloat = 7.5
     package nonisolated static let fontSize: CGFloat = 9.5
@@ -28,10 +28,20 @@ public final class StatusBarItem: NSObject, MenuBarItem, NSPopoverDelegate {
 
     private let item: NSStatusItem
     private let popover = NSPopover()
-    /// Builds what the popover shows. Called each time it opens, and the
-    /// result let go when it closes, so while it is shut there is no view
-    /// being kept up to date with figures nobody is looking at.
-    private let makeContent: () -> NSViewController
+    /// What the popover shows, built and laid out once, ahead of the first
+    /// click.
+    ///
+    /// It used to be built at the click, and that was the hitch on opening:
+    /// SwiftUI's first layout of it took 24 to 35 ms on the main thread, and
+    /// the popover then opened at its default size and was resized to fit,
+    /// which cost as much again — a stall of several frames between the click
+    /// and the popover, measured on the running app. Built here, a click only
+    /// shows something that already exists at the size it already has.
+    private let content: NSHostingController<MenuBarPopoverView>
+    /// The figures the popover shows. Its own copy, handed new figures only
+    /// while it is open and once as it opens — so the view kept ready for the
+    /// next click is not redrawn every refresh while nobody can see it.
+    private let shown = MenuBarState()
     private var figures: [MenuBarFigure] = []
     /// The bar's appearance the picture was last drawn for. Kept so a
     /// notification that the appearance may have changed redraws only when it
@@ -45,23 +55,21 @@ public final class StatusBarItem: NSObject, MenuBarItem, NSPopoverDelegate {
     ///   The popover is put away first, so the two are never on screen at once.
     public init(
         settings: SettingsStore,
-        state: MenuBarState,
         meters: [MenuBarMeter],
         onSettings: @escaping () -> Void
     ) {
         self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let popover = self.popover
-        self.makeContent = { [weak popover] in
-            NSHostingController(rootView: MenuBarPopoverView(
-                settings: settings,
-                state: state,
-                meters: meters,
-                openSettings: {
-                    popover?.performClose(nil)
-                    onSettings()
-                }
-            ))
-        }
+        let shown = self.shown
+        self.content = NSHostingController(rootView: MenuBarPopoverView(
+            settings: settings,
+            state: shown,
+            meters: meters,
+            openSettings: { [weak popover] in
+                popover?.performClose(nil)
+                onSettings()
+            }
+        ))
         super.init()
 
         // Named, so a place somebody drags it to with Command held is kept.
@@ -88,11 +96,32 @@ public final class StatusBarItem: NSObject, MenuBarItem, NSPopoverDelegate {
 
         popover.behavior = .transient
         popover.animates = true
-        popover.delegate = self
+        // The popover follows its content's own size from here on — a figure
+        // switched on or off changes the row of tiles — rather than being told
+        // a size once and keeping it.
+        if #available(macOS 13.0, *) {
+            content.sizingOptions = .preferredContentSize
+        }
+        popover.contentViewController = content
+        // The first layout is the expensive one, so it is done now, a turn
+        // after the item appears, instead of under the first click.
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.fitPopover() }
+        }
+    }
+
+    /// Size the popover to what it shows, so it opens at that size rather
+    /// than at the system's default and then grows.
+    private func fitPopover() {
+        let size = content.view.fittingSize
+        if size.width > 0, size.height > 0, popover.contentSize != size {
+            popover.contentSize = size
+        }
     }
 
     public func display(_ figures: [MenuBarFigure]) {
         self.figures = figures
+        if popover.isShown, shown.figures != figures { shown.figures = figures }
         guard let button = item.button else { return }
         let height = max(18, min(26, NSStatusBar.system.thickness))
 
@@ -135,14 +164,11 @@ public final class StatusBarItem: NSObject, MenuBarItem, NSPopoverDelegate {
         // an inactive app needs a first click just to wake it. Activating
         // first makes the first click on a switch the one that flips it.
         NSApp.activate(ignoringOtherApps: true)
-        popover.contentViewController = makeContent()
+        if shown.figures != figures { shown.figures = figures }
+        // macOS 12 has no sizing that follows the content, so it is measured
+        // again here; on later systems this finds the size already right.
+        fitPopover()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-    }
-
-    public nonisolated func popoverDidClose(_ notification: Notification) {
-        MainActor.assumeIsolated {
-            popover.contentViewController = nil
-        }
     }
 
     // MARK: Drawing

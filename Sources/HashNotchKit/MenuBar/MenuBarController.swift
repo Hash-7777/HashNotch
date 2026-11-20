@@ -13,13 +13,6 @@ public protocol MenuBarItem: AnyObject {
     func remove()
 }
 
-/// The figures the menu bar is showing now, for the popover to show larger.
-@MainActor
-public final class MenuBarState: ObservableObject {
-    @Published public package(set) var figures: [MenuBarFigure] = []
-    public init() {}
-}
-
 /// Puts the figures somebody chose into one item in the menu bar, reads them on
 /// one clock while it is there, and takes it out again.
 ///
@@ -35,11 +28,13 @@ public final class MenuBarState: ObservableObject {
 /// sensors — and the item is redrawn only when what it says has changed.
 @MainActor
 public final class MenuBarController {
-    public let state = MenuBarState()
+    /// What the item was last given, so a figure that has not changed is not
+    /// drawn again.
+    private var figures: [MenuBarFigure] = []
 
     private let settings: SettingsStore
     private let meters: [MenuBarMeter]
-    private let makeItem: (MenuBarState) -> MenuBarItem
+    private let makeItem: () -> MenuBarItem
     private let queue = DispatchQueue(label: "com.hashnotch.menubar", qos: .utility)
     private var item: MenuBarItem?
     private var timer: DispatchSourceTimer?
@@ -54,7 +49,7 @@ public final class MenuBarController {
     public init(
         settings: SettingsStore,
         meters: [MenuBarMeter],
-        makeItem: @escaping (MenuBarState) -> MenuBarItem
+        makeItem: @escaping () -> MenuBarItem
     ) {
         self.settings = settings
         self.meters = meters
@@ -111,7 +106,7 @@ public final class MenuBarController {
             return
         }
         if item != nil, wanted == running { return }
-        if item == nil { item = makeItem(state) }
+        if item == nil { item = makeItem() }
         running = wanted
         startClock()
     }
@@ -120,7 +115,7 @@ public final class MenuBarController {
     public func stopAll() {
         stopClock()
         running = []
-        state.figures = []
+        figures = []
         item?.remove()
         item = nil
     }
@@ -144,7 +139,7 @@ public final class MenuBarController {
         // Shown straight away so the item does not appear empty and then grow
         // when the first reading lands: what a figure already said is kept,
         // and a new one is a dash until it has read something.
-        let previous = state.figures
+        let previous = figures
         let placeholder = chosen.map { meter in
             MenuBarFigure(meter: meter, reading: previous.first { $0.id == meter.id }?.reading)
         }
@@ -189,8 +184,8 @@ public final class MenuBarController {
     }
 
     private func show(_ figures: [MenuBarFigure]) {
-        guard figures != state.figures else { return }
-        state.figures = figures
+        guard figures != self.figures else { return }
+        self.figures = figures
         item?.display(figures)
     }
 }

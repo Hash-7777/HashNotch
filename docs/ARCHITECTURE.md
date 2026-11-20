@@ -199,8 +199,10 @@ indicator switched on. With nothing wanted there is no item and no clock.
 The item is one image: a small word above each number, in the bar's own text
 colours, red only where the panel would be red. Its width depends on which
 figures are shown, never on what they say. The popover (`MenuBarPopoverView`)
-is built when it opens and let go when it closes, so nothing keeps a view up to
-date while it is shut.
+is built and laid out once, ahead of the first click, at the size it will open
+at — building it under the click was a stall of several frames — and it is
+handed new figures only while it is open, so the view kept ready is not
+redrawn while it is shut.
 
 ## Adding a feature
 
