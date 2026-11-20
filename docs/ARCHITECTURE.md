@@ -9,8 +9,9 @@ features be added or removed without editing the core.
 
 ```
 HashNotchKit      Core framework. Notch detection, the overlay window, the
-                  island and panel, the theme, shared UI pieces, settings, and
-                  the NotchFeature contract. Depends on nothing in this repo.
+                  island and panel, the menu bar item, the theme, shared UI
+                  pieces, settings, and the NotchFeature contract. Depends on
+                  nothing in this repo.
 
 FeatureMedia      One self-contained feature each. Every feature module depends
 FeatureActivities only on HashNotchKit — never on another feature.

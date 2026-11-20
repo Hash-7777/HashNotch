@@ -143,7 +143,7 @@ Run it **after** the app is already in Applications. If you drag the app somewhe
 ### Which macOS
 
 <div align="center">
-<img src="docs/media/support.svg" alt="Supported macOS releases: Tahoe 26 built and verified, Sequoia 15, Sonoma 14 and Ventura 13 fully supported, Monterey 12 supported except Open at Login, Big Sur 11 not supported." width="100%">
+<img src="docs/media/support.svg" alt="Supported macOS releases: macOS 27 built and verified, Tahoe 26 and Sequoia 15 fully supported and checked on every change, Sonoma 14 and Ventura 13 fully supported, Monterey 12 supported except Open at Login, Big Sur 11 not supported." width="100%">
 </div>
 
 On **Monterey**, everything works except Open at Login, which needs macOS 13 — and the app says so plainly rather than failing quietly. **Big Sur** is out: some of the drawing this relies on does not exist there.

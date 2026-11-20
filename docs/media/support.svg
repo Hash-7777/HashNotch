@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 210" width="780" height="210" role="img" aria-label="Supported macOS releases. Tahoe 26 is built and verified. Sequoia 15, Sonoma 14 and Ventura 13 are fully supported. Monterey 12 is supported except Open at Login. Big Sur 11 is not supported.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 246" width="780" height="246" role="img" aria-label="Supported macOS releases. macOS 27 is built and verified. Tahoe 26 and Sequoia 15 are fully supported and checked on every change. Sonoma 14 and Ventura 13 are fully supported. Monterey 12 is supported except Open at Login. Big Sur 11 is not supported.">
   <title>Supported macOS releases</title>
   <style>
     text { font-family: ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif; }
@@ -10,64 +10,75 @@
     .rowNo { fill:#0D0E14; stroke:#191C26; }
   </style>
 
-  <rect width="780" height="210" rx="16" fill="#0B0C10"/>
+  <rect width="780" height="246" rx="16" fill="#0B0C10"/>
 
-  <!-- Tahoe 26 — the one it is built on -->
+  <!-- macOS 27 — the one it is built on -->
   <g>
     <rect class="row" x="20" y="16" width="740" height="30" rx="8"/>
     <rect x="20" y="16" width="3" height="30" rx="1.5" fill="#8FBAFF"/>
-    <!-- a filled ring, drawn not typed -->
     <circle cx="44" cy="31" r="7" fill="#47D67A"/>
     <path d="M40.5 31 l2.6 2.6 l4.6 -5.2" fill="none" stroke="#07130C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text class="name" x="62"  y="35">Tahoe</text>
-    <text class="ver"  x="150" y="35">26</text>
+    <text class="name" x="62"  y="35">macOS</text>
+    <text class="ver"  x="150" y="35">27</text>
     <text class="verified" x="196" y="35">BUILT AND VERIFIED ON THIS</text>
   </g>
 
+
+  <!-- Tahoe 26 — checked on every change -->
   <g>
     <rect class="row" x="20" y="52" width="740" height="30" rx="8"/>
+        <!-- a filled ring, drawn not typed -->
     <circle cx="44" cy="67" r="7" fill="#47D67A"/>
     <path d="M40.5 67 l2.6 2.6 l4.6 -5.2" fill="none" stroke="#07130C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text class="name" x="62"  y="71">Sequoia</text>
-    <text class="ver"  x="150" y="71">15</text>
-    <text class="note" x="196" y="71">every feature</text>
+    <text class="name" x="62"  y="71">Tahoe</text>
+    <text class="ver"  x="150" y="71">26</text>
+    <text class="note" x="196" y="71">every feature · built and checked on every change</text>
   </g>
 
   <g>
     <rect class="row" x="20" y="88" width="740" height="30" rx="8"/>
     <circle cx="44" cy="103" r="7" fill="#47D67A"/>
     <path d="M40.5 103 l2.6 2.6 l4.6 -5.2" fill="none" stroke="#07130C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text class="name" x="62"  y="107">Sonoma</text>
-    <text class="ver"  x="150" y="107">14</text>
-    <text class="note" x="196" y="107">every feature</text>
+    <text class="name" x="62"  y="107">Sequoia</text>
+    <text class="ver"  x="150" y="107">15</text>
+    <text class="note" x="196" y="107">every feature · built and checked on every change</text>
   </g>
 
   <g>
     <rect class="row" x="20" y="124" width="740" height="30" rx="8"/>
     <circle cx="44" cy="139" r="7" fill="#47D67A"/>
     <path d="M40.5 139 l2.6 2.6 l4.6 -5.2" fill="none" stroke="#07130C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text class="name" x="62"  y="143">Ventura</text>
-    <text class="ver"  x="150" y="143">13</text>
+    <text class="name" x="62"  y="143">Sonoma</text>
+    <text class="ver"  x="150" y="143">14</text>
     <text class="note" x="196" y="143">every feature</text>
+  </g>
+
+  <g>
+    <rect class="row" x="20" y="160" width="740" height="30" rx="8"/>
+    <circle cx="44" cy="175" r="7" fill="#47D67A"/>
+    <path d="M40.5 175 l2.6 2.6 l4.6 -5.2" fill="none" stroke="#07130C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="name" x="62"  y="179">Ventura</text>
+    <text class="ver"  x="150" y="179">13</text>
+    <text class="note" x="196" y="179">every feature</text>
   </g>
 
   <!-- Monterey — supported with one stated exception -->
   <g>
-    <rect class="row" x="20" y="160" width="366" height="30" rx="8"/>
-    <circle cx="44" cy="175" r="7" fill="#E5A34B"/>
-    <path d="M44 171.4 v4.2 M44 178.4 v.2" stroke="#150E04" stroke-width="1.9" stroke-linecap="round"/>
-    <text class="name" x="62"  y="179">Monterey</text>
-    <text class="ver"  x="150" y="179">12</text>
-    <text class="note" x="196" y="179">all but Open at Login</text>
+    <rect class="row" x="20" y="196" width="366" height="30" rx="8"/>
+    <circle cx="44" cy="211" r="7" fill="#E5A34B"/>
+    <path d="M44 207.4 v4.2 M44 214.4 v.2" stroke="#150E04" stroke-width="1.9" stroke-linecap="round"/>
+    <text class="name" x="62"  y="215">Monterey</text>
+    <text class="ver"  x="150" y="215">12</text>
+    <text class="note" x="196" y="215">all but Open at Login</text>
   </g>
 
   <!-- Big Sur — an honest no -->
   <g>
-    <rect class="rowNo" x="394" y="160" width="366" height="30" rx="8"/>
-    <circle cx="418" cy="175" r="7" fill="none" stroke="#4A4048" stroke-width="1.6"/>
-    <path d="M415 172 l6 6 M421 172 l-6 6" stroke="#6E5C66" stroke-width="1.7" stroke-linecap="round"/>
-    <text class="name" x="436" y="179" fill="#6B7285">Big Sur</text>
-    <text class="ver"  x="524" y="179">11</text>
-    <text class="note" x="570" y="179" fill="#5C6272">not supported</text>
+    <rect class="rowNo" x="394" y="196" width="366" height="30" rx="8"/>
+    <circle cx="418" cy="211" r="7" fill="none" stroke="#4A4048" stroke-width="1.6"/>
+    <path d="M415 208 l6 6 M421 208 l-6 6" stroke="#6E5C66" stroke-width="1.7" stroke-linecap="round"/>
+    <text class="name" x="436" y="215" fill="#6B7285">Big Sur</text>
+    <text class="ver"  x="524" y="215">11</text>
+    <text class="note" x="570" y="215" fill="#5C6272">not supported</text>
   </g>
 </svg>
