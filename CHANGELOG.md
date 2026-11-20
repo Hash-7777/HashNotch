@@ -2,6 +2,23 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Added
+
+- **Graphics: how busy the graphics processor is.** A new row beside the
+  processor, as a number, a graph of the last half-minute, or both, from the
+  graphics driver's own figure. It turns red at 90%, like every other full-scale
+  readout. It reads nothing while the panel is shut and asks for no permission.
+  A Mac whose driver does not publish the figure is shown as not reporting,
+  rather than as idle.
+
+### Fixed
+
+- **The opening window names every reading about the machine.** Its list of
+  readings that are counters about the hardware left out power consumption; it
+  now names it, along with the new graphics reading.
+
 ## 1.5.0 — it says what your Mac is drawing, and the panel stays where you put it
 
 ### Added

@@ -36,6 +36,7 @@ let package = Package(
         .target(name: "FeatureCall", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureStorage", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureCPU", dependencies: ["HashNotchKit"]),
+        .target(name: "FeatureGPU", dependencies: ["HashNotchKit"]),
         .target(name: "FeatureMemory", dependencies: ["HashNotchKit"]),
         .target(name: "FeaturePower", dependencies: ["HashNotchKit"]),
 
@@ -54,6 +55,7 @@ let package = Package(
                 "FeatureAirPods", "FeatureCall",
                 "FeatureStorage",
                 "FeatureCPU",
+                "FeatureGPU",
                 "FeatureMemory",
                 "FeaturePower",
             ]
@@ -65,7 +67,7 @@ let package = Package(
         // .testTarget once full Xcode is available.
         .executableTarget(
             name: "HashNotchChecks",
-            dependencies: ["HashNotchKit", "FeatureMedia", "FeatureActivities", "FeatureTokens", "FeatureBattery", "FeatureDownloads", "FeatureAway", "FeatureFocus", "FeatureAirPods", "FeatureCall", "FeatureNetwork", "FeatureStorage", "FeatureThermal", "FeatureCPU", "FeatureMemory", "FeatureTimer", "FeaturePower"]
+            dependencies: ["HashNotchKit", "FeatureMedia", "FeatureActivities", "FeatureTokens", "FeatureBattery", "FeatureDownloads", "FeatureAway", "FeatureFocus", "FeatureAirPods", "FeatureCall", "FeatureNetwork", "FeatureStorage", "FeatureThermal", "FeatureCPU", "FeatureGPU", "FeatureMemory", "FeatureTimer", "FeaturePower"]
         ),
     ],
     swiftLanguageModes: [.v5]

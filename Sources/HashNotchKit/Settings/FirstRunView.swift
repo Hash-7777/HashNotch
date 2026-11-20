@@ -21,8 +21,8 @@ struct FirstRunView: View {
 
     /// The ones that touch a file, run a subprocess, can raise a macOS
     /// permission prompt, or learn something about YOU rather than about the
-    /// machine. The rest — connection speed, battery, processor, memory,
-    /// storage, temperatures — read counters the kernel keeps about the
+    /// machine. The rest — connection speed, battery, power, processor,
+    /// graphics, memory, storage, temperatures — read counters the kernel keeps about the
     /// hardware, and listing them all here would bury the ones that matter.
     ///
     /// The test for being on this list is not "does it need permission". Naming
@@ -123,7 +123,7 @@ struct FirstRunView: View {
             Text("The rest")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.45))
-            Text("AirPods charge runs the same Bluetooth report the System Information app shows you, and reads the battery percentages out of it. Connection speed, battery, processor, memory, storage and temperatures read counters the system keeps about the machine itself — how much went past, not what it was or whose it was.")
+            Text("AirPods charge runs the same Bluetooth report the System Information app shows you, and reads the battery percentages out of it. Connection speed, battery, power, processor, graphics, memory, storage and temperatures read counters the system keeps about the machine itself — how much went past, not what it was or whose it was.")
                 .font(.system(size: 12.5))
                 .foregroundStyle(.white.opacity(0.68))
                 .fixedSize(horizontal: false, vertical: true)

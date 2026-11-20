@@ -14,6 +14,7 @@ import FeatureNetwork
 import FeatureThermal
 import FeatureStorage
 import FeatureCPU
+import FeatureGPU
 import FeatureMemory
 import FeaturePower
 import FeatureTimer
@@ -3739,7 +3740,7 @@ MainActor.assumeIsolated {
             // Power sits beside the battery: it is the other half of the same
             // question, what the Mac is running on and how hard.
             "network", "battery", "power", "airpods",
-            "tokens", "thermal", "memory", "cpu",
+            "tokens", "thermal", "memory", "cpu", "gpu",
             "timer", "storage",
         ]
     )
@@ -4040,11 +4041,13 @@ check(
         ("thermal", ["symbolAndNumber", "number", "word", "symbol"]),
         ("tokens", ["number", "labeled"]),
         ("cpu", ["numberAndGraph", "number", "graph"]),
+        ("gpu", ["numberAndGraph", "number", "graph"]),
     ]
     // Built here rather than read from the app's manifest, which lives in the
     // executable and is not importable.
     let manifest: [NotchFeature] = [
         NetworkFeature(), BatteryFeature(), ThermalFeature(), TokensFeature(), CPUFeature(),
+        GPUFeature(),
     ]
     var everyOptionIsKnown = true
     for (id, known) in styleFeatures {
@@ -6407,6 +6410,79 @@ check(
     }()
 )
 
+// MARK: - Graphics load
+
+// The figure is the graphics driver's own, read out of a dictionary the
+// registry hands back. Everything about turning that dictionary into a share is
+// pure and is held here; the registry itself is only asked once, below, and
+// only for whether it answers in the right shape.
+check(
+    "the driver's percentage becomes a share",
+    GPUReader.share(from: [GPUReader.utilizationKey: NSNumber(value: 18)]) == 0.18
+)
+check(
+    "an idle graphics processor reads zero, which is a reading",
+    GPUReader.share(from: [GPUReader.utilizationKey: NSNumber(value: 0)]) == 0
+)
+check(
+    "statistics without the figure give no reading rather than zero",
+    GPUReader.share(from: ["Renderer Utilization %": NSNumber(value: 40)]) == nil
+)
+check(
+    "a figure that is not a number is refused",
+    GPUReader.share(from: [GPUReader.utilizationKey: "eighteen"]) == nil
+)
+check(
+    "a negative figure is refused rather than drawn below the floor",
+    GPUReader.share(from: [GPUReader.utilizationKey: NSNumber(value: -3)]) == nil
+)
+check(
+    "a figure past a hundred is held at the whole",
+    GPUReader.share(from: [GPUReader.utilizationKey: NSNumber(value: 140)]) == 1
+)
+check(
+    "with two graphics processors the busier one is the answer",
+    GPUReader.combined([0.05, nil, 0.7]) == 0.7
+)
+check(
+    "and with none reporting there is no answer at all",
+    GPUReader.combined([]) == nil && GPUReader.combined([nil, nil]) == nil
+)
+check(
+    "a reading from the registry, when there is one, is a share",
+    { GPUReader.read().map { (0...1).contains($0) } ?? true }()
+)
+
+check("a share is shown as a whole percentage", GPUText.reading(0.184, available: true) == "18%")
+check("no reading yet is a dash", GPUText.reading(nil, available: true) == "—")
+check(
+    "a Mac that reports nothing says so instead of holding a dash",
+    GPUText.reading(nil, available: false) == "Not reported"
+)
+
+MainActor.assumeIsolated {
+    var next: Double? = 0.25
+    let monitor = GPUMonitor(read: { next })
+    monitor.sample()
+    check("one reading is already an answer", monitor.load == 0.25 && monitor.history == [0.25])
+    next = nil
+    monitor.sample()
+    check(
+        "a reading that does not come marks the figure unavailable and keeps the last one out of the graph",
+        !monitor.isAvailable && monitor.history == [0.25]
+    )
+    next = 0.5
+    monitor.sample()
+    check("and one that comes back makes it available again", monitor.isAvailable && monitor.load == 0.5)
+    for _ in 0..<40 { monitor.sample() }
+    check("the graph keeps half a minute and no more", monitor.history.count == 30)
+    monitor.stop()
+    check(
+        "stopping drops the reading and the graph",
+        monitor.load == nil && monitor.history.isEmpty && monitor.isAvailable
+    )
+}
+
 // MARK: - Temperatures
 
 // The SMC reader is what makes this work on a Mac the other reader cannot see —
@@ -6591,8 +6667,8 @@ check(
 )
 
 // A mark that came out the same as another one is the copy-and-paste failure
-// this family is most exposed to: fourteen marks written one after another, each
-// from the shape of the last.
+// this family is most exposed to: marks written one after another, each from
+// the shape of the last.
 check(
     "no two marks are the same drawing",
     Set(NotchIcon.allCases.map { icon in

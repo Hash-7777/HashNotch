@@ -25,6 +25,7 @@ FeatureAirPods
 FeatureCall
 FeatureThermal
 FeatureCPU
+FeatureGPU
 FeatureMemory
 FeaturePower
 FeatureStorage

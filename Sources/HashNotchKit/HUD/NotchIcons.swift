@@ -14,9 +14,9 @@ import SwiftUI
 ///   where the mark should be. The oldest Mac this app supports is four
 ///   releases behind the one it is built on, and nothing in a build here would
 ///   notice a mark that is blank there.
-/// - **A borrowed set cannot be held to one shape.** These are fourteen marks
-///   that have to look like eleven members of one family at nine points, on
-///   black. Drawing them against one grid, at one stroke weight, is the only
+/// - **A system set cannot be held to one shape.** These are marks that
+///   have to look like members of one family at nine points, on black.
+///   Drawing them against one grid, at one stroke weight, is the only
 ///   way to be sure of that — and it is what was already done for the battery,
 ///   for the same reason.
 ///
@@ -26,6 +26,7 @@ import SwiftUI
 /// so the checks can measure it.
 public enum NotchIcon: String, CaseIterable, Sendable {
     case cpu
+    case graphics
     case memory
     case storage
     case internet
@@ -115,6 +116,7 @@ public enum NotchIconGeometry {
     public static func unscaled(_ icon: NotchIcon) -> [NotchIconPart] {
         switch icon {
         case .cpu: return cpu
+        case .graphics: return graphics
         case .memory: return memory
         case .storage: return storage
         case .internet: return internet
@@ -171,6 +173,35 @@ public enum NotchIconGeometry {
             legs.move(to: CGPoint(x: 72, y: offset)); legs.addLine(to: CGPoint(x: 88, y: offset))
         }
         parts.append(NotchIconPart(path: legs, style: .stroke(detailWeight)))
+        return parts
+    }
+
+    /// A graphics card seen side on: the board, the fan on it, the metal
+    /// bracket it is screwed in by, and the contacts along its lower edge.
+    ///
+    /// It sits between the processor and the memory chip in the panel, and all
+    /// three are rectangles with things attached, so what separates it is what
+    /// is attached: a round fan where the others have a square core or bars,
+    /// and a bracket standing apart from the body on one side, which neither
+    /// chip has. The contacts are solid for the same reason the thermometer is
+    /// — a row of lines that small closes up into a smudge.
+    private static var graphics: [NotchIconPart] {
+        var parts: [NotchIconPart] = []
+        parts.append(NotchIconPart(
+            path: Path(roundedRect: CGRect(x: 26, y: 24, width: 64, height: 42),
+                       cornerRadius: 8, style: .continuous),
+            style: .stroke(strokeWeight)))
+        parts.append(NotchIconPart(
+            path: Path(ellipseIn: CGRect(x: 58 - 12, y: 45 - 12, width: 24, height: 24)),
+            style: .stroke(detailWeight)))
+        var bracket = Path()
+        bracket.move(to: CGPoint(x: 12, y: 14))
+        bracket.addLine(to: CGPoint(x: 12, y: 86))
+        parts.append(NotchIconPart(path: bracket, style: .stroke(strokeWeight)))
+        parts.append(NotchIconPart(
+            path: Path(roundedRect: CGRect(x: 38, y: 72, width: 30, height: 10),
+                       cornerRadius: 2.5, style: .continuous),
+            style: .fill))
         return parts
     }
 

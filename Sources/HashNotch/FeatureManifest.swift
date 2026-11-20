@@ -13,6 +13,7 @@ import FeatureAirPods
 import FeatureCall
 import FeatureStorage
 import FeatureCPU
+import FeatureGPU
 import FeatureMemory
 import FeaturePower
 
@@ -51,6 +52,7 @@ enum FeatureManifest {
             CallFeature(),
             ThermalFeature(),
             CPUFeature(),
+            GPUFeature(),
             MemoryFeature(),
             StorageFeature(),
         ])

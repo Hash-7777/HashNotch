@@ -45,7 +45,7 @@ public final class FeatureRegistry {
     /// they change constantly and are why the panel gets opened; downloads next
     /// as the other thing that arrives on its own. Then the machine's vital
     /// signs — connection, battery and the power it is feeding, what is in
-    /// your ears. Then the figures you read rather than watch: tokens, temperatures, memory, processor. Timer
+    /// your ears. Then the figures you read rather than watch: tokens, temperatures, memory, processor, graphics. Timer
     /// and disk last, because a timer is set and forgotten and a disk changes
     /// over weeks.
     ///
@@ -53,7 +53,7 @@ public final class FeatureRegistry {
     public static let defaultOrder: [String] = [
         "call", "media", "activities", "downloads", "away", "focus",
         "network", "battery", "power", "airpods",
-        "tokens", "thermal", "memory", "cpu",
+        "tokens", "thermal", "memory", "cpu", "gpu",
         "timer", "storage",
     ]
 
