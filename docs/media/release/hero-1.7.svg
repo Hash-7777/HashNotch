@@ -61,5 +61,5 @@
 
   <path d="M300 288 L900 288" stroke="url(#rule)" stroke-width="1"/>
 
-  <text x="600" y="306" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="13" fill="#6E7681" letter-spacing="0.4">15 commits since 1.5.0 &#183; 1251 checks &#183; nothing leaves your Mac</text>
+  <text x="600" y="306" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="13" fill="#6E7681" letter-spacing="0.4">1251 checks &#183; every commit signed &#183; nothing leaves your Mac</text>
 </svg>
