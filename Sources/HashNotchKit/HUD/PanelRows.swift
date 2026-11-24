@@ -253,6 +253,22 @@ package enum PanelHold {
 package enum PanelScroll {
     package static let factor: Double = 0.5
 
+    /// What the panel's scroll view is handed for `event`: a mouse wheel's
+    /// steps calmed, a trackpad's gesture exactly as it came.
+    ///
+    /// A trackpad scroll is one continuous gesture, and the scroll view follows
+    /// it as one: it carries momentum on after the fingers lift and stops that
+    /// momentum the instant a new swipe begins. Handing it rebuilt copies of the
+    /// gesture's events broke that continuity, and reversing direction — up to
+    /// the top, then back down — made the list stick for a moment and then
+    /// crawl before it moved. So a trackpad's events reach the scroll view
+    /// untouched, and it scrolls exactly as every other list on the Mac does.
+    /// A wheel's click has no gesture to break, and a click that moves a whole
+    /// line is still what carried the list too far, so that is still calmed.
+    package static func adjusted(_ event: NSEvent) -> NSEvent {
+        event.hasPreciseScrollingDeltas ? event : calmed(event)
+    }
+
     /// The event with its vertical distance scaled by `factor`. Every field
     /// macOS reads a scroll's distance from is scaled together, so a trackpad,
     /// a mouse wheel and the momentum after a flick all slow alike; the phase

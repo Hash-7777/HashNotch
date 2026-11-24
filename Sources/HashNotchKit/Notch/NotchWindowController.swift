@@ -863,20 +863,21 @@ public final class NotchWindowController {
         }
         // The same events, seen from inside the app — which is where scrolling
         // the open panel arrives. The gesture handler reads the original; the
-        // panel's own scroll view is handed a calmed copy (`PanelScroll`).
+        // panel's own scroll view is handed a wheel's steps calmed and a
+        // trackpad's gesture untouched (`PanelScroll.adjusted`).
         localScrollMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { [weak self] event in
             let overPanel = MainActor.assumeIsolated { () -> Bool in
                 self?.handleScroll(event)
                 guard let self, self.state.isExpanded else { return false }
                 let overPanel = self.panelAnchor.contains(NSEvent.mouseLocation)
-                // A scroll that reaches the rows ends the opening hold. The
-                // panel's scrolling is calmed to half distance, so an unhurried
-                // swipe in the first second moves it by less than the drift the
-                // hold puts back — which read as the panel refusing to scroll.
+                // A scroll that reaches the rows ends the opening hold. An
+                // unhurried swipe in the first second can move the list by less
+                // than the drift the hold puts back, which read as the panel
+                // refusing to scroll.
                 if overPanel { PanelHold.userScrolled() }
                 return overPanel
             }
-            return overPanel ? PanelScroll.calmed(event) : event
+            return overPanel ? PanelScroll.adjusted(event) : event
         }
 
         // A click away from the panel closes it.

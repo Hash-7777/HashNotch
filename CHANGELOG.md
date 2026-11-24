@@ -18,6 +18,12 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The notch panel scrolls smoothly with a trackpad.** Its rows were scrolled
+  at half distance by handing the list rebuilt copies of every scroll, and
+  that broke the trackpad's gesture apart: scrolling back down after going up
+  could stick for a moment and then crawl. A trackpad's scrolling now reaches
+  the list untouched, glide and all, exactly as everywhere else on the Mac; a
+  mouse wheel's steps are still calmed.
 - **The menu bar panel opens under the menu bar the first time too.** The
   first time it opened after launch, it was measured before its figures were
   in it, and when they arrived it grew upwards, so it opened far too high;

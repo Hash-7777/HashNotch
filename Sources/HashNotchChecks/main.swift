@@ -7876,6 +7876,22 @@ check("a mouse wheel's single click still moves it rather than rounding to nothi
                 let calmed = PanelScroll.calmed(event).cgEvent else { return false }
           return calmed.getIntegerValueField(.scrollWheelEventDeltaAxis1) == -1
       }())
+check("a trackpad's scroll reaches the panel's list untouched, so its momentum stays whole",
+      {
+          guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1,
+                                 wheel1: -20, wheel2: 0, wheel3: 0),
+                let event = NSEvent(cgEvent: cg) else { return false }
+          return event.hasPreciseScrollingDeltas && PanelScroll.adjusted(event) === event
+      }())
+check("and a mouse wheel's steps are still calmed",
+      {
+          guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1,
+                                 wheel1: -4, wheel2: 0, wheel3: 0),
+                let event = NSEvent(cgEvent: cg),
+                !event.hasPreciseScrollingDeltas,
+                let adjusted = PanelScroll.adjusted(event).cgEvent else { return false }
+          return adjusted.getIntegerValueField(.scrollWheelEventDeltaAxis1) == -2
+      }())
 check("a panel that scrolls shows no scroll bar",
       MainActor.assumeIsolated {
           guard #available(macOS 13.0, *) else { return true }
