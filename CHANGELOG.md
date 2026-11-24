@@ -14,6 +14,13 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **Smoother edges on the notch's strip and panel.** Their bottom corners are
+  now continuous curves that ease out of the straight sides, the way the
+  system's own rounded shapes do, instead of quarter circles that turned
+  abruptly, and they look the same on every supported macOS. The strip's
+  title side is a whole number of points wide, so its rounded end lands on the
+  pixel grid on any display. And a title too long for the room fades out
+  before the dots instead of being cut through a letter.
 - **The notch's strip no longer covers the menu bar figures.** On a crowded
   menu bar the figures sit right beside the notch, and a playing song's title
   ran over them. The strip now ends just before the figures, and a long title

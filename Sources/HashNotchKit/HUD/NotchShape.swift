@@ -15,10 +15,12 @@ import SwiftUI
 /// it costs a dozen lines and buys back every macOS the rest of the app can
 /// run on.
 ///
-/// The corners are quarter circles rather than SwiftUI's `.continuous`
-/// squircle. The difference at these radii is under a point, and a shape that
-/// draws identically everywhere is worth more than one that is subtly rounder
-/// on newer systems than older ones.
+/// The corners are continuous curves, the kind the system draws its own
+/// rounded shapes with, rather than quarter circles: the curve eases out of the
+/// straight side instead of turning abruptly where an arc meets a line, which
+/// is what made the strip's ends look stepped. They are drawn here, by
+/// `IslandCorner`, rather than taken from SwiftUI's `.continuous` style, so
+/// the shape stays the same on every macOS the app runs on.
 struct NotchShape: InsettableShape, Equatable {
     /// The bottom corner radius. Clamped on use, so no caller can produce a
     /// shape that folds through itself.
@@ -47,30 +49,55 @@ struct NotchShape: InsettableShape, Equatable {
     func path(in outer: CGRect) -> Path {
         let rect = outer.insetBy(dx: inset, dy: inset)
         guard rect.width > 0, rect.height > 0 else { return Path() }
-        // Never more than half of either side: past that the two corners meet
-        // and the shape starts inverting.
-        let r = max(0, min(radius, min(rect.width, rect.height) / 2))
         var path = Path()
-
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
-        path.addArc(
-            center: CGPoint(x: rect.maxX - r, y: rect.maxY - r),
-            radius: r,
-            startAngle: .degrees(0),
-            endAngle: .degrees(90),
-            clockwise: false
-        )
-        path.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
-        path.addArc(
-            center: CGPoint(x: rect.minX + r, y: rect.maxY - r),
-            radius: r,
-            startAngle: .degrees(90),
-            endAngle: .degrees(180),
-            clockwise: false
-        )
+        IslandCorner.bottomRight(of: rect, radius: radius, in: &path)
+        IslandCorner.bottomLeft(of: rect, radius: radius, in: &path)
         path.closeSubpath()
         return path
+    }
+}
+
+/// The island's bottom corners, as continuous curves.
+///
+/// A quarter circle joins a straight side with a sudden change of curvature,
+/// and at the strip's small size the eye reads that join as a step. This
+/// corner starts curving further from the corner and eases in, one cubic per
+/// corner, sized so it passes through the same point at 45 degrees as the
+/// circle of the same radius would. Its curvature still begins gently rather
+/// than all at once, which is what reads as smooth.
+package enum IslandCorner {
+    /// How far along each side the curve begins, as a multiple of the radius:
+    /// the figure the system's own continuous corners use.
+    package static let reach: CGFloat = 1.528
+    /// Where the control points sit, as a fraction of `reach` from the corner.
+    /// Chosen so the curve's midpoint matches the circle's.
+    package static let pull: CGFloat = 0.178
+
+    /// How far along each side a corner of `radius` reaches in `rect`: never
+    /// past half the width, so two corners never cross, nor past the height.
+    package static func extent(radius: CGFloat, in rect: CGRect) -> CGFloat {
+        max(0, min(radius * reach, rect.width / 2, rect.height))
+    }
+
+    /// From the right side, around the bottom-right corner, onto the bottom.
+    package static func bottomRight(of rect: CGRect, radius: CGFloat, in path: inout Path) {
+        let l = extent(radius: radius, in: rect)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - l))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX - l, y: rect.maxY),
+            control1: CGPoint(x: rect.maxX, y: rect.maxY - l * pull),
+            control2: CGPoint(x: rect.maxX - l * pull, y: rect.maxY))
+    }
+
+    /// Along the bottom, around the bottom-left corner, onto the left side.
+    package static func bottomLeft(of rect: CGRect, radius: CGFloat, in path: inout Path) {
+        let l = extent(radius: radius, in: rect)
+        path.addLine(to: CGPoint(x: rect.minX + l, y: rect.maxY))
+        path.addCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - l),
+            control1: CGPoint(x: rect.minX + l * pull, y: rect.maxY),
+            control2: CGPoint(x: rect.minX, y: rect.maxY - l * pull))
     }
 }

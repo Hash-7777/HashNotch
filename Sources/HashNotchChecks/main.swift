@@ -2323,6 +2323,27 @@ MainActor.assumeIsolated {
     // Compared against the silhouette rather than against numbers, so the two
     // cannot drift apart: the outline must be shorter, and it must not reach
     // the top edge anywhere along its length.
+    // The bottom corners are continuous curves: they reach further along the
+    // sides than a quarter circle, pass through the same point at 45 degrees,
+    // and never reach past half the width or the full height.
+    check(
+        "a corner reaches further along its sides than a circle of the same radius",
+        IslandCorner.extent(radius: 10, in: CGRect(x: 0, y: 0, width: 200, height: 40)) > 10
+    )
+    check(
+        "and passes within a fifth of a point of the circle's point at 45 degrees",
+        {
+            let l = IslandCorner.extent(radius: 10, in: CGRect(x: 0, y: 0, width: 200, height: 40))
+            let mid = l * (1 + 3 * IslandCorner.pull) / 8
+            return abs(mid - 10 * (1 - 1 / 2.0.squareRoot())) < 0.2
+        }()
+    )
+    check(
+        "and never crosses the other corner or runs past the top",
+        IslandCorner.extent(radius: 30, in: CGRect(x: 0, y: 0, width: 40, height: 100)) == 20
+            && IslandCorner.extent(radius: 30, in: CGRect(x: 0, y: 0, width: 400, height: 28)) == 28
+            && IslandCorner.extent(radius: -3, in: CGRect(x: 0, y: 0, width: 400, height: 28)) == 0
+    )
     let outlineBox = CGRect(x: 0, y: 0, width: 200, height: 40)
     let traced = IslandOutlineShape(radius: 14).path(in: outlineBox)
     check(
@@ -6776,6 +6797,28 @@ MainActor.assumeIsolated {
             state.avoidMenuBarItem(nil, notch: stripNotch)
             return budget == state.liveTrailingWidth && near == 96 && far == budget
                 && state.liveTrailingCap == budget
+        }()
+    )
+    check(
+        "the capped side is a whole number of points, so the strip's end sits on the pixel grid",
+        CappedWidthRule.width(ideal: 80.3, cap: 120, offered: nil) == 81
+            && CappedWidthRule.width(ideal: 200, cap: 95.7, offered: nil) == 95
+            && CappedWidthRule.width(ideal: 200, cap: 120, offered: 60.5) == 60
+    )
+    check(
+        "a held title fades out over a visible stretch rather than being cut through a letter",
+        {
+            let stops = MarqueeText.fadeStops(width: 90, moving: false)
+            let fadeStart = stops[stops.count - 2].location
+            return abs((1 - fadeStart) * 90 - MarqueeText.trailingFade) < 0.001
+                && stops.first?.location == 0 && stops.last?.location == 1
+        }()
+    )
+    check(
+        "and never fades more than a third of a narrow title",
+        {
+            let stops = MarqueeText.fadeStops(width: 30, moving: true)
+            return abs((1 - stops[2].location) * 30 - 10) < 0.001 && abs(stops[1].location * 30 - 8) < 0.001
         }()
     )
     check(

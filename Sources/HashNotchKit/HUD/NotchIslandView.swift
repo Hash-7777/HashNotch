@@ -891,9 +891,13 @@ private struct CappedWidth: ViewModifier {
 
 package enum CappedWidthRule {
     /// The content's own width, or the cap, or what the parent offers —
-    /// whichever is least, and never below nothing.
+    /// whichever is least, and never below nothing. In whole points, so the
+    /// strip's rounded end lands on the pixel grid on every display rather
+    /// than part-way across a pixel, where its edge is drawn soft: the content
+    /// is given the point it was short of, and the cap and the offer are never
+    /// exceeded.
     package static func width(ideal: CGFloat, cap: CGFloat, offered: CGFloat?) -> CGFloat {
-        max(0, min(ideal, cap, offered ?? .greatestFiniteMagnitude))
+        max(0, min(ideal.rounded(.up), cap.rounded(.down), (offered ?? .greatestFiniteMagnitude).rounded(.down)))
     }
 }
 

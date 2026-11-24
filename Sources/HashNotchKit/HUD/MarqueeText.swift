@@ -119,18 +119,7 @@ public struct MarqueeText: View {
                     // for — that is why this view exists at all.
                     .mask(
                         LinearGradient(
-                            stops: distance > 0.5
-                                ? [
-                                    .init(color: .clear, location: 0),
-                                    .init(color: .black, location: 0.035),
-                                    .init(color: .black, location: 0.965),
-                                    .init(color: .clear, location: 1),
-                                ]
-                                : [
-                                    .init(color: .black, location: 0),
-                                    .init(color: .black, location: 0.965),
-                                    .init(color: .clear, location: 1),
-                                ],
+                            stops: Self.fadeStops(width: available, moving: distance > 0.5),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -140,5 +129,31 @@ public struct MarqueeText: View {
                 label
             }
         }
+    }
+
+    /// How wide the fades are, in points: wide enough to read as the title
+    /// running on out of sight rather than being cut through a letter, which a
+    /// share of the width was not — on a short strip it came to a couple of
+    /// points. Never more than a third of the room, so a narrow title stays
+    /// mostly readable.
+    package static let trailingFade: CGFloat = 18
+    package static let leadingFade: CGFloat = 8
+
+    package static func fadeStops(width: CGFloat, moving: Bool) -> [Gradient.Stop] {
+        guard width > 0 else { return [.init(color: .black, location: 0)] }
+        let trailing = 1 - min(trailingFade, width / 3) / width
+        let leading = min(leadingFade, width / 3) / width
+        return moving
+            ? [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: leading),
+                .init(color: .black, location: trailing),
+                .init(color: .clear, location: 1),
+            ]
+            : [
+                .init(color: .black, location: 0),
+                .init(color: .black, location: trailing),
+                .init(color: .clear, location: 1),
+            ]
     }
 }

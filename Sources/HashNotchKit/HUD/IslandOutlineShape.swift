@@ -48,26 +48,10 @@ package struct IslandOutlineShape: InsettableShape {
     package func path(in outer: CGRect) -> Path {
         let rect = outer.insetBy(dx: inset, dy: inset)
         guard rect.width > 0, rect.height > 0 else { return Path() }
-        let r = max(0, min(radius, min(rect.width, rect.height) / 2))
         var path = Path()
-
         path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
-        path.addArc(
-            center: CGPoint(x: rect.maxX - r, y: rect.maxY - r),
-            radius: r,
-            startAngle: .degrees(0),
-            endAngle: .degrees(90),
-            clockwise: false
-        )
-        path.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
-        path.addArc(
-            center: CGPoint(x: rect.minX + r, y: rect.maxY - r),
-            radius: r,
-            startAngle: .degrees(90),
-            endAngle: .degrees(180),
-            clockwise: false
-        )
+        IslandCorner.bottomRight(of: rect, radius: radius, in: &path)
+        IslandCorner.bottomLeft(of: rect, radius: radius, in: &path)
         path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
         return path
     }
