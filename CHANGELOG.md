@@ -17,8 +17,9 @@ All notable changes to HashNotch are recorded here.
   sections arriving a beat after one another; with Reduce Motion on it simply
   fades. The figures sit in slightly raised tiles with larger, rounded numbers
   that roll as they change, the switches are grouped on one pane with thin
-  lines between them, the chosen refresh rate slides between choices, and the
-  headings and notes are quieter, so the numbers are what you see first.
+  lines between them, the chosen refresh rate slides between choices under a
+  "Refresh rate" heading with no note beneath it, and the headings are
+  quieter, so the numbers are what you see first. Settings explains the rate.
 
 ### Fixed
 

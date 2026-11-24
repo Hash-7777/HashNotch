@@ -79,13 +79,8 @@ public struct MenuBarPanelView: View {
             .modifier(ArrivesInTurn(order: 4))
 
             VStack(alignment: .leading, spacing: 7) {
-                caption("Refresh")
+                caption("Refresh rate")
                 refreshPicker
-                Text(refreshDetail)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.45))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 2)
             }
             .modifier(ArrivesInTurn(order: 5))
         }
@@ -223,11 +218,6 @@ public struct MenuBarPanelView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-    }
-
-    private var refreshDetail: String {
-        MenuBarWording.refreshDetail(
-            refresh: settings.menuBarRefresh, batterySaver: settings.batterySaver)
     }
 }
 

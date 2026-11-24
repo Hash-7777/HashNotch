@@ -637,7 +637,7 @@ public struct SettingsView: View {
                 }
             }
 
-            SettingSection("Refresh") {
+            SettingSection("Refresh rate") {
                 SettingRow(
                     "Read the figures",
                     detail: MenuBarWording.refreshDetail(
