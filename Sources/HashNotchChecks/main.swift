@@ -6772,6 +6772,15 @@ MainActor.assumeIsolated {
         MenuBarPanel.shadowRoom.top < MenuBarPanel.gap
     )
     check(
+        "a panel that grew from its bottom edge is put back under the menu bar, keeping its new size",
+        MenuBarPanel.keepingTop(NSRect(x: 900, y: 450, width: 336, height: 450), at: 803)
+            == NSRect(x: 900, y: 353, width: 336, height: 450)
+    )
+    check(
+        "and one already in place is left alone",
+        MenuBarPanel.keepingTop(NSRect(x: 900, y: 353, width: 336, height: 450), at: 803) == nil
+    )
+    check(
         "and its controls answer the first click",
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
     )

@@ -36,6 +36,10 @@ package final class MenuBarPanel {
     /// Whether the content is open, which the surface animates from: it grows
     /// down out of the menu bar on a spring, and folds back up to go.
     private let presence = MenuBarPanelPresence()
+    /// Where the window's top edge belongs while it is open. Whatever changes
+    /// the window's size, it grows and shrinks DOWN from here.
+    private var pinnedTop: CGFloat?
+    private var resizeObserver: NSObjectProtocol?
 
     /// Room between the menu bar and the top of the panel.
     package static let gap: CGFloat = 5
@@ -73,6 +77,38 @@ package final class MenuBarPanel {
         window.level = .popUpMenu
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
         window.contentView = host
+        // The hosting view resizes the window when what it shows changes size,
+        // and it does so from the window's BOTTOM edge. The first time the
+        // panel opened it had been measured without its figures, so when they
+        // arrived it grew upwards and opened with its top far above the menu
+        // bar. Whatever resizes it, the top edge goes back where it was put.
+        // (Turning the hosting view's own sizing off is not the answer: it
+        // then reports no size of its own at all, and `fittingSize` with it.)
+        resizeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.keepTop() }
+        }
+    }
+
+    /// Put the window's top edge back where it belongs, if a resize moved it.
+    private func keepTop() {
+        guard isShown, let top = pinnedTop else { return }
+        let frame = window.frame
+        guard let corrected = Self.keepingTop(frame, at: top) else { return }
+        window.setFrameOrigin(corrected.origin)
+    }
+
+    /// `frame` moved so its top edge is at `top`, or nil when it already is.
+    package static func keepingTop(_ frame: NSRect, at top: CGFloat) -> NSRect? {
+        guard abs(frame.maxY - top) > 0.5 else { return nil }
+        return NSRect(x: frame.minX, y: top - frame.height, width: frame.width, height: frame.height)
+    }
+
+    /// The panel's own top edge and height, for the debug trace.
+    var debugDescription: String {
+        let room = Self.shadowRoom
+        return "panel.top=\(Int(window.frame.maxY - room.top)) panel.h=\(Int(window.frame.height - room.top - room.bottom))"
     }
 
     /// Open under `button`, or close if it is open.
@@ -98,8 +134,13 @@ package final class MenuBarPanel {
         window.orderFrontRegardless()
         // A turn later, once the closed state has been drawn: the opening is
         // an animation from it, not a jump to the end.
-        DispatchQueue.main.async { [presence] in
+        //
+        // The figures handed over with this click are in the view by then too,
+        // so it is also when the panel is measured again: the first time it
+        // opens it was measured without them.
+        DispatchQueue.main.async { [weak self, presence] in
             MainActor.assumeIsolated {
+                self?.refit()
                 withAnimation(MenuBarPanelPresence.opening) { presence.isOpen = true }
             }
         }
@@ -126,11 +167,11 @@ package final class MenuBarPanel {
     func refit() {
         guard isShown else { return }
         let size = host.fittingSize
+        guard size.width > 0, size.height > 0 else { return }
         var frame = window.frame
-        guard size.width > 0, size.height > 0, frame.size != size else { return }
-        frame.origin.y = frame.maxY - size.height
+        frame.origin.y = (pinnedTop ?? frame.maxY) - size.height
         frame.size = size
-        window.setFrame(frame, display: true)
+        if frame != window.frame { window.setFrame(frame, display: true) }
     }
 
     /// Where to hang it from: the item, or — when the click came from a menu
@@ -154,7 +195,9 @@ package final class MenuBarPanel {
         let x = min(max(anchor.minX, visible.minX + 8), visible.maxX - 8 - size.width)
         let panel = NSRect(x: x.rounded(), y: (top - size.height).rounded(),
                            width: size.width, height: size.height)
-        window.setFrame(Self.windowFrame(panel: panel), display: true)
+        let frame = Self.windowFrame(panel: panel)
+        pinnedTop = frame.maxY
+        window.setFrame(frame, display: true)
     }
 
     /// The window around a panel at `panel`: the panel, and the room its

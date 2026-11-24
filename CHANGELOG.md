@@ -18,6 +18,11 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The menu bar panel opens under the menu bar the first time too.** The
+  first time it opened after launch, it was measured before its figures were
+  in it, and when they arrived it grew upwards, so it opened far too high;
+  every later open was right. It now keeps its top edge just under the menu
+  bar however its size changes, and is measured again once the figures are in.
 - **Smoother edges on the notch's strip and panel.** Their bottom corners are
   now continuous curves that ease out of the straight sides, the way the
   system's own rounded shapes do, instead of quarter circles that turned

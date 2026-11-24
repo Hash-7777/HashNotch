@@ -106,6 +106,8 @@ public final class StatusBarItem: NSObject, MenuBarItem {
             }
         }
 
+        startDebugCycleIfRequested()
+
         // A figure switched on or off from inside the panel changes what it
         // holds; it is fitted again a turn later, once the view has the change.
         settings.$menuBarFigures.dropFirst()
@@ -172,6 +174,30 @@ public final class StatusBarItem: NSObject, MenuBarItem {
         }
         let frame = window.frame
         if place.frame != frame { place.frame = frame }
+    }
+
+    /// Development aid, inert unless `HASHNOTCH_DEBUG` contains `menubar`:
+    /// opens and closes the panel on a timer, a few times, and logs where its
+    /// top edge lands each time, so where it opens can be measured without a
+    /// hand on the trackpad.
+    private func startDebugCycleIfRequested() {
+        guard (ProcessInfo.processInfo.environment["HASHNOTCH_DEBUG"] ?? "")
+            .split(separator: ",").contains("menubar") else { return }
+        var ticks = 0
+        Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, ticks < 6 else { timer.invalidate(); return }
+                ticks += 1
+                self.togglePanel()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    MainActor.assumeIsolated {
+                        let item = self.item.button?.window?.frame ?? .zero
+                        FileHandle.standardError.write(Data(
+                            "[menubar] open=\(self.panel.isShown) item.minY=\(Int(item.minY)) \(self.panel.debugDescription)\n".utf8))
+                    }
+                }
+            }
+        }
     }
 
     @objc private func togglePanel() {
