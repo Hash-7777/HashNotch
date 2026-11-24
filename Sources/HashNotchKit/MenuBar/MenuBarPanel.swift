@@ -41,21 +41,7 @@ package final class MenuBarPanel {
     static let fade: TimeInterval = 0.12
 
     init<Content: View>(content: Content) {
-        let root = AnyView(
-            content
-                .background(
-                    ZStack {
-                        VisualEffectView(material: .menu)
-                        Color.black.opacity(0.3)
-                    }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-                )
-                .environment(\.colorScheme, .dark)
-        )
+        let root = AnyView(MenuBarPanelSurface(content: content))
         host = FirstClickHostingView(rootView: root)
         window = MenuBarPanelWindow(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 300),
@@ -178,6 +164,36 @@ package final class MenuBarPanel {
     private func stopWatching() {
         if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         outsideClickMonitor = nil
+    }
+}
+
+/// The panel's glass: the app's own surface, with a lighter wash than the
+/// notch panel's so more of what is behind it shows through, and a hairline
+/// edge that catches the light the way the system's own menu bar panels do.
+///
+/// The wash is kept, lighter: glass takes its brightness from what is behind
+/// it, and white text over a white document needs some darkening to stay
+/// readable.
+package struct MenuBarPanelSurface<Content: View>: View {
+    package static var cornerRadius: CGFloat { 16 }
+    let content: Content
+
+    package init(content: Content) {
+        self.content = content
+    }
+
+    package var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+        content
+            .background(
+                ZStack {
+                    VisualEffectView(material: .menu)
+                    Color.black.opacity(0.18)
+                }
+            )
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+            .environment(\.colorScheme, .dark)
     }
 }
 

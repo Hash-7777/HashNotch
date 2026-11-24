@@ -33,18 +33,20 @@ public struct MenuBarPanelView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("HashNotch")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.85))
                 Spacer(minLength: 8)
                 Button(action: openSettings) {
                     Image(systemName: "gearshape")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Color.white.opacity(0.08)))
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.white.opacity(0.7))
                 .help("All settings")
                 .accessibilityLabel("All settings")
             }
@@ -57,24 +59,43 @@ public struct MenuBarPanelView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 7) {
                 caption("In the menu bar")
-                ForEach(meters, id: \.id) { meter in
-                    row(meter)
+                VStack(spacing: 0) {
+                    ForEach(Array(meters.enumerated()), id: \.element.id) { index, meter in
+                        if index > 0 {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.07))
+                                .frame(height: 0.5)
+                                .padding(.leading, 33)
+                        }
+                        row(meter)
+                    }
                 }
+                .background(card)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 7) {
                 caption("Refresh")
                 refreshPicker
                 Text(refreshDetail)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.white.opacity(0.45))
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 2)
             }
         }
-        .padding(16)
+        .padding(14)
         .frame(width: 280)
+    }
+
+    /// The faint pane the tiles and the switches sit on: a little lighter than
+    /// the glass, with an edge just visible, so they read as set into it.
+    private var card: some View {
+        let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+        return shape
+            .fill(Color.white.opacity(0.06))
+            .overlay(shape.strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5))
     }
 
     /// The app's own colours: its accent for anything on or chosen, its red
@@ -98,9 +119,9 @@ public struct MenuBarPanelView: View {
                 } label: {
                     Text(refresh.shortLabel)
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(chosen ? theme.onAccent : Color.white.opacity(0.7))
+                        .foregroundStyle(chosen ? theme.onAccent : Color.white.opacity(0.6))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 22)
+                        .frame(height: 24)
                         .background(
                             Capsule(style: .continuous)
                                 .fill(chosen ? theme.accent : Color.clear)
@@ -113,37 +134,40 @@ public struct MenuBarPanelView: View {
             }
         }
         .padding(2)
-        .background(Capsule(style: .continuous).fill(Color.white.opacity(0.08)))
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5))
+        )
         .animation(.easeOut(duration: 0.15), value: settings.menuBarRefresh)
     }
 
     private func caption(_ text: String) -> some View {
         Text(text.uppercased())
-            .font(.system(size: 9.5, weight: .semibold))
-            .kerning(0.8)
-            .foregroundStyle(.secondary)
+            .font(.system(size: 9, weight: .semibold))
+            .kerning(0.9)
+            .foregroundStyle(Color.white.opacity(0.4))
+            .padding(.leading, 2)
     }
 
     /// One figure, larger: its glyph, its number, its name.
     private func tile(_ figure: MenuBarFigure) -> some View {
         let level: ReadingLevel = figure.reading?.isHigh == true ? .danger : .normal
-        return VStack(spacing: 5) {
-            MenuBarGlyphView(figure.glyph, size: 15, color: theme.color(for: level))
+        return VStack(spacing: 4) {
+            MenuBarGlyphView(figure.glyph, size: 14, color: theme.color(for: level))
+                .padding(.bottom, 2)
             Text(figure.text)
-                .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(level == .danger ? Theme.danger : Color.white)
             Text(figure.title)
                 .font(.system(size: 9.5, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.white.opacity(0.5))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
+        .padding(.vertical, 11)
+        .background(card)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(figure.reading?.spoken ?? "\(figure.title), no reading yet")
     }
@@ -152,16 +176,16 @@ public struct MenuBarPanelView: View {
     /// and greyed, and says why, rather than a switch that does nothing.
     private func row(_ meter: MenuBarMeter) -> some View {
         let indicatorOn = settings.isEnabled(meter.id)
-        return HStack(spacing: 9) {
-            MenuBarGlyphView(meter.glyph, size: 12, color: indicatorOn ? theme.accent : .white.opacity(0.3))
+        return HStack(spacing: 10) {
+            MenuBarGlyphView(meter.glyph, size: 13, color: indicatorOn ? theme.accent : .white.opacity(0.3))
             VStack(alignment: .leading, spacing: 1) {
                 Text(meter.title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(indicatorOn ? Color.primary : Color.secondary)
+                    .foregroundStyle(indicatorOn ? Color.white.opacity(0.9) : Color.white.opacity(0.45))
                 if !indicatorOn {
                     Text("Its indicator is off")
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.white.opacity(0.4))
                 }
             }
             Spacer(minLength: 8)
@@ -173,6 +197,8 @@ public struct MenuBarPanelView: View {
             .disabled(!indicatorOn)
             .accessibilityLabel(meter.title)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
     }
 
     private var refreshDetail: String {
@@ -203,7 +229,7 @@ struct PanelSwitchStyle: ToggleStyle {
             configuration.isOn.toggle()
         } label: {
             Capsule(style: .continuous)
-                .fill(configuration.isOn ? accent : Color.white.opacity(0.16))
+                .fill(configuration.isOn ? accent : Color.white.opacity(0.14))
                 .frame(width: 30, height: 18)
                 .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                     Circle()

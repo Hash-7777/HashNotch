@@ -4,6 +4,14 @@ All notable changes to HashNotch are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- **A clearer, glassier menu bar panel.** More of what is behind the panel
+  shows through its glass, and a fine edge catches the light. The figures sit
+  in tiles with larger, rounded numbers, the switches are grouped on one pane
+  with thin lines between them, and the headings and notes are quieter, so the
+  numbers are what you see first.
+
 ### Fixed
 
 - **No more stray box of figures under the pointer.** The menu bar item set a
