@@ -2,6 +2,14 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// Where the app's menu bar item is on screen, for the notch's live strip to
+/// keep clear of. Nil while there is no item.
+@MainActor
+public final class MenuBarItemPlace: ObservableObject {
+    @Published public internal(set) var frame: CGRect?
+    public init() {}
+}
+
 /// The app's one item in the real menu bar: a small column per figure, its
 /// word above its number, all drawn into one image.
 ///
@@ -45,15 +53,20 @@ public final class StatusBarItem: NSObject, MenuBarItem {
     /// The picture is drawn in the bar's colours as they were when it was
     /// drawn, so a switch between a light bar and a dark one redraws it.
     private var appearanceObservation: NSKeyValueObservation?
+    /// Told where the item is, so the notch's strip can stop short of it.
+    private let place: MenuBarItemPlace?
+    private var moveObserver: NSObjectProtocol?
 
     /// - Parameter onSettings: opens the settings window on the menu-bar page.
     ///   The panel is put away first, so the two are never on screen at once.
     public init(
         settings: SettingsStore,
         meters: [MenuBarMeter],
+        place: MenuBarItemPlace? = nil,
         onSettings: @escaping () -> Void
     ) {
         self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.place = place
         let shown = self.shown
         var close: () -> Void = {}
         self.panel = MenuBarPanel(content: MenuBarPanelView(
@@ -127,6 +140,7 @@ public final class StatusBarItem: NSObject, MenuBarItem {
         let width = image.size.width + Self.itemInset * 2
         if item.length != width { item.length = width }
         button.image = image
+        reportPlace()
         // Spoken to VoiceOver, and deliberately not a hover tooltip. The item
         // already shows these figures, and on macOS 26 and later the system
         // draws the menu bar's items itself, so the button's own window is not
@@ -139,7 +153,25 @@ public final class StatusBarItem: NSObject, MenuBarItem {
 
     public func remove() {
         panel.hide()
+        if let moveObserver { NotificationCenter.default.removeObserver(moveObserver) }
+        moveObserver = nil
         NSStatusBar.system.removeStatusItem(item)
+        place?.frame = nil
+    }
+
+    /// Say where the item is now, and keep saying it as it moves: the menu
+    /// bar shifts it whenever an item beside it comes, goes or changes width.
+    private func reportPlace() {
+        guard let place, let window = item.button?.window else { return }
+        if moveObserver == nil {
+            moveObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didMoveNotification, object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.reportPlace() }
+            }
+        }
+        let frame = window.frame
+        if place.frame != frame { place.frame = frame }
     }
 
     @objc private func togglePanel() {

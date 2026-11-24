@@ -93,7 +93,10 @@ window, until it went too.
 
 What appears beside the notch now is the live strip, which one feature at a time
 owns through `makeCompactLeadingView` and `makeCompactTrailingView`, and which
-is decided by `livePriority` rather than by any placement.
+is decided by `livePriority` rather than by any placement. Its right-hand side
+stops short of the app's own menu bar item when that sits closer than its usual
+width (`NotchState.trailingRoom`), so a title scrolls in the room left rather
+than drawing over the item's figures.
 
 A feature owns its own data source (an `ObservableObject` monitor) and its own
 SwiftUI views. `FeatureContext` is how it reaches shared services: the settings

@@ -665,7 +665,11 @@ struct NotchIslandView: View {
             // past the width its own centring is computed from and slid across
             // the notch. One feature fits; the cap makes that structural rather
             // than a thing each feature has to remember.
-            .frame(maxWidth: state.liveTrailingWidth, alignment: .leading)
+            //
+            // And it stops short of this app's own menu bar item when that sits
+            // closer than the budget: given less room, a title scrolls inside
+            // it rather than running over the item's figures.
+            .modifier(CappedWidth(cap: state.liveTrailingCap))
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(height: state.notchHeight)
@@ -863,5 +867,51 @@ private struct PressableStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.88 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
+    }
+}
+
+/// Lays its content out at its own width or `cap`, whichever is less, and
+/// offers the content that narrower width, so text inside it truncates or
+/// scrolls rather than spilling past the cap. Clipped at the cap as well, for
+/// content that cannot get any narrower.
+///
+/// Layouts arrived in macOS 13. On macOS 12 the content keeps its own width
+/// up to the cap and is cut off there, which still keeps it off the item.
+private struct CappedWidth: ViewModifier {
+    let cap: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(macOS 13.0, *) {
+            CappedWidthLayout(cap: cap) { content }.clipped()
+        } else {
+            content.frame(maxWidth: cap, alignment: .leading).clipped()
+        }
+    }
+}
+
+package enum CappedWidthRule {
+    /// The content's own width, or the cap, or what the parent offers —
+    /// whichever is least, and never below nothing.
+    package static func width(ideal: CGFloat, cap: CGFloat, offered: CGFloat?) -> CGFloat {
+        max(0, min(ideal, cap, offered ?? .greatestFiniteMagnitude))
+    }
+}
+
+@available(macOS 13.0, *)
+private struct CappedWidthLayout: Layout {
+    let cap: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let child = subviews.first else { return .zero }
+        let width = CappedWidthRule.width(
+            ideal: child.sizeThatFits(.unspecified).width, cap: cap, offered: proposal.width)
+        let height = child.sizeThatFits(ProposedViewSize(width: width, height: proposal.height)).height
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(
+            at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
     }
 }

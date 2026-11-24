@@ -34,6 +34,7 @@ public final class NotchWindowController {
     /// of them can reach down over the Dock.
     private var screenFrame: CGRect
     private var notchRect: CGRect
+    private var menuBarItemFrame: CGRect?
     /// The y coordinate the island hangs from — the screen's top edge on a
     /// notched display, the bottom of the menu bar otherwise.
     private var islandTop: CGFloat
@@ -465,11 +466,36 @@ public final class NotchWindowController {
         apply(geometry: adjustment.applied(to: measured))
     }
 
+    /// Keep the live strip clear of the menu bar item wherever `place` says it is.
+    public func follow(menuBarItem place: MenuBarItemPlace) {
+        itemPlaceSubscription = place.$frame
+            .removeDuplicates()
+            .sink { [weak self] frame in self?.avoidMenuBarItem(frame) }
+    }
+
+    private var itemPlaceSubscription: AnyCancellable?
+
+    /// Where this app's menu bar item is, in screen coordinates, or nil when
+    /// there is none. The live strip stops short of it. Kept so a change to the
+    /// notch's own geometry measures against the same item again.
+    public func avoidMenuBarItem(_ frame: CGRect?) {
+        menuBarItemFrame = frame
+        state.avoidMenuBarItem(frame, notch: notchRect)
+        if Self.debugOptions.contains("frames") {
+            FileHandle.standardError.write(Data("""
+            [island] menu bar item \(frame.map { "x=\(Int($0.minX)) w=\(Int($0.width)) y=\(Int($0.minY))" } ?? "none") \
+            notch maxX=\(Int(notchRect.maxX)) | strip room \(state.liveTrailingRoom.map { "\(Int($0))" } ?? "unlimited")
+
+            """.utf8))
+        }
+    }
+
     private func apply(geometry: NotchGeometry) {
         screenFrame = geometry.roomFrame
         notchRect = geometry.notchRect
         islandTop = geometry.islandTop
         state.apply(geometry: geometry)
+        state.avoidMenuBarItem(menuBarItemFrame, notch: notchRect)
         updateHoverRects()
         // Straight to the exact frame: an animated resize per slider tick would
         // trail the drag rather than follow it.

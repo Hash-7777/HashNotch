@@ -14,6 +14,10 @@ All notable changes to HashNotch are recorded here.
 
 ### Fixed
 
+- **The notch's strip no longer covers the menu bar figures.** On a crowded
+  menu bar the figures sit right beside the notch, and a playing song's title
+  ran over them. The strip now ends just before the figures, and a long title
+  scrolls in the room that is left.
 - **No more stray box of figures under the pointer.** The menu bar item set a
   hover tip with its figures on every refresh, and since macOS draws the menu
   bar's items itself, the tip could pop up wherever the pointer was, anywhere

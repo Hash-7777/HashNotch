@@ -6741,6 +6741,51 @@ MainActor.assumeIsolated {
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
     )
 
+    // The notch's live strip stops short of the item instead of drawing over it.
+    let stripNotch = CGRect(x: 562, y: 804, width: 156, height: 28)
+    check(
+        "the strip reaches up to the item beside the notch, less a little clearance",
+        NotchState.trailingRoom(notch: stripNotch, item: NSRect(x: 820, y: 803, width: 110, height: 29))
+            == 820 - 718 - NotchState.menuBarItemClearance
+    )
+    check(
+        "and is not limited by an item that is not beside it",
+        NotchState.trailingRoom(notch: stripNotch, item: nil) == nil
+            // hidden by a full menu bar, to the notch's left
+            && NotchState.trailingRoom(notch: stripNotch, item: NSRect(x: 300, y: 803, width: 110, height: 29)) == nil
+            // on a display whose island hangs below the menu bar
+            && NotchState.trailingRoom(notch: CGRect(x: 562, y: 750, width: 132, height: 26),
+                                       item: NSRect(x: 820, y: 803, width: 110, height: 29)) == nil
+            && NotchState.trailingRoom(notch: stripNotch, item: .zero) == nil
+    )
+    check(
+        "an item right against the notch leaves no room rather than a negative width",
+        NotchState.trailingRoom(notch: stripNotch, item: NSRect(x: 719, y: 803, width: 110, height: 29)) == 0
+    )
+    check(
+        "the strip's right side is the smaller of its budget and the room",
+        {
+            let geometry = NotchGeometry(
+                screenFrame: CGRect(x: 0, y: 0, width: 1280, height: 832), notchRect: stripNotch, hasNotch: true)
+            let state = NotchState(geometry: geometry)
+            let budget = state.liveTrailingCap
+            state.avoidMenuBarItem(NSRect(x: 820, y: 803, width: 110, height: 29), notch: stripNotch)
+            let near = state.liveTrailingCap
+            state.avoidMenuBarItem(NSRect(x: 1100, y: 803, width: 110, height: 29), notch: stripNotch)
+            let far = state.liveTrailingCap
+            state.avoidMenuBarItem(nil, notch: stripNotch)
+            return budget == state.liveTrailingWidth && near == 96 && far == budget
+                && state.liveTrailingCap == budget
+        }()
+    )
+    check(
+        "content in the capped side takes its own width, the cap, or what it is offered, whichever is least",
+        CappedWidthRule.width(ideal: 80, cap: 120, offered: nil) == 80
+            && CappedWidthRule.width(ideal: 200, cap: 120, offered: nil) == 120
+            && CappedWidthRule.width(ideal: 200, cap: 120, offered: 50) == 50
+            && CappedWidthRule.width(ideal: 200, cap: -4, offered: nil) == 0
+    )
+
     // What is stored. Processor, memory and temperature by default, on a fresh
     // install and on an update; switching them all off is kept.
     let fresh = SettingsStore(defaults: InMemoryDefaults(), legacyDefaults: InMemoryDefaults())

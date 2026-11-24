@@ -30,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var power: PowerCoordinator?
     /// The figures somebody chose to put in the menu bar. None by default.
     private var menuBar: MenuBarController?
+    /// Where the menu bar item is, so every overlay built keeps its strip clear.
+    private let menuBarItemPlace = MenuBarItemPlace()
     private var screenObserver: NSObjectProtocol?
     private var rebuildWork: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
@@ -149,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 StatusBarItem(
                     settings: settings,
                     meters: meters,
+                    place: self?.menuBarItemPlace,
                     onSettings: { self?.openSettingsAlone(at: "menuBar") }
                 )
             }
@@ -488,6 +491,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow?.owns(window) == true
         }
         controller.closeSettings = { [weak settingsWindow] in settingsWindow?.hide() }
+        // So the live strip stops short of the app's own menu bar item.
+        controller.follow(menuBarItem: menuBarItemPlace)
         // So a switch that is about to make macOS ask for something can clear
         // the screen first. Both of this app's windows sit above the ordinary
         // level, so a permission dialog opens behind them otherwise.

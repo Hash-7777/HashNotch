@@ -27,6 +27,10 @@ public final class NotchState: ObservableObject {
     @Published public private(set) var liveCornerRadius: CGFloat = NotchState.cornerRadius(forHeight: NotchState.minimumContentHeight)
     @Published public private(set) var liveTrailingWidth: CGFloat = 170
     @Published public private(set) var liveWidth: CGFloat = 0
+    /// How far the strip may reach right of the notch before it would cover
+    /// this app's own item in the menu bar, or nil when the item is not in the
+    /// way. See `trailingRoom(notch:item:)`.
+    @Published public private(set) var liveTrailingRoom: CGFloat?
     @Published public private(set) var liveHeight: CGFloat = 0
     @Published public private(set) var expandedWidth: CGFloat = 0
     @Published public private(set) var expandedHeight: CGFloat = 460
@@ -243,6 +247,42 @@ public final class NotchState: ObservableObject {
     public var notchAnchorInLiveStrip: CGFloat {
         guard liveWidth > 0 else { return 0.5 }
         return (liveLeadingWidth + notchWidth / 2) / liveWidth
+    }
+
+    /// The widest the strip's right-hand side may be drawn: its usual budget,
+    /// or less where the menu bar item begins.
+    public var liveTrailingCap: CGFloat {
+        min(liveTrailingWidth, liveTrailingRoom ?? .greatestFiniteMagnitude)
+    }
+
+    /// Told where this app's menu bar item is, in screen coordinates, and
+    /// where the notch is.
+    public func avoidMenuBarItem(_ item: CGRect?, notch: CGRect) {
+        let room = Self.trailingRoom(notch: notch, item: item)
+        if room != liveTrailingRoom { liveTrailingRoom = room }
+    }
+
+    /// Room left between the notch's right edge and the menu bar item.
+    package static let menuBarItemClearance: CGFloat = 6
+
+    /// How far right of the notch the strip may reach without covering the
+    /// menu bar item: up to its left edge, less a little clearance.
+    ///
+    /// The strip spreads into the menu bar beside the notch, which is where
+    /// macOS puts the items nearest it. On a crowded bar that is this app's own
+    /// item, and the strip drew straight over its figures. Other apps' items
+    /// cannot be located from here, but this one can, and it is the one the
+    /// strip would otherwise always cover, since it stays beside the notch.
+    ///
+    /// Nil — no limit — when the item is not on the notch's band of the screen
+    /// (another display, or a notchless one where the island hangs below the
+    /// menu bar) or not to the notch's right (hidden beside the notch by a full
+    /// menu bar).
+    package static func trailingRoom(notch: CGRect, item: CGRect?) -> CGFloat? {
+        guard let item, !item.isEmpty, !notch.isEmpty,
+              item.minY < notch.maxY, item.maxY > notch.minY,
+              item.minX >= notch.maxX - 1 else { return nil }
+        return max(0, item.minX - notch.maxX - menuBarItemClearance)
     }
 
     public func setExpanded(_ expanded: Bool) {
