@@ -6,11 +6,15 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
-- **A clearer, glassier menu bar panel.** More of what is behind the panel
-  shows through its glass, and a fine edge catches the light. The figures sit
-  in tiles with larger, rounded numbers, the switches are grouped on one pane
-  with thin lines between them, and the headings and notes are quieter, so the
-  numbers are what you see first.
+- **A clearer, glassier menu bar panel with depth and motion.** More of what
+  is behind the panel shows through its glass, its edge is lit along the top,
+  and it floats on a soft shadow that moves with it. It grows down out of the
+  menu bar on a spring and folds back up to close, with the figures and
+  sections arriving a beat after one another; with Reduce Motion on it simply
+  fades. The figures sit in slightly raised tiles with larger, rounded numbers
+  that roll as they change, the switches are grouped on one pane with thin
+  lines between them, the chosen refresh rate slides between choices, and the
+  headings and notes are quieter, so the numbers are what you see first.
 
 ### Fixed
 

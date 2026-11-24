@@ -18,6 +18,8 @@ public struct MenuBarPanelView: View {
     @ObservedObject var state: MenuBarState
     let meters: [MenuBarMeter]
     let openSettings: () -> Void
+    /// The chosen rate's pill slides between rates rather than jumping.
+    @Namespace private var rateSelection
 
     public init(
         settings: SettingsStore,
@@ -53,8 +55,8 @@ public struct MenuBarPanelView: View {
 
             if !state.figures.isEmpty {
                 HStack(spacing: 8) {
-                    ForEach(state.figures, id: \.id) { figure in
-                        tile(figure)
+                    ForEach(Array(state.figures.enumerated()), id: \.element.id) { index, figure in
+                        tile(figure).modifier(ArrivesInTurn(order: 1 + index))
                     }
                 }
             }
@@ -74,6 +76,7 @@ public struct MenuBarPanelView: View {
                 }
                 .background(card)
             }
+            .modifier(ArrivesInTurn(order: 4))
 
             VStack(alignment: .leading, spacing: 7) {
                 caption("Refresh")
@@ -84,6 +87,7 @@ public struct MenuBarPanelView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 2)
             }
+            .modifier(ArrivesInTurn(order: 5))
         }
         .padding(14)
         .frame(width: 280)
@@ -91,11 +95,20 @@ public struct MenuBarPanelView: View {
 
     /// The faint pane the tiles and the switches sit on: a little lighter than
     /// the glass, with an edge just visible, so they read as set into it.
+    ///
+    /// Raised a little: lit along its top edge and resting on a soft shadow,
+    /// so the tiles and the switches read as standing on the glass rather
+    /// than printed on it.
     private var card: some View {
         let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
         return shape
-            .fill(Color.white.opacity(0.06))
-            .overlay(shape.strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5))
+            .fill(Color.white.opacity(0.065))
+            .overlay(shape.strokeBorder(
+                LinearGradient(
+                    colors: [Color.white.opacity(0.16), Color.white.opacity(0.03)],
+                    startPoint: .top, endPoint: .bottom),
+                lineWidth: 0.5))
+            .background(OuterShadow(shape: shape, color: .black.opacity(0.32), radius: 3, y: 2))
     }
 
     /// The app's own colours: its accent for anything on or chosen, its red
@@ -122,10 +135,19 @@ public struct MenuBarPanelView: View {
                         .foregroundStyle(chosen ? theme.onAccent : Color.white.opacity(0.6))
                         .frame(maxWidth: .infinity)
                         .frame(height: 24)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(chosen ? theme.accent : Color.clear)
-                        )
+                        .background {
+                            if chosen {
+                                Capsule(style: .continuous)
+                                    .fill(theme.accent)
+                                    .overlay(Capsule(style: .continuous).strokeBorder(
+                                        LinearGradient(
+                                            colors: [Color.white.opacity(0.35), Color.white.opacity(0)],
+                                            startPoint: .top, endPoint: .bottom),
+                                        lineWidth: 0.5))
+                                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                                    .matchedGeometryEffect(id: "chosen", in: rateSelection)
+                            }
+                        }
                         .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -139,7 +161,7 @@ public struct MenuBarPanelView: View {
                 .fill(Color.white.opacity(0.06))
                 .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5))
         )
-        .animation(.easeOut(duration: 0.15), value: settings.menuBarRefresh)
+        .animation(.spring(response: 0.3, dampingFraction: 0.82), value: settings.menuBarRefresh)
     }
 
     private func caption(_ text: String) -> some View {
@@ -159,6 +181,8 @@ public struct MenuBarPanelView: View {
             Text(figure.text)
                 .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(level == .danger ? Theme.danger : Color.white)
+                .rollingDigits()
+                .figureAnimation(.spring(response: 0.35, dampingFraction: 0.9), value: figure.text)
             Text(figure.title)
                 .font(.system(size: 9.5, weight: .medium))
                 .foregroundStyle(Color.white.opacity(0.5))
@@ -234,7 +258,7 @@ struct PanelSwitchStyle: ToggleStyle {
                 .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                     Circle()
                         .fill(Color.white)
-                        .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+                        .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
                         .frame(width: 14, height: 14)
                         .padding(2)
                 }
@@ -243,5 +267,25 @@ struct PanelSwitchStyle: ToggleStyle {
         }
         .buttonStyle(.plain)
         .accessibilityValue(configuration.isOn ? "On" : "Off")
+    }
+}
+
+/// The panel's contents arriving one after another as it opens, each rising a
+/// few points into place, a beat behind the one before. Closing, they all go
+/// at once with the panel, since nothing about leaving needs an order.
+private struct ArrivesInTurn: ViewModifier {
+    let order: Int
+    @Environment(\.menuBarPanelOpen) private var open
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(open ? 1 : 0)
+            .offset(y: open || reduceMotion ? 0 : 6)
+            .animation(
+                open
+                    ? .spring(response: 0.38, dampingFraction: 0.86).delay(0.03 * Double(order))
+                    : .easeIn(duration: 0.1),
+                value: open)
     }
 }

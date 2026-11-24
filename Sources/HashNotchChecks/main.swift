@@ -6758,6 +6758,20 @@ MainActor.assumeIsolated {
         }()
     )
     check(
+        "the panel's window holds the panel exactly where it is placed, with room around it for its shadow",
+        {
+            let panel = NSRect(x: 900, y: 400, width: 280, height: 380)
+            let window = MenuBarPanel.windowFrame(panel: panel)
+            let room = MenuBarPanel.shadowRoom
+            return window.minX == panel.minX - room.left && window.maxX == panel.maxX + room.right
+                && window.minY == panel.minY - room.bottom && window.maxY == panel.maxY + room.top
+        }()
+    )
+    check(
+        "and that room never reaches up past the gap under the menu bar, so it never covers the item",
+        MenuBarPanel.shadowRoom.top < MenuBarPanel.gap
+    )
+    check(
         "and its controls answer the first click",
         FirstClickHostingView(rootView: EmptyView()).acceptsFirstMouse(for: nil)
     )
