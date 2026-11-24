@@ -127,9 +127,13 @@ public final class StatusBarItem: NSObject, MenuBarItem {
         let width = image.size.width + Self.itemInset * 2
         if item.length != width { item.length = width }
         button.image = image
+        // Spoken to VoiceOver, and deliberately not a hover tooltip. The item
+        // already shows these figures, and on macOS 26 and later the system
+        // draws the menu bar's items itself, so the button's own window is not
+        // where the item is seen: a tooltip set on every refresh was raised by
+        // AppKit wherever the pointer happened to be, anywhere on the screen.
         let spoken = figures.map { $0.reading?.spoken ?? "\($0.title), no reading yet" }
             .joined(separator: ", ")
-        button.toolTip = spoken
         button.setAccessibilityLabel(spoken)
     }
 

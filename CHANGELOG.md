@@ -2,6 +2,16 @@
 
 All notable changes to HashNotch are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- **No more stray box of figures under the pointer.** The menu bar item set a
+  hover tip with its figures on every refresh, and since macOS draws the menu
+  bar's items itself, the tip could pop up wherever the pointer was, anywhere
+  on the screen. The item no longer has a hover tip: it already shows the
+  figures, and VoiceOver still reads them out.
+
 ## 1.7.0 — your Mac's vital signs in the menu bar, and a pause for focus
 
 ### Added
