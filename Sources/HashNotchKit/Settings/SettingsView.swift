@@ -168,6 +168,7 @@ public struct SettingsView: View {
             header
             tabStrip
             Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1)
+            ZStack(alignment: .top) {
             ScrollView {
                 page
                     .padding(.horizontal, 22)
@@ -188,6 +189,16 @@ public struct SettingsView: View {
             // Hiding the scrollbar is cosmetic; on macOS 12 it simply shows
             // in the system's usual way, which is not worth a workaround.
             .hideScrollIndicatorsIfPossible()
+            // A page of its own each time, so every page opens at its top
+            // rather than wherever the last one was scrolled to, and arrives
+            // rising a few points into place while the one it replaces fades.
+            .id(pageKey)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .offset(y: 8)),
+                removal: .opacity))
+            }
+            .animation(.spring(response: 0.34, dampingFraction: 0.9), value: pageKey)
+            .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(panelSurface)
@@ -372,6 +383,12 @@ public struct SettingsView: View {
     }
 
     // MARK: Pages
+
+    /// Which page is showing, as one value: a supplied page is told apart by
+    /// its place in the list.
+    private var pageKey: String {
+        section == .supplied ? "supplied.\(suppliedIndex)" : section.rawValue
+    }
 
     @ViewBuilder
     private var page: some View {
@@ -1526,12 +1543,21 @@ public struct SettingCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) { content }
             .padding(14)
             .background(
+                // Raised a little off the window, the way the menu bar panel's
+                // tiles are: lit along the top edge, resting on a soft shadow.
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.045))
+                    .fill(Color.white.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.07), lineWidth: 1)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.13), Color.white.opacity(0.04)],
+                                    startPoint: .top, endPoint: .bottom),
+                                lineWidth: 1)
                     )
+                    .background(OuterShadow(
+                        shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                        color: .black.opacity(0.35), radius: 4, y: 2))
             )
     }
 }

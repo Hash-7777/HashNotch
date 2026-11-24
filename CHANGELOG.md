@@ -6,6 +6,10 @@ All notable changes to HashNotch are recorded here.
 
 ### Changed
 
+- **Settings, raised and smoother.** Its cards sit slightly off the window,
+  lit along their top edge like the menu bar panel's, and changing page fades
+  the old one out while the new one rises into place, opening at its top
+  rather than wherever the last page was scrolled to.
 - **A clearer, glassier menu bar panel with depth and motion.** More of what
   is behind the panel shows through its glass, its edge is lit along the top,
   and it floats on a soft shadow that moves with it. It grows down out of the
