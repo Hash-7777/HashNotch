@@ -2,7 +2,7 @@
 
 All notable changes to HashNotch are recorded here.
 
-## Unreleased
+## 1.7.1 — smoother, clearer, and out of the way
 
 ### Changed
 
