@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="HashNotch 1.7.1: the notch, and the live figures beside the clock, smoother and out of each other's way.">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12151C"/>
+      <stop offset="1" stop-color="#0B0C10"/>
+    </linearGradient>
+    <linearGradient id="lit" gradientUnits="userSpaceOnUse" x1="484" y1="0" x2="716" y2="0">
+      <stop offset="0" stop-color="#408CFF" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#8FBAFF" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#BFD8FF" stop-opacity="1"/>
+      <stop offset="0.75" stop-color="#8FBAFF" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#408CFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="rule" gradientUnits="userSpaceOnUse" x1="300" y1="0" x2="900" y2="0">
+      <stop offset="0" stop-color="#12151C"/>
+      <stop offset="0.5" stop-color="#2A3040"/>
+      <stop offset="1" stop-color="#12151C"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#151925" stop-opacity="0"/>
+      <stop offset="0.18" stop-color="#151925"/>
+      <stop offset="0.82" stop-color="#151925"/>
+      <stop offset="1" stop-color="#151925" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="1199" height="319" rx="24" fill="url(#plate)" stroke="#1E2230"/>
+
+  <!-- The menu bar, faded out at both ends. -->
+  <rect x="120" y="44" width="960" height="38" fill="url(#bar)"/>
+
+  <!-- The island, black exactly to the hardware, with its lit line. -->
+  <path d="M508 44 L692 44 L692 68 Q692 82 678 82 L522 82 Q508 82 508 68 Z" fill="#000000"/>
+  <path d="M484 90 L716 90" stroke="url(#lit)" stroke-width="14" stroke-linecap="round" opacity="0.16"/>
+  <path d="M486 90 L714 90" stroke="url(#lit)" stroke-width="7" stroke-linecap="round" opacity="0.34"/>
+  <path d="M488 90 L712 90" stroke="url(#lit)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- The new menu bar item: a word above each number, as the app draws it. -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" text-anchor="middle">
+    <g font-size="8.5" font-weight="650" fill="#7D8799" letter-spacing="0.5">
+      <text x="806" y="58">CPU</text>
+      <text x="852" y="58">MEM</text>
+      <text x="898" y="58">TEMP</text>
+    </g>
+    <g font-size="13" font-weight="650" fill="#F2F5FA" font-family="'SF Mono', SFMono-Regular, Menlo, monospace">
+      <text x="806" y="74">12%</text>
+      <text x="852" y="74">64%</text>
+      <text x="898" y="74">52°</text>
+    </g>
+  </g>
+  <rect x="780" y="47" width="144" height="32" rx="8" fill="none" stroke="#8FBAFF" stroke-opacity="0.28"/>
+
+  <text x="600" y="180" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Helvetica, Arial, sans-serif" font-size="60" font-weight="700" fill="#F2F5FA" letter-spacing="-1.2">HashNotch</text>
+
+  <g transform="translate(600 204)">
+    <rect x="-49" y="0" width="98" height="32" rx="16" fill="#101C33" stroke="#2A4A80"/>
+    <text x="0" y="22" text-anchor="middle" font-family="'SF Mono', SFMono-Regular, Menlo, monospace" font-size="16" font-weight="600" fill="#8FBAFF" letter-spacing="0.6">1.7.1</text>
+  </g>
+
+  <text x="600" y="266" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="20" fill="#9AA4B2">Smoother, clearer, and out of the way.</text>
+
+  <path d="M300 288 L900 288" stroke="url(#rule)" stroke-width="1"/>
+
+  <text x="600" y="306" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, Arial, sans-serif" font-size="13" fill="#6E7681" letter-spacing="0.4">1268 checks &#183; every commit signed &#183; nothing leaves your Mac</text>
+</svg>
