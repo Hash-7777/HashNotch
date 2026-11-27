@@ -2,6 +2,16 @@
 
 All notable changes to HashNotch are recorded here.
 
+## 1.7.2 — local app activity and token counts
+
+### Added
+
+- Compatible desktop apps can share activity updates with the notch through a
+  local feed. HashNotch reads these updates when Activities is on.
+- The token readout can include input and output counts reported by compatible
+  apps for the current day. First-run consent and Privacy settings explain
+  what HashNotch reads.
+
 ## 1.7.1 — smoother, clearer, and out of the way
 
 ### Changed
