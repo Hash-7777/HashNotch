@@ -95,6 +95,11 @@ struct TokensDetailView: View {
         if monitor.today.hashCerebrum > 0 {
             lines.append("HashCerebrum: \(Formatters.compactCount(monitor.today.hashCerebrum))")
         }
+        if let companion = monitor.today.companion {
+            for source in companion.keys.sorted() {
+                lines.append("\(source): \(Formatters.compactCount(companion[source] ?? 0))")
+            }
+        }
         if monitor.today.cached > 0 {
             lines.append("Cached: +\(Formatters.compactCount(monitor.today.cached))")
         }

@@ -39,6 +39,7 @@ package final class TokenUsageScanner: @unchecked Sendable {
         var cache: Int64
     }
 
+    private let companionFolder: URL?
     private let claudeProjects: URL
     private let ecosystemFiles: [(url: URL, bucket: Bucket)]
     private var files: [String: FileState] = [:]
@@ -57,8 +58,10 @@ package final class TokenUsageScanner: @unchecked Sendable {
         ecosystemFiles: [(url: URL, bucket: Bucket)] = [
             (TokenUsageReader.hashCortxURL, .hashCortx),
             (TokenUsageReader.hashCerebrumURL, .hashCerebrum),
-        ]
+        ],
+        companionFolder: URL? = nil
     ) {
+        self.companionFolder = companionFolder
         self.claudeProjects = claudeProjects
         self.ecosystemFiles = ecosystemFiles
     }
@@ -154,7 +157,12 @@ package final class TokenUsageScanner: @unchecked Sendable {
             // only after a pass that actually read a file from the beginning.
             malloc_zone_pressure_relief(nil, 0)
         }
-        return totals()
+        var result = totals()
+        if let folder = companionFolder {
+            let counts = TokenUsageReader.companionCounts(in: folder, now: now)
+            result.companion = counts.isEmpty ? nil : counts
+        }
+        return result
     }
 
     private func totals() -> TokenTotals {

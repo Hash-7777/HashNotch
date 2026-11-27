@@ -241,3 +241,5 @@ and its `Package.swift` entries. Nothing else is affected.
   untouched, so the risk of each addition stays flat as the app grows.
 - **Testability** — the core is verified against a stub feature, with no real
   feature present, proving the decoupling holds.
+
+The activity and token features share `LocalActivityFeed` for bounded, read-only discovery of per-app snapshots. The activity monitor watches the folder for changes. Token snapshots are read on the existing token refresh schedule.

@@ -1,4 +1,5 @@
 import Foundation
+import HashNotchKit
 
 /// Today's token totals, per source. `claude` / `hashCortx` / `hashCerebrum`
 /// count PROCESSED tokens — input + cache-write + output — exactly the number
@@ -10,10 +11,11 @@ public struct TokenTotals: Equatable, Codable {
     public var hashCortx: Int64 = 0
     public var hashCerebrum: Int64 = 0
     public var cached: Int64 = 0
+    public var companion: [String: Int64]? = nil
 
     public init() {}
 
-    public var total: Int64 { claude + hashCortx + hashCerebrum }
+    public var total: Int64 { claude + hashCortx + hashCerebrum + (companion?.values.reduce(0, +) ?? 0) }
 }
 
 /// The assistant messages already counted today.
@@ -68,7 +70,34 @@ package struct SeenMessages {
 /// tens of megabytes and costing nothing.
 package enum TokenUsageReader {
     static func readToday() -> TokenTotals {
-        TokenUsageScanner().readToday()
+        TokenUsageScanner(companionFolder: LocalActivityFeed.directory).readToday()
+    }
+
+    private struct CompanionCount: Decodable {
+        let source: String
+        let at: Double
+        let input: Int64
+        let output: Int64
+        let measured: Int64
+    }
+
+    package static func companionCounts(in folder: URL, now: Date) -> [String: Int64] {
+        let calendar = Calendar.current
+        var counts: [String: Int64] = [:]
+        for url in LocalActivityFeed.files(in: folder, suffix: ".usage.json", maxBytes: 1024) {
+            guard let data = LocalActivityFeed.read(url, maxBytes: 1024),
+                  let entry = try? JSONDecoder().decode(CompanionCount.self, from: data),
+                  !entry.source.isEmpty, entry.source.count <= 40,
+                  entry.source.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == " " || $0 == "-") }),
+                  entry.at.isFinite, entry.at > 0,
+                  entry.at <= now.timeIntervalSince1970 + 5,
+                  calendar.isDate(Date(timeIntervalSince1970: entry.at), inSameDayAs: now),
+                  (1...1_000_000_000).contains(entry.measured),
+                  (0...1_000_000_000).contains(entry.input), (0...1_000_000_000).contains(entry.output),
+                  counts[entry.source] == nil else { continue }
+            counts[entry.source] = entry.input + entry.output
+        }
+        return counts
     }
 
     // MARK: Sources

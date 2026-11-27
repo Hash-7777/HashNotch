@@ -195,3 +195,9 @@ often you ask. How often is yours to set in Settings — from every ten seconds 
 once every two hours, or only when you ask — and it counts on that rhythm
 whether or not the panel is open, so the figure on the notch is as fresh as the
 setting says.
+
+## Per-app snapshots
+
+A local app can publish a JSON array using its own filename ending in `.activity.json` in `~/Library/Application Support/Local Activity Feed`. Each file is limited to 4 KB. An optional `expiresAt` is a Unix timestamp in seconds. The existing limit of eight visible entries applies across both feed formats.
+
+A file ending in `.usage.json` can hold a token snapshot with `source`, `at` (Unix seconds), `input`, `output`, and `measured` (the number of measured responses). The reader limits each file to 1 KB and shows the current local day's counts. Publish complete files by replacing them atomically.

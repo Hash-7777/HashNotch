@@ -24,7 +24,7 @@ public final class TokensMonitor: ObservableObject {
 
     private var sampler: PollingSampler?
     private let queue = DispatchQueue(label: "com.hashnotch.tokens", qos: .utility)
-    private let scanner = TokenUsageScanner()
+    private let scanner = TokenUsageScanner(companionFolder: LocalActivityFeed.directory)
     private let defaults: UserDefaults
     private var inFlight = false
 

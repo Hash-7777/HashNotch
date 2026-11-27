@@ -245,8 +245,8 @@ package enum ConsentReadings {
             id: "tokens",
             icon: "number",
             title: "AI tokens",
-            reads: "Adds up the token counts your AI tools write into their own log files.",
-            never: "Only the numbers are kept. None of the text of your conversations is read into the app."
+            reads: "Adds up token counts from local tool logs and the usage snapshots apps publish on this Mac.",
+            never: "Keeps the totals by source in local preferences. Conversation text stays out of the readout."
         ),
         Reader(
             id: "networkApps",
@@ -259,8 +259,8 @@ package enum ConsentReadings {
             id: "activities",
             icon: "bell.badge",
             title: "Live activities",
-            reads: "Reads one file, ~/.hashnotch/activities.json, which your own scripts and tools write when they want to put something on the notch.",
-            never: "Never written to by this app, and nothing is read unless you or a tool you installed put it there."
+            reads: "Reads local activity labels that apps and scripts post for the notch.",
+            never: "HashNotch only reads the feed files. The app that posts an activity decides which label it shares."
         ),
     ]
 

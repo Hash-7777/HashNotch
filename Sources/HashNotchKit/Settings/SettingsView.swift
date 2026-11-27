@@ -1146,7 +1146,7 @@ public struct SettingsView: View {
                 SettingDivider()
                 PrivacyLine(
                     "Nothing runs until you say so",
-                    "On a new install every indicator is stopped until the opening window is answered. Before that the app has opened no file, run no command, and could not have raised any of the requests below."
+                    "On a new install the indicator readers wait until you accept the opening window."
                 )
                 SettingDivider()
                 PrivacyLine(
@@ -1154,13 +1154,14 @@ public struct SettingsView: View {
                     "An indicator switched off is never started — it reads nothing and asks for nothing. Switching one off stops the work, not just the display."
                 )
                 SettingDivider()
-                // The records here that are about YOU rather than about the
-                // machine, so they are named on this page rather than left to
-                // be discovered. Neither needs permission from macOS, which is
-                // exactly why they would otherwise never be mentioned anywhere.
                 PrivacyLine(
-                    "The two things it keeps about you",
-                    "Everything else here reads counters about the hardware. Naming the programs that used the most data reads which programs you run, which is a fact about you rather than about the Mac — so it has its own switch on the General page, and off means the tool that answers it is never run. It is Apple's own nettop, the one Activity Monitor uses: it asks for byte totals per program and gets no address, site or port back, so this app cannot see where any of it went. What it records — program names and byte counts — never leaves the Mac, and switching it off deletes it."
+                    "Per-app network history",
+                    "Naming the programs that used the most data reads which programs you run, which is a fact about you rather than about the Mac — so it has its own switch on the General page, and off means the tool that answers it is never run. It is Apple's own nettop, the one Activity Monitor uses: it asks for byte totals per program and gets no address, site or port back, so this app cannot see where any of it went. What it records — program names and byte counts — never leaves the Mac, and switching it off deletes it."
+                )
+                SettingDivider()
+                PrivacyLine(
+                    "Local activity and token counts",
+                    "The activity strip shows labels posted by local apps and scripts. The token indicator counts tokens by source from local logs and usage snapshots. HashNotch reads these files and keeps token totals in preferences."
                 )
                 SettingDivider()
                 PrivacyLine(

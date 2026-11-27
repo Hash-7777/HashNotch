@@ -30,6 +30,8 @@ public final class ActivitiesMonitor: ObservableObject {
     private static let hookCheckInterval: TimeInterval = 60
 
     private var watcher: DirectoryWatcher?
+    private var companionWatcher: DirectoryWatcher?
+    private var companionParent: DirectoryWatcher?
     private var sampler: PollingSampler?
     private var clock: PollingSampler?
     private weak var presence: LivePresence?
@@ -61,6 +63,10 @@ public final class ActivitiesMonitor: ObservableObject {
         self.settings = settings
         reload()
         refreshHookState()
+        watchCompanion()
+        companionParent = DirectoryWatcher(url: LocalActivityFeed.directory.deletingLastPathComponent()) { [weak self] in
+            self?.watchCompanion()
+        }
 
         // The feed changes when somebody posts, which is rarely and never on a
         // schedule. Watch the folder rather than stat-ing the file forever —
@@ -80,6 +86,10 @@ public final class ActivitiesMonitor: ObservableObject {
     public func stop() {
         watcher?.stop()
         watcher = nil
+        companionWatcher?.stop()
+        companionWatcher = nil
+        companionParent?.stop()
+        companionParent = nil
         sampler?.stop()
         sampler = nil
         clock?.stop()
@@ -101,6 +111,15 @@ public final class ActivitiesMonitor: ObservableObject {
         self.watcher = watcher
         sampler?.stop()
         sampler = nil
+        reload()
+    }
+
+    private func watchCompanion() {
+        // The directory can be created, removed, or replaced while the app is running.
+        companionWatcher?.stop()
+        companionWatcher = DirectoryWatcher(url: LocalActivityFeed.directory) { [weak self] in
+            self?.reload()
+        }
         reload()
     }
 

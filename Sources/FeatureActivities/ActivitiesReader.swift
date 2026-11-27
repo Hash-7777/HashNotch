@@ -1,4 +1,5 @@
 import Foundation
+import HashNotchKit
 
 /// One live activity posted to HashNotch by another app, a script, or a
 /// Shortcut. This is the macOS-honest version of iPhone Live Activities: since
@@ -98,9 +99,10 @@ public struct LiveActivity: Identifiable, Equatable {
         return max(0, Int(endsAt.timeIntervalSince(now)))
     }
 
-    public var isExpired: Bool {
-        guard let endsAt else { return false }
-        return endsAt.timeIntervalSinceNow < -2
+    public var isExpired: Bool { isExpired(at: Date()) }
+
+    fileprivate func isExpired(at now: Date) -> Bool {
+        endsAt.map { $0.timeIntervalSince(now) < -2 } ?? false
     }
 
     /// When a self-dismissing notice should disappear, given the moment it was
@@ -182,12 +184,33 @@ package enum ActivitiesReader {
         let progress: Double?
         let endsAt: String?
         let dismissAfter: Double?
+        let expiresAt: Double?
         let image: String?
         let app: String?
     }
 
     static func read() -> [LiveActivity] {
-        read(from: feedURL)
+        combine(legacy: read(from: feedURL), folder: LocalActivityFeed.directory)
+    }
+
+    package static func combine(legacy: [LiveActivity], folder: URL, now: Date = Date()) -> [LiveActivity] {
+        var seen = Set<String>()
+        let files = LocalActivityFeed.files(in: folder, suffix: ".activity.json", maxBytes: 4096)
+        var result: [LiveActivity] = []
+        func add(_ activities: [LiveActivity]) {
+            for item in activities where seen.insert(item.id).inserted {
+                if result.count == maxActivities { return }
+                result.append(item)
+            }
+        }
+        for file in files {
+            if let data = LocalActivityFeed.read(file, maxBytes: 4096) {
+                add(decode(data, appRoots: standardAppRoots, now: now))
+            }
+            if result.count == maxActivities { return result }
+        }
+        add(legacy)
+        return result
     }
 
     package static func read(
@@ -195,11 +218,12 @@ package enum ActivitiesReader {
         appRoots: [String] = standardAppRoots
     ) -> [LiveActivity] {
         guard let data = try? Data(contentsOf: url),
-              data.count <= maxFeedBytes,
-              let items = try? JSONDecoder().decode([ActivityDTO].self, from: data) else {
-            return []
-        }
+              data.count <= maxFeedBytes else { return [] }
+        return decode(data, appRoots: appRoots, now: Date())
+    }
 
+    private static func decode(_ data: Data, appRoots: [String], now: Date) -> [LiveActivity] {
+        guard let items = try? JSONDecoder().decode([ActivityDTO].self, from: data) else { return [] }
         var seen = Set<String>()
         var result: [LiveActivity] = []
         for dto in items {
@@ -218,14 +242,16 @@ package enum ActivitiesReader {
                 title: title,
                 subtitle: dto.subtitle.map { String($0.prefix(maxTextLength)) },
                 progress: dto.progress.map { min(max($0, 0), 1) },
-                endsAt: dto.endsAt.flatMap(parseDate),
+                endsAt: dto.endsAt.flatMap(parseDate) ?? dto.expiresAt.flatMap {
+                    $0.isFinite && $0 > 0 ? Date(timeIntervalSince1970: $0) : nil
+                },
                 dismissAfter: dto.dismissAfter.map {
                     min(max($0, minDismissAfter), maxDismissAfter)
                 },
                 imagePath: dto.image.flatMap(safeImagePath),
                 appPath: dto.app.flatMap { safeAppPath($0, roots: appRoots) }
             )
-            if !activity.isExpired { result.append(activity) }
+            if !activity.isExpired(at: now) { result.append(activity) }
         }
         return result
     }

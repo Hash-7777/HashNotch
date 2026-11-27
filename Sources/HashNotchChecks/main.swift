@@ -1922,6 +1922,26 @@ MainActor.assumeIsolated {
     check("feed drops expired", !parsed.contains { $0.id == "d" })
     try? FileManager.default.removeItem(at: feed)
 
+    let companionDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try? FileManager.default.createDirectory(at: companionDir, withIntermediateDirectories: true)
+    let companionNow = Date()
+    let companionStamp = companionNow.timeIntervalSince1970
+    let companionFinished = companionDir.appendingPathComponent("sample.finished.activity.json")
+    let expired = companionDir.appendingPathComponent("sample.expired.activity.json")
+    try? Data("[{\"id\":\"example\",\"title\":\"Sample finished\",\"expiresAt\":\(companionStamp + 60),\"dismissAfter\":4}]".utf8).write(to: companionFinished)
+    try? Data("[{\"id\":\"expired\",\"title\":\"Older sample\",\"expiresAt\":\(companionStamp - 60)}]".utf8).write(to: expired)
+    check("local snapshots combine with the legacy feed and drop expired entries",
+          ActivitiesReader.combine(legacy: parsed, folder: companionDir, now: companionNow).map(\.id) == ["example", "a", "b"])
+    let usage = companionDir.appendingPathComponent("sample.usage.json")
+    try? Data("{\"source\":\"Sample App\",\"at\":\(companionStamp),\"input\":15,\"output\":5,\"measured\":1}".utf8).write(to: usage)
+    check("local token snapshots count a source once on the current day",
+          TokenUsageReader.companionCounts(in: companionDir, now: companionNow) == ["Sample App": 20] &&
+          TokenUsageReader.companionCounts(in: companionDir, now: companionNow.addingTimeInterval(172800)).isEmpty)
+    let oversizedSnapshot = companionDir.appendingPathComponent("sample.oversized.activity.json")
+    try? Data(repeating: 65, count: 4097).write(to: oversizedSnapshot)
+    check("the snapshot reader refuses an oversized file", LocalActivityFeed.read(oversizedSnapshot, maxBytes: 4096) == nil)
+    try? FileManager.default.removeItem(at: companionDir)
+
     let overflowing = (0..<20).map { "{\"id\": \"x\($0)\", \"title\": \"Item \($0)\"}" }
     let bigFeed = tempFile("[\(overflowing.joined(separator: ","))]")
     check("feed caps activity count", ActivitiesReader.read(from: bigFeed).count == ActivitiesReader.maxActivities)
